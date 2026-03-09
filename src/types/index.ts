@@ -1,0 +1,218 @@
+// 用户角色枚举
+export enum UserRole {
+  STUDENT = 'student',
+  TEACHER = 'teacher',
+  ADMIN = 'admin'
+}
+
+// 用户接口
+export interface User {
+  id: string
+  username: string
+  name: string
+  email: string
+  avatar?: string
+  role: UserRole
+  createdAt: string
+  status: 'active' | 'disabled'
+  classId?: string
+  phone?: string
+}
+
+// 登录用户信息
+export interface AuthUser extends User {
+  token: string
+}
+
+// 课程分类
+export interface Category {
+  id: string
+  name: string
+  icon?: string
+}
+
+// 课程章节
+export interface Chapter {
+  id: string
+  title: string
+  duration: number // 分钟
+  videoUrl?: string
+  order: number
+}
+
+// 课程
+export interface Course {
+  id: string
+  title: string
+  description: string
+  cover: string
+  categoryId: string
+  teacherId: string
+  teacherName: string
+  chapters: Chapter[]
+  status: 'draft' | 'published' | 'under_review' | 'rejected'
+  createdAt: string
+  updatedAt: string
+  totalDuration: number
+  studentCount: number
+  rating: number
+}
+
+// 学习进度
+export interface LearningProgress {
+  userId: string
+  courseId: string
+  chapterId: string
+  progress: number // 0-100
+  lastPosition: number // 秒
+  completed: boolean
+  updatedAt: string
+}
+
+// 题目类型
+export enum QuestionType {
+  SINGLE_CHOICE = 'single_choice',
+  MULTIPLE_CHOICE = 'multiple_choice',
+  FILL_BLANK = 'fill_blank'
+}
+
+// 题目
+export interface Question {
+  id: string
+  courseId: string
+  chapterId: string
+  type: QuestionType
+  content: string
+  options?: string[]
+  correctAnswer: string | string[]
+  knowledgePoint: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  score: number
+}
+
+// 测验记录
+export interface QuizRecord {
+  id: string
+  userId: string
+  courseId: string
+  chapterId: string
+  score: number
+  totalScore: number
+  answers: Record<string, string | string[]>
+  correctAnswers: Record<string, boolean>
+  duration: number // 分钟
+  completedAt: string
+}
+
+// 错题
+export interface WrongQuestion {
+  id: string
+  userId: string
+  questionId: string
+  question: Question
+  wrongAnswer: string | string[]
+  times: number
+  lastWrongAt: string
+}
+
+// 笔记
+export interface Note {
+  id: string
+  userId: string
+  courseId: string
+  chapterId?: string
+  title: string
+  content: string
+  tags: string[]
+  isFavorite: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// 学习报告数据
+export interface LearningReport {
+  userId: string
+  totalStudyTime: number // 分钟
+  completedChapters: number
+  totalChapters: number
+  averageScore: number
+  quizCount: number
+  weeklyProgress: Array<{
+    date: string
+    duration: number
+    chapters: number
+  }>
+  knowledgePoints: Array<{
+    name: string
+    score: number
+  }>
+}
+
+// 班级数据
+export interface ClassData {
+  id: string
+  name: string
+  teacherId: string
+  studentCount: number
+  courseIds: string[]
+}
+
+// 学生成绩
+export interface StudentGrade {
+  userId: string
+  userName: string
+  courseId: string
+  totalScore: number
+  quizScores: number[]
+  completionRate: number
+}
+
+// 系统统计数据
+export interface SystemStats {
+  totalUsers: number
+  students: number
+  teachers: number
+  admins: number
+  totalCourses: number
+  activeUsers: {
+    daily: number
+    weekly: number
+    monthly: number
+  }
+  courseStats: Array<{
+    category: string
+    count: number
+    learners: number
+  }>
+}
+
+// D3图表数据类型
+export interface ChartDataPoint {
+  label: string
+  value: number
+  color?: string
+}
+
+export interface LineChartData {
+  x: string | number
+  y: number
+  series?: string
+}
+
+export interface PieChartData {
+  name: string
+  value: number
+}
+
+export interface RadarChartData {
+  axis: string
+  value: number
+}
+
+// AI消息
+export interface AIMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+}

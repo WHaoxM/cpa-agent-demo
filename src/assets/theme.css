@@ -1,0 +1,195 @@
+:root {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --transition-fast: 160ms;
+  --transition-base: 240ms;
+  --noise-opacity: 0.08;
+}
+
+:root[data-theme='crystal'] {
+  --primary-100: #2DD4BF;
+  --primary-200: #99F6E4;
+  --primary-300: #042F2E;
+  --accent-100: #A3E635;
+  --accent-200: #ECFCCB;
+  --text-100: #ECFEFF;
+  --text-200: #A5F3FC;
+  --bg-100: #071A18;
+  --bg-200: #052523;
+  --bg-300: #0B3A35;
+  --noise-opacity: 0.09;
+}
+
+:root[data-theme='warm'] {
+  --primary-100: #FF6B4A;
+  --primary-200: #FFD6A5;
+  --primary-300: #2A0F0A;
+  --accent-100: #166534;
+  --accent-200: #DCFCE7;
+  --text-100: #1A1210;
+  --text-200: #3D2A24;
+  --bg-100: #FFF3E8;
+  --bg-200: #F8E6D6;
+  --bg-300: #E6C8AF;
+  --noise-opacity: 0.07;
+}
+
+:root[data-theme='xuanZhi'] {
+  --primary-100: #0B6B3A;
+  --primary-200: #DCE7D7;
+  --primary-300: #07110C;
+  --accent-100: #9A3412;
+  --accent-200: #F3E7C8;
+  --text-100: #131515;
+  --text-200: #3B3F41;
+  --bg-100: #F3EBDD;
+  --bg-200: #E5D8C3;
+  --bg-300: #CCB593;
+  --noise-opacity: 0.08;
+}
+
+:root[data-theme='sunset'] {
+  --primary-100: #F97316;
+  --primary-200: #FDBA74;
+  --primary-300: #1B120C;
+  --accent-100: #10B981;
+  --accent-200: #D1FAE5;
+  --text-100: #1B120C;
+  --text-200: #3A2A1E;
+  --bg-100: #FFF0D6;
+  --bg-200: #FFE2B6;
+  --bg-300: #E9C28A;
+  --noise-opacity: 0.07;
+}
+
+:root[data-theme='classicWhite'] {
+  --primary-100: #d4eaf7;
+  --primary-200: #b6ccd8;
+  --primary-300: #3b3c3d;
+  --accent-100: #71c4ef;
+  --accent-200: #00668c;
+  --text-100: #1d1c1c;
+  --text-200: #313d44;
+  --bg-100: #fffefb;
+  --bg-200: #f5f4f1;
+  --bg-300: #cccbc8;
+  --noise-opacity: 0.06;
+}
+
+:root[data-theme='night'] {
+  --primary-100: #7C3AED;
+  --primary-200: #C4B5FD;
+  --primary-300: #0B0616;
+  --accent-100: #22D3EE;
+  --accent-200: #0E7490;
+  --text-100: #E5E7EB;
+  --text-200: #A1A1AA;
+  --bg-100: #0B1220;
+  --bg-200: #0F172A;
+  --bg-300: #1F2937;
+  --noise-opacity: 0.10;
+}
+
+:root {
+  --el-color-primary: var(--primary-100);
+  --el-color-primary-light-3: color-mix(in srgb, var(--primary-100) 70%, #ffffff 30%);
+  --el-color-primary-light-5: color-mix(in srgb, var(--primary-100) 55%, #ffffff 45%);
+  --el-color-primary-light-7: color-mix(in srgb, var(--primary-100) 40%, #ffffff 60%);
+  --el-color-primary-light-9: color-mix(in srgb, var(--primary-100) 22%, #ffffff 78%);
+  --el-color-primary-dark-2: color-mix(in srgb, var(--primary-100) 80%, #000000 20%);
+
+  --el-border-radius-base: var(--radius-sm);
+  --el-border-radius-round: 999px;
+
+  --el-bg-color: var(--bg-100);
+  --el-bg-color-page: var(--bg-100);
+  --el-bg-color-overlay: var(--bg-100);
+
+  --el-text-color-primary: var(--text-100);
+  --el-text-color-regular: var(--text-200);
+
+  --el-fill-color-blank: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  --el-fill-color-light: color-mix(in srgb, var(--bg-100) 86%, #ffffff 14%);
+  --el-border-color: color-mix(in srgb, var(--bg-300) 70%, #000000 30%);
+  --el-border-color-light: color-mix(in srgb, var(--bg-300) 55%, #000000 45%);
+
+  --el-box-shadow: var(--shadow-sm);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow-lighter: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  position: relative;
+  background: radial-gradient(
+      1200px 600px at 20% -10%,
+      color-mix(in srgb, var(--primary-100) 16%, transparent 84%),
+      transparent
+    ),
+    radial-gradient(
+      900px 500px at 90% 10%,
+      color-mix(in srgb, var(--accent-100) 12%, transparent 88%),
+      transparent
+    ),
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--bg-200) 88%, #ffffff 12%),
+      color-mix(in srgb, var(--bg-100) 88%, #000000 12%)
+    );
+  color: var(--text-100);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    filter var(--transition-base);
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ui-card {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.ui-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
