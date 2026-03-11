@@ -1,7 +1,7 @@
 ﻿<!-- 页面：首页；路由：/app（dashboard） -->
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore, useCourseStore } from '@/stores'
 import CalendarChart from '@/components/charts/CalendarChart.vue'
@@ -134,6 +134,16 @@ function toggleTodo(id: number) {
     todo.completed = !todo.completed
   }
 }
+
+onMounted(() => {
+  const el = document.querySelector('.content')
+  if (el) el.classList.add('hide-scrollbar')
+})
+
+onUnmounted(() => {
+  const el = document.querySelector('.content')
+  if (el) el.classList.remove('hide-scrollbar')
+})
 </script>
 
 
@@ -449,12 +459,31 @@ function toggleTodo(id: number) {
 <style scoped>
 /* ===== 全局容器 ===== */
 .dash {
-  width: calc(100% + 44px);
-  margin: -22px;
+  width: 100%;
   min-height: 100vh;
   background: var(--bg-100);
   color: var(--text-100);
   font-family: var(--font-body);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dash::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+:global(.content.hide-scrollbar) {
+  scrollbar-width: none;
+  overflow-y: auto;
+}
+
+:global(.content.hide-scrollbar::-webkit-scrollbar) {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 /* ===== HEADER ===== */
