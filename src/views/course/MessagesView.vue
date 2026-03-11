@@ -18,7 +18,7 @@ const tab = ref<MsgType | '全部'>('全部')
 const list = ref<Msg[]>([
   {
     id: 'm_01',
-    title: '课程中心新主题上线',
+    title: '学习中心新主题上线',
     content: '现在支持“宝石蓝 / 温暖 / 宣纸 / 落日”四种主题，切换更丝滑。',
     time: '2026-02-07 14:12',
     type: '系统消息',
