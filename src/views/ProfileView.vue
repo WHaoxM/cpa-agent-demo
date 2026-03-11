@@ -124,11 +124,10 @@ function onSave() {
 }
 
 .panel {
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
-  padding: 14px;
+  border-radius: 0;
+  border: 2px solid var(--card-border);
+  background: transparent;
+  padding: 16px;
 }
 
 .rail {
@@ -160,9 +159,9 @@ function onSave() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
-  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--card-divider);
+  margin-bottom: 16px;
 }
 
 .section-head__title {
@@ -215,13 +214,8 @@ function onSave() {
 
 @media (min-width: 1024px) {
   .profile-shell {
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 280px 1fr;
     align-items: start;
-  }
-
-  .rail {
-    position: sticky;
-    top: 90px;
   }
 
   .form-grid {
@@ -238,7 +232,7 @@ function onSave() {
 }
 
 .kv + .kv {
-  border-top: 1px dashed color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  border-top: 1px dashed var(--card-divider);
 }
 
 .kv__k {
@@ -261,23 +255,25 @@ function onSave() {
   width: 100%;
   text-align: left;
   border: none;
+  border-bottom: 2px solid var(--card-divider);
   background: transparent;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 16px 0;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  transition: background 0.18s ease, border-color 0.18s ease;
+  transition: transform 0.15s ease;
 }
 
 .pref-row:hover {
-  background: color-mix(in srgb, var(--bg-200) 80%, transparent 20%);
+  background: transparent;
+  transform: translateX(4px);
 }
 
 .pref-row + .pref-row {
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 .pref-row__title {

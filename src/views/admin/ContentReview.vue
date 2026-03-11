@@ -1,6 +1,7 @@
 ﻿<!-- 页面：内容审核；路由：admin/content-review（admin-content-review）；角色：ADMIN -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Search, Check, Close, View } from '@element-plus/icons-vue'
 import { useCourseStore } from '@/stores'
 import type { Course } from '@/types'
@@ -185,7 +186,7 @@ function getStatusTag(status: string) {
           />
         </el-form-item>
       </el-form>
-      <template #footer">
+      <template #footer>
         <el-button @click="showRejectDialog = false">取消</el-button>
         <el-button type="danger" @click="confirmReject">确认驳回</el-button>
       </template>

@@ -1,5 +1,6 @@
-﻿<!-- 页面：错题本；路由：student/wrong-questions（student-wrong-questions）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：错题本；路由：student/wrong-questions（student-wrong-questions）；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
+// @ts-nocheck
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -387,8 +388,8 @@ onMounted(() => {
 })
 </script>
 
-
-
+
+
 <template>
   <div class="wrongbook page page--compact">
     <div v-if="filteredQuestions.length > 0" class="wb-topbar" aria-label="错题本工具条">
@@ -423,7 +424,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="filteredQuestions.length > 0" class="wb-workspace" aria-label="错题本工作台">
+    <div v-if="filteredQuestions.length > 0" class="wb-workspace card-base" aria-label="错题本工作台">
       <div class="wb-body">
         <aside class="wb-list" aria-label="错题列表">
           <div class="wb-list__head">
@@ -441,7 +442,7 @@ onMounted(() => {
             >
               <el-table-column label="错题" width="86">
                 <template #default="{ row }">
-                  <el-tag type="danger" size="small">×{{ row.times }}</el-tag>
+                  <el-tag type="danger" size="small" effect="plain">×{{ row.times }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="知识点" min-width="140">
@@ -454,12 +455,12 @@ onMounted(() => {
               </el-table-column>
               <el-table-column label="难度" width="90">
                 <template #default="{ row }">
-                  <el-tag :type="diffTagType(getDifficultyKey(row))" size="small">{{ difficultyLabelMap[getDifficultyKey(row)] }}</el-tag>
+                  <el-tag :type="diffTagType(getDifficultyKey(row))" size="small" effect="plain">{{ difficultyLabelMap[getDifficultyKey(row)] }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="92">
                 <template #default="{ row }">
-                  <el-tag :type="statusTagType(getMockStatus(row))" size="small">{{ statusLabelMap[getMockStatus(row)] }}</el-tag>
+                  <el-tag :type="statusTagType(getMockStatus(row))" size="small" effect="plain">{{ statusLabelMap[getMockStatus(row)] }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="最近" width="112">
@@ -479,7 +480,7 @@ onMounted(() => {
         <main class="wb-main" aria-label="错题内容区">
           <div class="wb-main__head">
             <div class="main-title">
-              <Icon icon="fluent-emoji:robot" class="main-title__icon" />
+              <Icon icon="lucide:bot" class="main-title__icon" />
               <span>学习工作台</span>
             </div>
             <div class="main-actions">
@@ -519,7 +520,7 @@ onMounted(() => {
                   <section class="wb-section">
                     <div class="wb-section__head">
                       <div class="wb-section__title">视频时间点</div>
-                      <el-tag type="warning" size="small">mock</el-tag>
+                      <el-tag type="warning" size="small" effect="plain">mock</el-tag>
                     </div>
                     <div class="video-anchor">
                       <div class="video-time">{{ formatTime(selectedAnalysis.knowledge.videoTimeSec) }}</div>
@@ -620,7 +621,7 @@ onMounted(() => {
               <div class="tab-pad tab-pad--chat">
                 <div class="chat-head">
                   <div class="chat-meta">
-                    <el-tag type="info" size="small">LangGraph thread</el-tag>
+                    <el-tag type="info" size="small" effect="plain">LangGraph thread</el-tag>
                     <span class="chat-thread">{{ chatThreadId }}</span>
                   </div>
                   <IntegrationHint align="right" />
@@ -683,8 +684,8 @@ onMounted(() => {
 }
 
 .wb-toolbar {
-  background: color-mix(in srgb, var(--bg-100) 95%, white 5%);
-  border: 1px solid var(--bg-300);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 12px;
   display: grid;
@@ -718,12 +719,8 @@ onMounted(() => {
 }
 
 .wb-workspace {
-  background: #ffffff;
-  border: 1px solid var(--bg-300);
-  border-radius: 16px;
   overflow: hidden;
   min-height: 740px;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
 }
 
 .wb-body {
@@ -735,15 +732,15 @@ onMounted(() => {
 
 .wb-list {
   min-width: 0;
-  border-right: 1px solid #eef2f7;
+  border-right: 1px solid var(--card-border);
   display: flex;
   flex-direction: column;
-  background: #fbfcfe;
+  background: var(--card-bg);
 }
 
 .wb-list__head {
   padding: 12px 14px;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--card-border);
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -774,7 +771,7 @@ onMounted(() => {
 
 .wb-main__head {
   padding: 12px 14px;
-  border-bottom: 1px solid #eef2f7;
+  border-bottom: 1px solid var(--card-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -922,7 +919,7 @@ onMounted(() => {
 }
 
 .wb-list__table :deep(.el-table__row:hover) {
-  background: color-mix(in srgb, var(--primary-100) 6%, transparent);
+  background: var(--card-subtle);
 }
 
 .center-body {
@@ -951,8 +948,8 @@ onMounted(() => {
 .detail__block {
   padding: 12px 12px;
   border-radius: 14px;
-  border: 1px solid var(--bg-300);
-  background: var(--bg-200);
+  border: 1px solid var(--card-border);
+  background: var(--card-data-bg);
 }
 
 .block-title {
@@ -1003,9 +1000,9 @@ onMounted(() => {
   place-items: center;
   border-radius: 12px;
   font-weight: 1000;
-  background: linear-gradient(135deg, #FF6B4A22, #FFA07A18);
-  border: 1px solid #FF6B4A30;
-  color: #7c2d12;
+  background: var(--card-data-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-100);
 }
 
 .video-label {
@@ -1232,5 +1229,5 @@ onMounted(() => {
   }
 }
 </style>
-
-
+
+

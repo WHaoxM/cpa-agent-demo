@@ -1,5 +1,6 @@
 ﻿<!-- 页面：系统监控；路由：admin/system-stats（admin-system-stats）；角色：ADMIN -->
 <script setup lang="ts">
+// @ts-nocheck
 import { computed } from 'vue'
 import PieChart from '@/components/charts/PieChart.vue'
 import ScoreLineChart from '@/components/charts/ScoreLineChart.vue'

@@ -1,6 +1,7 @@
 ﻿<!-- 页面：编辑课程；路由：teacher/course/edit/:id?（teacher-course-edit）；角色：TEACHER -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, Plus, Delete } from '@element-plus/icons-vue'
 import { useCourseStore } from '@/stores'
@@ -62,7 +63,7 @@ function saveCourse() {
   }
 
   if (isEdit) {
-    courseStore.updateCourse(courseId, {
+    courseStore.updateCourse(courseId!, {
       ...courseForm.value,
       totalDuration: courseForm.value.chapters.reduce((sum, ch) => sum + ch.duration, 0),
     })
@@ -74,6 +75,7 @@ function saveCourse() {
       teacherName: '刘老师',
       status: 'draft',
       chapters: courseForm.value.chapters,
+      totalDuration: courseForm.value.chapters.reduce((sum, ch) => sum + ch.duration, 0),
       studentCount: 0,
       rating: 0,
     })

@@ -1,8 +1,10 @@
-﻿<!-- 页面：登录；路由：/login（login） -->
+﻿<!-- 页面：登录；路由：/login（login） -->
 <script setup lang="ts">
 import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { ICONS } from '@/constants/icons'
 import { useUserStore } from '@/stores'
 import { UserRole } from '@/types'
 
@@ -16,9 +18,9 @@ const loading = ref(false)
 const showPassword = ref(false)
 
 const roleTabs = [
-  { role: UserRole.STUDENT, icon: 'fluent-emoji:student', label: '学生', color: '#10B981' },
-  { role: UserRole.TEACHER, icon: 'fluent-emoji:teacher', label: '教师', color: '#F59E0B' },
-  { role: UserRole.ADMIN, icon: 'fluent-emoji:technologist', label: '管理', color: '#EF4444' },
+  { role: UserRole.STUDENT, icon: ICONS.graduationCap, label: '学生', color: '#10B981' },
+  { role: UserRole.TEACHER, icon: ICONS.bookOpen, label: '教师', color: '#F59E0B' },
+  { role: UserRole.ADMIN, icon: ICONS.shield, label: '管理', color: '#EF4444' },
 ]
 
 const quickLogins = [
@@ -56,15 +58,15 @@ function quickLogin(role: UserRole, account: string) {
 }
 </script>
 
-
-
+
+
 <template>
   <div class="login-page">
     <!-- 左侧品牌区 - 占 60% -->
     <div class="login-brand-side">
       <div class="brand-content">
         <div class="brand-badge">
-          <Icon icon="fluent-emoji:sparkles" />
+          <Icon :icon="ICONS.sparkles" />
           <span>课程管理系统</span>
         </div>
         <h1 class="brand-title">
@@ -82,15 +84,15 @@ function quickLogin(role: UserRole, account: string) {
         
         <div class="feature-list">
           <div class="feature-item">
-            <Icon icon="fluent-emoji:chart-increasing" class="feature-icon" />
+            <Icon :icon="ICONS.trendingUp" class="feature-icon" />
             <span>学习数据一目了然</span>
           </div>
           <div class="feature-item">
-            <Icon icon="fluent-emoji:robot" class="feature-icon" />
+            <Icon :icon="ICONS.bot" class="feature-icon" />
             <span>AI 答疑随时在线</span>
           </div>
           <div class="feature-item">
-            <Icon icon="fluent-emoji:mobile-phone" class="feature-icon" />
+            <Icon :icon="ICONS.smartphone" class="feature-icon" />
             <span>多端同步随时学</span>
           </div>
         </div>
@@ -127,7 +129,7 @@ function quickLogin(role: UserRole, account: string) {
         <!-- 输入框 -->
         <div class="input-group">
           <div class="input-wrap">
-            <Icon icon="fluent-emoji:bust-in-silhouette" class="input-icon" />
+            <Icon :icon="ICONS.user" class="input-icon" />
             <input
               v-model="username"
               type="text"
@@ -138,7 +140,7 @@ function quickLogin(role: UserRole, account: string) {
           </div>
           
           <div class="input-wrap">
-            <Icon icon="fluent-emoji:locked" class="input-icon" />
+            <Icon :icon="ICONS.lock" class="input-icon" />
             <input
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
@@ -147,7 +149,7 @@ function quickLogin(role: UserRole, account: string) {
               @keydown.enter="handleLogin"
             />
             <button class="password-toggle" @click="showPassword = !showPassword">
-              <Icon :icon="showPassword ? 'fluent-emoji:eye' : 'fluent-emoji:closed-eye'" />
+              <Icon :icon="showPassword ? ICONS.eye : ICONS.eyeOff" />
             </button>
           </div>
         </div>
@@ -161,7 +163,7 @@ function quickLogin(role: UserRole, account: string) {
         >
           <span v-if="!loading">
             立即登录
-            <Icon icon="fluent-emoji:rocket" class="btn-icon" />
+            <Icon :icon="ICONS.rocket" class="btn-icon" />
           </span>
           <span v-else>登录中...</span>
         </button>
@@ -186,7 +188,7 @@ function quickLogin(role: UserRole, account: string) {
 
         <!-- 提示 -->
         <div class="login-hint">
-          <Icon icon="fluent-emoji:light-bulb" class="hint-icon" />
+          <Icon :icon="ICONS.lightbulb" class="hint-icon" />
           <span>默认密码都是 123456</span>
         </div>
       </div>
@@ -638,5 +640,5 @@ function quickLogin(role: UserRole, account: string) {
   }
 }
 </style>
-
-
+
+

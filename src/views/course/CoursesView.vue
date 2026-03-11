@@ -180,8 +180,9 @@ const paged = computed(() => {
 .toolbar {
   padding: 14px;
   border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -213,8 +214,16 @@ const paged = computed(() => {
 .course {
   border-radius: var(--radius-md);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.course:hover {
+  border-color: var(--card-hover-border);
+  background: color-mix(in srgb, var(--bg-200) 20%, var(--card-bg) 80%);
+  transform: translateY(-1px);
 }
 
 .course__cover {

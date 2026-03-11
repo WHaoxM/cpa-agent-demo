@@ -1,6 +1,7 @@
 ﻿<!-- 页面：用户管理；路由：admin/users（admin-users）；角色：ADMIN -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Lock, Unlock, UserFilled, Refresh, Download, Grid } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
 import { mockUsers } from '@/mock/data'
@@ -115,8 +116,9 @@ function getRoleTag(role: UserRole) {
   <div class="admin-users-page page">
     <div class="page-header">
       <h2>用户管理</h2>
-      <div class="header-stats">
-        <el-tag size="large">总用户数：{{ users.length }}</el-tag>
+      <div class="header-stats card-data">
+        <div class="stat-label">总用户数</div>
+        <div class="stat-value">{{ users.length }}</div>
       </div>
     </div>
 
@@ -173,7 +175,7 @@ function getRoleTag(role: UserRole) {
 
         <el-table-column label="角色" width="100">
           <template #default="{ row }">
-            <el-tag :type="getRoleTag(row.role).type as any" size="small">
+            <el-tag :type="getRoleTag(row.role).type as any" size="small" effect="plain">
               {{ getRoleTag(row.role).label }}
             </el-tag>
           </template>
@@ -181,7 +183,7 @@ function getRoleTag(role: UserRole) {
 
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
+            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small" effect="plain">
               {{ row.status === 'active' ? '正常' : '禁用' }}
             </el-tag>
           </template>
@@ -254,21 +256,48 @@ function getRoleTag(role: UserRole) {
   font-size: 24px;
 }
 
+.header-stats {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+  border: 1px solid var(--card-divider);
+}
+
+.stat-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-200);
+  font-weight: 700;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-100);
+}
+
 .toolbar-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--card-divider);
 }
 
 .toolbar-left {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .toolbar-right {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .filter-bar {
@@ -289,7 +318,7 @@ function getRoleTag(role: UserRole) {
 }
 
 .user-name {
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .user-email {

@@ -1,652 +1,964 @@
-﻿<!-- 组件：HomeView -->
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const features = [
+const signalBands = [
   {
-    icon: 'fluent-emoji:books',
-    title: '课程随心学',
-    desc: '海量课程',
-    stat: '50+',
+    label: '课堂密度',
+    value: '18 条学习脉冲',
+    note: '章节、作业、讨论和测验被压进同一条观测面。',
+    tone: 'slate',
+    width: '92%',
+    shift: '0px',
+    tilt: '-2deg',
+    icon: 'solar:pulse-2-linear',
   },
   {
-    icon: 'fluent-emoji:chart-increasing',
-    title: '数据看得懂',
-    desc: '学习进度',
-    stat: '实时',
+    label: '风险回波',
+    value: '3 处待介入',
+    note: '错题堆积、讨论沉默、观看断层会被单独抬升。',
+    tone: 'steel',
+    width: '82%',
+    shift: '44px',
+    tilt: '1.5deg',
+    icon: 'solar:bell-bing-linear',
   },
   {
-    icon: 'fluent-emoji:robot',
-    title: 'AI 帮你忙',
-    desc: '智能答疑',
-    stat: '24h',
+    label: '教师视窗',
+    value: '09:30 实时刷新',
+    note: '不等日报，首页本身就是正在变化的课堂截面。',
+    tone: 'ice',
+    width: '88%',
+    shift: '12px',
+    tilt: '-1deg',
+    icon: 'solar:monitor-smartphone-linear',
   },
 ]
 
-const stats = [
-  { value: '10k+', label: '活跃学子' },
-  { value: '500+', label: '精品课程' },
-  { value: '98%', label: '好评率' },
+const metrics = [
+  { value: '32,480', label: '周内学习事件', note: '从打开课程到提交作业持续记录' },
+  { value: '87%', label: '章节推进连续度', note: '不再只看完成率，而是看推进节奏' },
+  { value: '240ms', label: '状态反馈延迟', note: '交互回声需要足够直接' },
+  { value: '3 端', label: '角色共视画面', note: '学生、教师、管理者共享同一张地形' },
 ]
+
+const streamColumns = [
+  {
+    label: '01 / 入口层',
+    panels: [
+      {
+        tone: 'slate',
+        scale: 'tall',
+        eyebrow: '学习流线',
+        title: '首页先回答走向，再谈功能。',
+        desc: '第一屏应该告诉用户现在发生了什么、接下来去哪、哪里需要介入，而不是把功能堆成宫格。',
+        bullets: [
+          '课程主线、作业节拍、讨论温度并到一条连续阅读面。',
+          '重要动作压缩成纵向节奏，减少在模块之间来回切换。',
+        ],
+        footer: '导航退到边缘，信息成为主角。',
+      },
+      {
+        tone: 'mist',
+        scale: 'mid',
+        eyebrow: '章节脉冲',
+        title: '每段内容都能看到推进速度。',
+        desc: '不是单点完成，而是连续推进的可读性。',
+        bullets: [
+          '已完成、临界、停滞三种状态直接分层。',
+        ],
+        footer: '速度比数量更重要。',
+      },
+    ],
+  },
+  {
+    label: '02 / 观测层',
+    panels: [
+      {
+        tone: 'ice',
+        scale: 'mid',
+        eyebrow: '状态翻译',
+        title: '把学习状态翻译成可读信号。',
+        desc: '冷静的界面不是少信息，而是让信息有秩序。',
+        bullets: [
+          '颜色只承担提醒，不承担装饰。',
+          '重要数字放大，但仍保留留白和呼吸。',
+        ],
+        footer: '克制比热闹更高级。',
+      },
+      {
+        tone: 'steel',
+        scale: 'tall',
+        eyebrow: '干预清单',
+        title: '老师只需要看到该介入的地方。',
+        desc: '首页不展示一切，只抬升最值得处理的段落，让系统像观察台而不是陈列柜。',
+        bullets: [
+          '拖延超过阈值的章节会顶到上层。',
+          '同一学生的多个异常被合并成一条处理线索。',
+          '讨论热度下降时，提示教学动作而不是只给红点。',
+        ],
+        footer: '从提醒，转向行动建议。',
+      },
+    ],
+  },
+  {
+    label: '03 / 共视层',
+    panels: [
+      {
+        tone: 'graph',
+        scale: 'tall',
+        eyebrow: '角色切面',
+        title: '学生、教师、管理者共用同一张地形。',
+        desc: '视角可以不同，但基础秩序必须一致。这样首页才不会随着角色切换而重新碎裂成模板页。',
+        bullets: [
+          '学生看自己的推进轨迹。',
+          '教师看班级中需要被打断和扶正的节点。',
+          '管理者看系统容量与内容健康度。',
+        ],
+        footer: '同构，而不是重复。',
+      },
+      {
+        tone: 'mist',
+        scale: 'short',
+        eyebrow: '进入方式',
+        title: '入口保持明确，不做按钮展览。',
+        desc: '只保留登录和演示两个动作，避免首页失焦。',
+        bullets: [
+          '动作少，但路径清楚。',
+        ],
+        footer: '少即是秩序。',
+      },
+    ],
+  },
+]
+
+const routeMoments = [
+  {
+    time: '08:10',
+    title: '进入课程主线',
+    text: '先看到今天的推进面，不先看到菜单。',
+  },
+  {
+    time: '10:20',
+    title: '识别风险断层',
+    text: '异常会被抬到更靠前的位置，减少老师搜索成本。',
+  },
+  {
+    time: '14:40',
+    title: '回到一条连续记录',
+    text: '课程、笔记、作业和讨论被编进同一条时间河道。',
+  },
+]
+
+const flattenedPanels = computed(() => streamColumns.flatMap((column) => column.panels))
+const mainPanels = computed(() => flattenedPanels.value.slice(0, 3))
+const notePanels = computed(() => flattenedPanels.value.slice(3))
 
 function goToLogin() {
   router.push('/login')
 }
 </script>
 
-
-
 <template>
-  <div class="landing">
-    <!-- 不对称导航 -->
-    <nav class="nav">
-      <div class="nav-brand">
-        <Icon icon="fluent-emoji:graduation-cap" class="brand-icon" />
-        <span class="brand-text">课管</span>
+  <div class="home-shell">
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand__mark">CM</div>
+        <div class="brand__text">
+          <p class="brand__eyebrow">COURSE TERRAIN</p>
+          <h2 class="brand__name">课程地形图</h2>
+        </div>
       </div>
-      <div class="nav-actions">
-        <button class="btn-ghost" @click="goToLogin">
-          登入
+
+      <div class="masthead__actions">
+        <button class="btn btn--ghost" @click="goToLogin">登录</button>
+        <button class="btn btn--solid" @click="goToLogin">
+          进入系统
+          <Icon icon="solar:arrow-right-up-linear" />
         </button>
-        <button class="btn-primary" @click="goToLogin">
-          开始使用
-        </button>
       </div>
-    </nav>
+    </header>
 
-    <!-- 主视觉区 - 左重右轻 -->
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <Icon icon="fluent-emoji:sparkles" />
-          <span>全新改版</span>
-        </div>
-        <h1 class="hero-title">
-          学习本该
-          <br />
-          <span class="title-highlight">这么爽</span>
-        </h1>
-        <p class="hero-desc">
-          不用死记硬背。
-          <br />
-          让数据告诉你，哪里需要补。
-        </p>
-        <div class="hero-cta">
-          <button class="btn-large btn-primary" @click="goToLogin">
-            免费体验
-            <Icon icon="fluent-emoji:rocket" class="btn-icon" />
-          </button>
-          <button class="btn-large btn-ghost" @click="goToLogin">
-            先看演示
-          </button>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <div class="visual-card visual-card-1">
-          <Icon icon="fluent-emoji:bar-chart" class="card-icon" />
-          <div class="card-text">本周学了 12h</div>
-        </div>
-        <div class="visual-card visual-card-2">
-          <Icon icon="fluent-emoji:fire" class="card-icon" />
-          <div class="card-text">连续 7 天</div>
-        </div>
-        <div class="visual-card visual-card-3">
-          <Icon icon="fluent-emoji:star" class="card-icon" />
-          <div class="card-text">评分 4.9</div>
-        </div>
-      </div>
-    </section>
+    <main class="canvas">
+      <section class="hero">
+        <div class="hero__copy">
+          <p class="hero__kicker">冷静的大屏首页</p>
+          <h1 class="hero__title">
+            课程管理不该是
+            <span>一堆模板化卡片。</span>
+          </h1>
+          <p class="hero__desc">
+            首页应该像一张持续展开的学习地形图。
+            先给出流向、密度和风险，再让用户进入动作。
+          </p>
 
-    <!-- 数据条 - 倾斜分割 -->
-    <section class="stats-bar">
-      <div class="stats-content">
-        <div v-for="(stat, i) in stats" :key="i" class="stat-item">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-label">{{ stat.label }}</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 功能展示 - 错落布局 -->
-    <section class="features">
-      <h2 class="section-title">
-        三步上手
-        <span class="title-dot">.</span>
-      </h2>
-      <div class="features-grid">
-        <div 
-          v-for="(feature, i) in features" 
-          :key="i" 
-          class="feature-card"
-          :style="{ '--delay': i * 0.1 + 's' }"
-        >
-          <div class="feature-icon-wrap">
-            <Icon :icon="feature.icon" class="feature-icon" />
+          <div class="hero__actions">
+            <button class="btn-primary" @click="goToLogin">
+              进入系统
+              <Icon icon="solar:arrow-right-linear" />
+            </button>
+            <div class="hero__links">
+              <button class="btn-text" @click="goToLogin">登录</button>
+              <span class="link-separator">·</span>
+              <button class="btn-text" @click="goToLogin">查看演示流</button>
+            </div>
           </div>
-          <h3 class="feature-title">{{ feature.title }}</h3>
-          <p class="feature-desc">{{ feature.desc }}</p>
-          <div class="feature-stat">{{ feature.stat }}</div>
         </div>
-      </div>
-    </section>
 
-    <!-- 底部 CTA - 偏移布局 -->
-    <section class="bottom-cta">
-      <div class="cta-content">
-        <h2 class="cta-title">
-          还在用 Excel
-          <br />
-          记学习进度？
-        </h2>
-        <p class="cta-desc">太麻烦了。试试这个。</p>
-        <button class="btn-large btn-primary" @click="goToLogin">
-          立即开启
-          <Icon icon="fluent-emoji:door" class="btn-icon" />
-        </button>
-      </div>
-      <div class="cta-decoration">
-        <div class="deco-circle" />
-        <div class="deco-line" />
-      </div>
-    </section>
+        <div class="signal-stage">
+          <div class="signal-stage__frame">
+            <article v-for="band in signalBands" :key="band.label" :class="['signal-strip', `signal-strip--${band.tone}`]">
+              <div class="signal-strip__head">
+                <span class="signal-strip__label">{{ band.label }}</span>
+                <Icon :icon="band.icon" class="signal-strip__icon" />
+              </div>
+              <div class="signal-strip__value">{{ band.value }}</div>
+              <p class="signal-strip__note">{{ band.note }}</p>
+              <div class="signal-strip__meter" aria-hidden="true">
+                <span v-for="item in 6" :key="item" />
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
-    <!-- 页脚 -->
-    <footer class="footer">
-      <div class="footer-brand">
-        <Icon icon="fluent-emoji:graduation-cap" />
-        <span>课管系统</span>
-      </div>
-      <p class="footer-copy">© 2024 课程管理系统</p>
-    </footer>
+      <section class="metric-ledger" aria-label="首页数据概览">
+        <div v-for="metric in metrics" :key="metric.label" class="metric-ledger__row">
+          <div class="metric-ledger__value">{{ metric.value }}</div>
+          <div class="metric-ledger__meta">
+            <div class="metric-ledger__label">{{ metric.label }}</div>
+            <div class="metric-ledger__note">{{ metric.note }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stream-manual" aria-label="首页叙事结构">
+        <div class="stream-manual__main">
+          <article
+            v-for="panel in mainPanels"
+            :key="panel.title"
+            :class="['manual-chapter', `manual-chapter--${panel.tone}`]"
+          >
+            <p class="manual-chapter__eyebrow">{{ panel.eyebrow }}</p>
+            <h3 class="manual-chapter__title">{{ panel.title }}</h3>
+            <p class="manual-chapter__desc">{{ panel.desc }}</p>
+
+            <ul class="manual-chapter__bullets">
+              <li v-for="bullet in panel.bullets" :key="bullet">{{ bullet }}</li>
+            </ul>
+
+            <div class="manual-chapter__footer">{{ panel.footer }}</div>
+          </article>
+        </div>
+
+        <aside class="stream-manual__notes" aria-label="旁注">
+          <div class="stream-manual__note-label">旁注</div>
+          <article v-for="panel in notePanels" :key="panel.title" :class="['manual-note', `manual-note--${panel.tone}`]">
+            <div class="manual-note__head">
+              <p class="manual-note__eyebrow">{{ panel.eyebrow }}</p>
+              <div class="manual-note__scale">{{ panel.scale }}</div>
+            </div>
+            <h4 class="manual-note__title">{{ panel.title }}</h4>
+            <p class="manual-note__desc">{{ panel.desc }}</p>
+          </article>
+        </aside>
+      </section>
+
+      <section class="command-slab">
+        <div class="command-slab__intro">
+          <p class="command-slab__eyebrow">首页节奏</p>
+          <h2 class="command-slab__title">
+            不再做功能橱窗，
+            <span>而是做一条可进入的学习河道。</span>
+          </h2>
+          <p class="command-slab__desc">
+            这部分保留宽幅、克制、连续的叙述方式。即使在移动端，也保持整段纵向流动，而不是退化成一排小卡片。
+          </p>
+        </div>
+
+        <div class="route-stream">
+          <article v-for="moment in routeMoments" :key="moment.time" class="route-stream__item">
+            <p class="route-stream__time">{{ moment.time }}</p>
+            <h3 class="route-stream__title">{{ moment.title }}</h3>
+            <p class="route-stream__text">{{ moment.text }}</p>
+          </article>
+        </div>
+
+        <div class="command-slab__cta">
+          <button class="btn-primary" @click="goToLogin">
+            打开首页原型
+            <Icon icon="solar:arrow-right-linear" />
+          </button>
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.landing {
+.home-shell {
   min-height: 100vh;
-  background: 
-    radial-gradient(ellipse 80% 50% at 20% 40%, color-mix(in srgb, var(--primary-100) 15%, transparent) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, color-mix(in srgb, var(--accent-100) 12%, transparent) 0%, transparent 50%),
-    var(--bg-100);
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
+  color: var(--text-100);
+  background: var(--bg-100);
 }
 
-.landing::before {
+.home-shell::before,
+.home-shell::after {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 0;
-  opacity: var(--noise-opacity, 0.08);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
 }
 
-/* 导航 - 左对齐品牌 */
-.nav {
+.home-shell::before {
+  display: none;
+}
+
+.home-shell::after {
+  display: none;
+}
+
+.masthead,
+.canvas {
   position: relative;
-  z-index: 10;
+  z-index: 1;
+  width: min(1680px, calc(100vw - 64px));
+  margin: 0 auto;
+}
+
+.masthead {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px 32px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 26px 0 0;
 }
 
-.nav-brand {
+.brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--text-100);
+  gap: 18px;
 }
 
-.brand-icon {
-  font-size: 28px;
-}
-
-.nav-actions {
-  display: flex;
-  gap: 12px;
-}
-
-/* 按钮系统 */
-.btn-primary {
-  background: var(--primary-100);
-  color: var(--bg-100);
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary-100) 30%, transparent);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-100);
-  border: 2px solid var(--bg-300);
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-ghost:hover {
-  background: var(--bg-200);
-  border-color: var(--primary-100);
-}
-
-.btn-large {
-  padding: 14px 28px;
-  font-size: 16px;
-  border-radius: 12px;
-}
-
-.btn-icon {
-  font-size: 20px;
-}
-
-/* 主视觉区 - 不对称 */
-.hero {
-  position: relative;
-  z-index: 10;
+.brand__mark {
+  width: 56px;
+  height: 56px;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 40px;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 60px 32px 80px;
-  align-items: center;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: color-mix(in srgb, var(--accent-100) 15%, transparent);
-  color: var(--accent-100);
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  width: fit-content;
-}
-
-.hero-title {
-  font-size: 56px;
+  place-items: center;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--card-divider) 45%, transparent);
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.1;
-  color: var(--text-100);
-  margin: 0 0 20px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.16em;
 }
 
-.title-highlight {
-  background: linear-gradient(135deg, var(--primary-100) 0%, var(--accent-100) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-desc {
-  font-size: 18px;
+.brand__eyebrow,
+.hero__kicker,
+.command-slab__eyebrow,
+.signal-strip__label {
+  margin: 0;
   color: var(--text-200);
-  line-height: 1.6;
-  margin: 0 0 32px;
-  max-width: 320px;
+  letter-spacing: 0.06em;
+  font-size: 11px;
 }
 
-.hero-cta {
+.brand__name {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.masthead__actions {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
-/* 视觉卡片 - 错落漂浮 */
-.hero-visual {
-  position: relative;
-  height: 400px;
-}
-
-.visual-card {
-  position: absolute;
-  background: color-mix(in srgb, var(--bg-100) 85%, white 15%);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--bg-300);
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: var(--shadow-md);
-  animation: float 6s ease-in-out infinite;
-}
-
-.visual-card-1 {
-  top: 20px;
-  right: 40px;
-  animation-delay: 0s;
-}
-
-.visual-card-2 {
-  top: 140px;
-  right: 100px;
-  animation-delay: -2s;
-}
-
-.visual-card-3 {
-  top: 260px;
-  right: 20px;
-  animation-delay: -4s;
-}
-
-.card-icon {
-  font-size: 32px;
-}
-
-.card-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-100);
-  white-space: nowrap;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(2deg); }
-}
-
-/* 数据条 - 倾斜 */
-.stats-bar {
-  position: relative;
-  z-index: 10;
-  background: var(--primary-100);
-  transform: skewY(-2deg);
-  margin: 40px 0;
-  padding: 40px 0;
-}
-
-.stats-content {
-  transform: skewY(2deg);
-  display: flex;
-  justify-content: center;
-  gap: 80px;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 32px;
-}
-
-.stat-item {
-  text-align: center;
-  color: var(--bg-100);
-}
-
-.stat-value {
-  font-size: 42px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-top: 8px;
-}
-
-/* 功能区 - 错落网格 */
-.features {
-  position: relative;
-  z-index: 10;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 80px 32px;
-}
-
-.section-title {
-  font-size: 36px;
-  font-weight: 800;
-  color: var(--text-100);
-  margin: 0 0 48px;
-  text-align: left;
-}
-
-.title-dot {
-  color: var(--primary-100);
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.feature-card {
-  background: color-mix(in srgb, var(--bg-100) 90%, white 10%);
-  border: 1px solid var(--bg-300);
-  border-radius: 20px;
-  padding: 32px;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.feature-card:nth-child(2) {
-  transform: translateY(30px);
-}
-
-.feature-card:hover {
-  transform: translateY(-8px) rotate(1deg);
-  box-shadow: 0 20px 40px color-mix(in srgb, var(--primary-100) 15%, transparent);
-  border-color: var(--primary-100);
-}
-
-.feature-icon-wrap {
-  width: 64px;
-  height: 64px;
-  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.feature-icon {
-  font-size: 36px;
-}
-
-.feature-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-100);
-  margin: 0 0 8px;
-}
-
-.feature-desc {
-  font-size: 14px;
-  color: var(--text-200);
-  margin: 0 0 16px;
-}
-
-.feature-stat {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--primary-100);
-}
-
-/* 底部 CTA - 偏移 */
-.bottom-cta {
-  position: relative;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 60px;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 80px 32px;
-  align-items: center;
-}
-
-.cta-content {
-  padding-left: 40px;
-}
-
-.cta-title {
-  font-size: 42px;
-  font-weight: 800;
-  color: var(--text-100);
-  line-height: 1.2;
-  margin: 0 0 16px;
-}
-
-.cta-desc {
-  font-size: 18px;
-  color: var(--text-200);
-  margin: 0 0 32px;
-}
-
-.cta-decoration {
-  position: relative;
-  height: 300px;
-}
-
-.deco-circle {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border: 4px solid var(--primary-100);
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0.3;
-}
-
-.deco-line {
-  position: absolute;
-  width: 2px;
-  height: 150px;
-  background: linear-gradient(to bottom, var(--accent-100), transparent);
-  top: 20%;
-  left: 60%;
-  transform: rotate(15deg);
-}
-
-/* 页脚 */
-.footer {
-  position: relative;
-  z-index: 10;
-  border-top: 1px solid var(--bg-300);
-  padding: 40px 32px;
-  text-align: center;
-}
-
-.footer-brand {
+.btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-100);
-  margin-bottom: 12px;
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary-100);
+  color: var(--bg-100);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
 }
 
-.footer-copy {
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--primary-100) 92%, var(--bg-100) 8%);
+}
+
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary-100);
   font-size: 13px;
-  color: var(--text-200);
-  margin: 0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
 }
 
-/* 响应式 */
-@media (max-width: 1024px) {
+.btn-text:hover {
+  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
+}
+
+.hero__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 34px;
+}
+
+.hero__links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.link-separator {
+  color: var(--text-200);
+  font-size: 13px;
+}
+
+.canvas {
+  padding: 52px 0 44px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  align-items: start;
+  gap: 48px;
+  min-height: calc(100vh - 200px);
+}
+
+.hero__copy {
+  max-width: 760px;
+  padding: 36px 0 40px;
+}
+
+.hero__title {
+  margin: 18px 0 0;
+  max-width: 8.5em;
+  font-size: clamp(56px, 7.4vw, 108px);
+  line-height: 0.92;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+}
+
+.hero__title span {
+  display: block;
+  color: var(--primary-100);
+}
+
+.hero__desc {
+  max-width: 520px;
+  margin: 28px 0 0;
+  font-size: 18px;
+  line-height: 1.9;
+  color: var(--text-200);
+}
+
+.hero__cta {
+  margin-top: 34px;
+}
+
+.signal-stage {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.signal-stage__frame {
+  width: min(100%, 720px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 8px 0 0;
+}
+
+.signal-strip {
+  position: relative;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: color-mix(in srgb, var(--bg-200) 60%, var(--bg-100) 40%);
+}
+
+.signal-strip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: color-mix(in srgb, var(--band-accent, var(--primary-100)) 18%, transparent);
+  pointer-events: none;
+}
+
+.signal-strip--slate {
+  --band-accent: var(--primary-100);
+}
+
+.signal-strip--steel {
+  --band-accent: var(--accent-100);
+}
+
+.signal-strip--ice {
+  --band-accent: var(--primary-100);
+}
+
+.signal-strip__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.signal-strip__icon {
+  font-size: 18px;
+  color: var(--band-accent, var(--primary-100));
+}
+
+.signal-strip__value {
+  margin-top: 10px;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.signal-strip__note {
+  max-width: 30em;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-200);
+}
+
+.signal-strip__meter {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.signal-strip__meter span {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--band-accent, var(--primary-100));
+  opacity: 0.7;
+}
+
+.signal-strip__meter span:nth-child(2),
+.signal-strip__meter span:nth-child(6) {
+  opacity: 0.45;
+}
+
+.signal-strip__meter span:nth-child(4) {
+  opacity: 0.25;
+}
+
+.metric-ledger {
+  margin-top: 18px;
+  padding: 18px 0 8px;
+  border-top: 1px solid var(--card-divider);
+  display: grid;
+  gap: 12px;
+}
+
+.metric-ledger__row {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: baseline;
+  padding: 16px 18px;
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: var(--card-data-bg);
+}
+
+.metric-ledger__value {
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.metric-ledger__label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text-200);
+}
+
+.metric-ledger__note {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-200);
+}
+
+.stream-manual {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+  gap: 28px;
+  margin-top: 56px;
+  align-items: start;
+}
+
+.stream-manual__main {
+  display: grid;
+  gap: 18px;
+}
+
+.manual-chapter {
+  position: relative;
+  padding: 26px 24px 22px;
+  border-radius: 22px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.manual-chapter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: color-mix(in srgb, var(--chapter-accent, var(--primary-100)) 18%, transparent);
+  pointer-events: none;
+}
+
+.manual-chapter--slate {
+  --chapter-accent: var(--primary-100);
+}
+
+.manual-chapter--steel {
+  --chapter-accent: var(--accent-100);
+}
+
+.manual-chapter--ice {
+  --chapter-accent: var(--primary-100);
+}
+
+.manual-chapter--mist {
+  --chapter-accent: var(--card-divider);
+}
+
+.manual-chapter--graph {
+  --chapter-accent: var(--card-divider);
+}
+
+.manual-chapter__eyebrow {
+  margin: 0;
+  color: var(--text-200);
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.manual-chapter__title {
+  margin: 14px 0 0;
+  max-width: 16em;
+  font-size: clamp(26px, 2.6vw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.manual-chapter__desc {
+  margin: 14px 0 0;
+  max-width: 44em;
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--text-200);
+}
+
+.manual-chapter__bullets {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.manual-chapter__bullets li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--text-100);
+}
+
+.manual-chapter__bullets li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent-100);
+  opacity: 0.7;
+}
+
+.manual-chapter__footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--card-divider);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text-200);
+}
+
+.stream-manual__notes {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--card-border);
+  background: var(--card-data-bg);
+}
+
+.stream-manual__note-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-200);
+}
+
+.manual-note {
+  padding: 14px 14px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: color-mix(in srgb, var(--bg-200) 60%, var(--bg-100) 40%);
+}
+
+.manual-note__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manual-note__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-200);
+}
+
+.manual-note__scale {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-200);
+}
+
+.manual-note__title {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  font-weight: 650;
+}
+
+.manual-note__desc {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-200);
+}
+
+.command-slab {
+  margin-top: 64px;
+  padding: 34px 0 8px;
+  border-top: 1px solid var(--card-divider);
+}
+
+.command-slab__title {
+  margin: 16px 0 0;
+  max-width: 11em;
+  font-size: clamp(38px, 4.4vw, 68px);
+  line-height: 0.98;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.command-slab__title span {
+  display: block;
+  color: var(--primary-100);
+}
+
+.command-slab__desc {
+  max-width: 44em;
+  margin: 20px 0 0;
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--text-200);
+}
+
+.route-stream {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 34px;
+}
+
+.route-stream__item {
+  min-height: 220px;
+  padding: 22px 22px 24px;
+  border-top: 1px solid var(--card-divider);
+  background: var(--card-data-bg);
+}
+
+.route-stream__time {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--text-200);
+}
+
+.route-stream__title {
+  margin: 18px 0 0;
+  max-width: 9em;
+  font-size: 28px;
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.route-stream__text {
+  margin: 14px 0 0;
+  max-width: 22em;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--text-200);
+}
+
+.command-slab__cta {
+  margin-top: 30px;
+}
+
+@media (max-width: 1320px) {
+  .masthead,
+  .canvas {
+    width: min(1680px, calc(100vw - 40px));
+  }
+
   .hero {
     grid-template-columns: 1fr;
-    gap: 60px;
+    min-height: auto;
+    gap: 18px;
   }
-  
-  .hero-visual {
-    order: -1;
-    height: 300px;
+
+  .hero__copy {
+    padding-bottom: 0;
   }
-  
-  .features-grid {
+
+  .signal-stage {
+    justify-content: flex-start;
+  }
+
+  .signal-stage__frame {
+    width: 100%;
+  }
+
+  .stream-manual {
     grid-template-columns: 1fr;
   }
-  
-  .feature-card:nth-child(2) {
-    transform: none;
+
+  .stream-manual__notes {
+    position: static;
   }
-  
-  .bottom-cta {
+
+  .route-stream {
     grid-template-columns: 1fr;
-    text-align: center;
   }
-  
-  .cta-content {
-    padding-left: 0;
+}
+
+@media (max-width: 820px) {
+  .masthead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
   }
-  
-  .stats-content {
-    gap: 40px;
+
+  .metric-ledger__row {
+    grid-template-columns: 1fr;
+  }
+
+  .command-slab__title {
+    font-size: clamp(34px, 11vw, 52px);
   }
 }
 
 @media (max-width: 640px) {
-  .nav {
-    padding: 16px 20px;
+  .masthead,
+  .canvas {
+    width: calc(100vw - 28px);
   }
-  
-  .hero {
-    padding: 40px 20px;
+
+  .canvas {
+    padding-top: 40px;
   }
-  
-  .hero-title {
-    font-size: 40px;
+
+  .btn-primary {
+    width: 100%;
   }
-  
-  .hero-desc {
-    font-size: 16px;
+
+  .hero__actions {
+    align-items: stretch;
   }
-  
-  .visual-card {
-    padding: 14px;
-    font-size: 12px;
+
+  .hero__links {
+    justify-content: center;
   }
-  
-  .visual-card-1 { right: 10px; }
-  .visual-card-2 { right: 60px; top: 120px; }
-  .visual-card-3 { right: 0; top: 220px; }
-  
-  .stats-content {
-    flex-direction: column;
-    gap: 24px;
+
+  .hero__desc,
+  .command-slab__desc,
+  .manual-chapter__desc,
+  .route-stream__text,
+  .metric-ledger__note,
+  .manual-note__desc {
+    max-width: none;
   }
-  
-  .features {
-    padding: 60px 20px;
+
+  .signal-strip,
+  .manual-chapter,
+  .manual-note,
+  .metric-ledger__row,
+  .route-stream__item,
+  .stream-manual__notes {
+    border-radius: 24px;
   }
-  
-  .section-title {
-    font-size: 28px;
+
+  .manual-chapter__footer {
+    margin-top: 24px;
   }
 }
 </style>
-
-

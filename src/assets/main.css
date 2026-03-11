@@ -21,15 +21,10 @@
 .page-header {
   margin-bottom: 18px;
   padding: 18px 18px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
-  background: radial-gradient(
-      800px 240px at 10% 0%,
-      color-mix(in srgb, var(--primary-100) 14%, transparent 86%),
-      transparent
-    ),
-    color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
 }
 
 .page-header .subtitle {
@@ -38,17 +33,59 @@
 
 .toolbar-card {
   padding: 14px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
 }
 
 .content-card {
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.card-base {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.card-base.is-interactive,
+button.card-base,
+a.card-base {
+  cursor: pointer;
+}
+
+.card-base.is-interactive:hover,
+button.card-base:hover,
+a.card-base:hover {
+  border-color: var(--card-hover-border);
+  box-shadow: var(--card-shadow);
+}
+
+.card-emphasis {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-emphasis-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.card-data {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-data-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.card-surface {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
 }
 
 .grid-gap-md {
@@ -61,14 +98,32 @@ a {
   text-decoration: none;
 }
 
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-cjk {
+  font-family: var(--font-cjk), var(--font-body);
+}
+
+.font-latin {
+  font-family: var(--font-latin), var(--font-body);
+}
+
 .el-card {
   --el-card-border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.el-card :is(.el-card__header, .el-card__body) {
+  background: transparent;
 }
 
 .el-card.is-hover-shadow:hover {
-  transform: translateY(-2px);
+  transform: none;
+  box-shadow: var(--card-shadow);
 }
 
 @media (max-width: 768px) {

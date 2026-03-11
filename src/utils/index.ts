@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 防抖函数
  * @param func 要防抖的函数

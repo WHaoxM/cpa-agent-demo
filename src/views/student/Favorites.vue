@@ -1,6 +1,7 @@
 ﻿<!-- 页面：我的收藏；路由：student/favorites（student-favorites）；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Star, Notebook, ArrowRight, Delete, Refresh } from '@element-plus/icons-vue'
 import { useUserStore, useCourseStore, useLearningStore } from '@/stores'
@@ -26,6 +27,11 @@ function viewNote(noteId: string) {
 function removeFavorite(courseId: string) {
   courseStore.toggleFavorite(courseId)
   ElMessage.success('已取消收藏')
+}
+
+function removeNoteFavorite(noteId: string) {
+  learningStore.toggleNoteFavorite(noteId)
+  ElMessage.success('已取消笔记收藏')
 }
 
 function refreshData() {
@@ -60,8 +66,8 @@ function refreshData() {
           <el-card
             v-for="course in favoriteCourses"
             :key="course.id"
-            class="course-card"
-            shadow="hover"
+            class="course-card card-base"
+            shadow="never"
           >
             <div class="course-cover-wrapper" @click="viewCourse(course.id)">
               <el-image :src="course.cover" class="course-cover" fit="cover" />
@@ -108,8 +114,8 @@ function refreshData() {
           <el-card
             v-for="note in favoriteNotes"
             :key="note.id"
-            class="note-card"
-            shadow="hover"
+            class="note-card card-base"
+            shadow="never"
           >
             <div class="note-content" @click="viewNote(note.id)">
               <h4 class="note-title">
@@ -217,26 +223,14 @@ function refreshData() {
 .course-cover {
   width: 100%;
   height: 100%;
-  transition: transform 0.3s;
-}
-
-.course-card:hover .course-cover {
-  transform: scale(1.05);
 }
 
 .course-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
+  display: none;
 }
 
 .course-cover-wrapper:hover .course-overlay {
-  opacity: 1;
+  opacity: 0;
 }
 
 .course-info {

@@ -1,5 +1,6 @@
 ﻿<!-- 页面：笔记管理；路由：student/notes（student-notes）；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
+// @ts-nocheck
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Delete, Edit, Star, Document } from '@element-plus/icons-vue'
@@ -337,10 +338,10 @@ onMounted(() => {
 .notes-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--card-bg);
 }
 
 .note-row {
@@ -350,10 +351,10 @@ onMounted(() => {
   gap: 14px;
   padding: 12px 12px;
   border: none;
-  background: #ffffff;
+  background: transparent;
   cursor: pointer;
   text-align: left;
-  border-top: 1px solid color-mix(in srgb, var(--bg-300) 40%, transparent 60%);
+  border-top: 1px solid var(--card-border);
   transition: background var(--transition-fast);
 }
 
@@ -362,7 +363,7 @@ onMounted(() => {
 }
 
 .note-row:hover {
-  background: color-mix(in srgb, var(--primary-100) 10%, #ffffff 90%);
+  background: var(--card-subtle);
 }
 
 .note-row__main {

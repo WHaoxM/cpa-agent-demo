@@ -80,7 +80,7 @@ export const useUserStore = defineStore(
     persist: {
       key: 'user-store',
       storage: localStorage,
-      paths: ['currentUser', 'token'],
+      pick: ['currentUser', 'token'],
     },
   },
 )

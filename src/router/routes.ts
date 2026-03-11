@@ -1,8 +1,20 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { UserRole } from '@/types'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { UserRole } from '@/types'
 
 export const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'landing',
+    component: () => import('@/views/HomeView.vue'),
+    meta: { title: '首页', public: true },
+  },
+  {
+    path: '/app/home',
+    name: 'app-home',
+    component: () => import('@/views/HomeView.vue'),
+    meta: { title: '首页', public: true, allowAuthenticated: true },
+  },
   {
     path: '/login',
     name: 'login',
@@ -19,9 +31,8 @@ export const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/views/DashboardView.vue'),
-        meta: { title: '首页', requiresAuth: true },
+        meta: { title: '面板', requiresAuth: true },
       },
-      // 学生端路由
       {
         path: 'student/learning',
         name: 'student-learning',
@@ -113,7 +124,6 @@ export const routes: RouteRecordRaw[] = [
         path: 'student/visualization',
         name: 'student-visualization',
         redirect: '/app/student/report',
-        meta: { title: '数据可视化', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
         path: 'student/test-visualization',
@@ -139,7 +149,6 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/student/Settings.vue'),
         meta: { title: '个人设置', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
-      // 教师端路由
       {
         path: 'teacher/courses',
         name: 'teacher-courses',
@@ -176,7 +185,6 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/teacher/Monitoring.vue'),
         meta: { title: '学情监控', requiresAuth: true, role: UserRole.TEACHER },
       },
-      // 管理员端路由
       {
         path: 'admin/users',
         name: 'admin-users',
@@ -195,7 +203,6 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/SystemStats.vue'),
         meta: { title: '系统监控', requiresAuth: true, role: UserRole.ADMIN },
       },
-      // 原有路由保持兼容
       {
         path: 'courses',
         name: 'courses',
@@ -221,6 +228,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '消息', requiresAuth: true },
       },
       {
+        path: 'notes',
+        name: 'notes',
+        component: () => import('@/views/course/NotesView.vue'),
+        meta: { title: '笔记', requiresAuth: true },
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('@/views/ProfileView.vue'),
@@ -229,13 +242,9 @@ export const routes: RouteRecordRaw[] = [
     ],
   },
   {
-    path: '/',
-    redirect: '/app/dashboard',
-  },
-  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
-    meta: { title: '页面未找到' },
+    meta: { title: '页面未找到', public: true },
   },
 ]

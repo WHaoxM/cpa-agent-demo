@@ -1,94 +1,78 @@
 :root {
   --radius-sm: 8px;
   --radius-md: 12px;
-  --shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.05);
   --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.12);
   --transition-fast: 160ms;
   --transition-base: 240ms;
-  --noise-opacity: 0.08;
+  --noise-opacity: 0.09;
+  --card-bg: color-mix(in srgb, var(--bg-100) 97%, #ffffff 3%);
+  --card-border: color-mix(in srgb, var(--bg-300) 78%, transparent 22%);
+  --card-hover-border: color-mix(in srgb, var(--primary-100) 16%, var(--bg-300) 84%);
+  --card-shadow: var(--shadow-sm);
+  --card-emphasis-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-100) 94%);
+  --card-emphasis-border: color-mix(in srgb, var(--primary-100) 20%, var(--bg-300) 80%);
+  --card-data-bg: color-mix(in srgb, var(--bg-100) 98.5%, #ffffff 1.5%);
+  --card-subtle: color-mix(in srgb, var(--bg-200) 92%, transparent 8%);
+  --card-divider: color-mix(in srgb, var(--bg-300) 68%, transparent 32%);
+  --card-icon-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
+  --card-icon-color: color-mix(in srgb, var(--primary-100) 72%, var(--text-100) 28%);
+  --card-emphasis-icon-color: color-mix(in srgb, var(--primary-100) 80%, var(--text-100) 20%);
 }
 
 :root[data-theme='crystal'] {
-  --primary-100: #2DD4BF;
-  --primary-200: #99F6E4;
-  --primary-300: #042F2E;
-  --accent-100: #A3E635;
-  --accent-200: #ECFCCB;
-  --text-100: #ECFEFF;
-  --text-200: #A5F3FC;
-  --bg-100: #071A18;
-  --bg-200: #052523;
-  --bg-300: #0B3A35;
-  --noise-opacity: 0.09;
-}
-
-:root[data-theme='warm'] {
-  --primary-100: #FF6B4A;
-  --primary-200: #FFD6A5;
-  --primary-300: #2A0F0A;
-  --accent-100: #166534;
-  --accent-200: #DCFCE7;
-  --text-100: #1A1210;
-  --text-200: #3D2A24;
-  --bg-100: #FFF3E8;
-  --bg-200: #F8E6D6;
-  --bg-300: #E6C8AF;
-  --noise-opacity: 0.07;
-}
-
-:root[data-theme='xuanZhi'] {
-  --primary-100: #0B6B3A;
-  --primary-200: #DCE7D7;
-  --primary-300: #07110C;
-  --accent-100: #9A3412;
-  --accent-200: #F3E7C8;
-  --text-100: #131515;
-  --text-200: #3B3F41;
-  --bg-100: #F3EBDD;
-  --bg-200: #E5D8C3;
-  --bg-300: #CCB593;
+  --primary-100: #2F5B8C;
+  --primary-200: #C9D7E6;
+  --primary-300: #1B2A3A;
+  --accent-100: #7A5C3A;
+  --accent-200: #E5D8C7;
+  --text-100: #1E2A3A;
+  --text-200: #465568;
+  --bg-100: #F4F6F9;
+  --bg-200: #E9EDF3;
+  --bg-300: #D6DCE6;
   --noise-opacity: 0.08;
 }
 
-:root[data-theme='sunset'] {
-  --primary-100: #F97316;
-  --primary-200: #FDBA74;
-  --primary-300: #1B120C;
-  --accent-100: #10B981;
-  --accent-200: #D1FAE5;
-  --text-100: #1B120C;
-  --text-200: #3A2A1E;
-  --bg-100: #FFF0D6;
-  --bg-200: #FFE2B6;
-  --bg-300: #E9C28A;
-  --noise-opacity: 0.07;
+:root[data-theme='xuanZhi'] {
+  --primary-100: #2E5E4E;
+  --primary-200: #C9D6C7;
+  --primary-300: #0E1C18;
+  --accent-100: #8C4C2D;
+  --accent-200: #E9D6C8;
+  --text-100: #1B1A17;
+  --text-200: #3F3A32;
+  --bg-100: #F6F1E8;
+  --bg-200: #ECE3D6;
+  --bg-300: #D8CCBB;
+  --noise-opacity: 0.08;
 }
 
 :root[data-theme='classicWhite'] {
-  --primary-100: #d4eaf7;
-  --primary-200: #b6ccd8;
-  --primary-300: #3b3c3d;
-  --accent-100: #71c4ef;
-  --accent-200: #00668c;
-  --text-100: #1d1c1c;
-  --text-200: #313d44;
-  --bg-100: #fffefb;
-  --bg-200: #f5f4f1;
-  --bg-300: #cccbc8;
+  --primary-100: #4A6F5D;
+  --primary-200: #D3E0D6;
+  --primary-300: #1E2C26;
+  --accent-100: #B46A3C;
+  --accent-200: #F1D9C7;
+  --text-100: #2C2A26;
+  --text-200: #5A534A;
+  --bg-100: #FAF7F0;
+  --bg-200: #F0E9DE;
+  --bg-300: #E3D8C9;
   --noise-opacity: 0.06;
 }
 
 :root[data-theme='night'] {
-  --primary-100: #7C3AED;
-  --primary-200: #C4B5FD;
-  --primary-300: #0B0616;
-  --accent-100: #22D3EE;
-  --accent-200: #0E7490;
-  --text-100: #E5E7EB;
-  --text-200: #A1A1AA;
-  --bg-100: #0B1220;
-  --bg-200: #0F172A;
-  --bg-300: #1F2937;
+  --primary-100: #5DAA9F;
+  --primary-200: #2A4D47;
+  --primary-300: #0D1D1A;
+  --accent-100: #C2895B;
+  --accent-200: #3E2D1F;
+  --text-100: #E8ECEF;
+  --text-200: #B5BCC4;
+  --bg-100: #14171A;
+  --bg-200: #1D2227;
+  --bg-300: #2A3138;
   --noise-opacity: 0.10;
 }
 
@@ -171,16 +155,12 @@ body::before {
 
 .ui-card {
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  transition:
-    transform var(--transition-fast),
-    box-shadow var(--transition-fast),
-    border-color var(--transition-fast);
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .ui-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--card-shadow);
 }
 
 .page-fade-enter-active,

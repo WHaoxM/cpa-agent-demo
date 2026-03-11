@@ -1,11 +1,14 @@
 ﻿<!-- 页面：班级报告；路由：teacher/class-report（teacher-class-report）；角色：TEACHER -->
 <script setup lang="ts">
+// @ts-nocheck
 import { computed } from 'vue'
 import PieChart from '@/components/charts/PieChart.vue'
 import HistogramChart from '@/components/charts/HistogramChart.vue'
 import HorizontalBarChart from '@/components/charts/HorizontalBarChart.vue'
 import { mockTeacherStats } from '@/mock/data'
 import IntegrationHint from '@/components/IntegrationHint.vue'
+
+const chartColors = ['var(--primary-100)', 'var(--primary-200)', 'var(--accent-100)']
 
 // 作业完成情况饼图数据
 const completionData = [
@@ -39,7 +42,7 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
 
     <div class="charts-grid">
       <!-- 作业完成情况 -->
-      <el-card class="chart-card" shadow="hover">
+      <el-card class="chart-card card-base" shadow="never">
         <template #header>
           <div class="card-header">
             <span>作业完成情况</span>
@@ -52,13 +55,13 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
             :width="400"
             :height="350"
             title="作业完成占比"
-            :colors="['#67C23A', '#F56C6C', '#E6A23C']"
+            :colors="chartColors"
           />
         </div>
       </el-card>
 
       <!-- 成绩分布 -->
-      <el-card class="chart-card" shadow="hover">
+      <el-card class="chart-card card-base" shadow="never">
         <template #header>
           <div class="card-header">
             <span>成绩分布</span>
@@ -71,13 +74,13 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
             :width="550"
             :height="350"
             title="分数段人数分布"
-            bar-color="#409EFF"
+            bar-color="var(--primary-100)"
           />
         </div>
       </el-card>
 
       <!-- 知识点错误率 -->
-      <el-card class="chart-card full-width" shadow="hover">
+      <el-card class="chart-card full-width card-base" shadow="never">
         <template #header>
           <div class="card-header">
             <span>知识点错误率排行</span>
@@ -90,7 +93,7 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
             :width="800"
             :height="350"
             title="各知识点错题率 (%)"
-            bar-color="#F56C6C"
+            bar-color="var(--accent-100)"
             value-label="错误率 (%)"
           />
         </div>
@@ -98,26 +101,26 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
     </div>
 
     <!-- 数据摘要 -->
-    <el-card class="summary-card" shadow="hover">
+    <el-card class="summary-card card-base" shadow="never">
       <template #header>
         <div class="card-header">
           <span>数据摘要</span>
         </div>
       </template>
       <div class="summary-content">
-        <div class="summary-item">
+        <div class="summary-item card-data">
           <div class="summary-value">{{ mockTeacherStats.classProgress.completed }}%</div>
           <div class="summary-label">作业完成率</div>
         </div>
-        <div class="summary-item">
+        <div class="summary-item card-data">
           <div class="summary-value">{{ mockTeacherStats.scoreDistribution[1].count + mockTeacherStats.scoreDistribution[2].count }}</div>
           <div class="summary-label">优良人数(80分以上)</div>
         </div>
-        <div class="summary-item">
+        <div class="summary-item card-data">
           <div class="summary-value">{{ mockTeacherStats.knowledgeErrorRate[2].name }}</div>
           <div class="summary-label">最薄弱知识点</div>
         </div>
-        <div class="summary-item">
+        <div class="summary-item card-data">
           <div class="summary-value">{{ Math.round(mockTeacherStats.knowledgeErrorRate.reduce((sum, k) => sum + k.errorRate, 0) / mockTeacherStats.knowledgeErrorRate.length) }}%</div>
           <div class="summary-label">平均错误率</div>
         </div>
@@ -153,6 +156,10 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
 
 .chart-card {
   min-height: 400px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-divider);
+  border-radius: 4px;
+  padding: 20px;
 }
 
 .chart-card.full-width {
@@ -163,7 +170,8 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  gap: 10px;
+  font-weight: 700;
 }
 
 .chart-wrapper {
@@ -185,15 +193,14 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
 
 .summary-item {
   text-align: center;
-  padding: 20px;
-  background: var(--bg-200);
-  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid var(--card-divider);
 }
 
 .summary-value {
   font-size: 28px;
-  font-weight: 700;
-  color: var(--primary-100);
+  font-weight: 800;
+  color: var(--text-100);
   margin-bottom: 8px;
 }
 

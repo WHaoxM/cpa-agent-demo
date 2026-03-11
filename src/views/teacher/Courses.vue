@@ -1,6 +1,7 @@
 ﻿<!-- 页面：课程管理；路由：teacher/courses（teacher-courses）；角色：TEACHER -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Search, Plus, View, Edit, Delete, Refresh, Download, Grid } from '@element-plus/icons-vue'
 import { useCourseStore } from '@/stores'

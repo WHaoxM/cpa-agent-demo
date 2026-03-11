@@ -246,10 +246,10 @@ function beforeAvatarUpload(file: File) {
 }
 
 .panel {
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
   padding: 14px;
 }
 
@@ -301,7 +301,7 @@ function beforeAvatarUpload(file: File) {
 }
 
 .rail-kv + .rail-kv {
-  border-top: 1px dashed color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  border-top: 1px dashed var(--card-divider);
 }
 
 .rail-kv__k {
@@ -326,7 +326,7 @@ function beforeAvatarUpload(file: File) {
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  border-bottom: 1px solid var(--card-divider);
   margin-bottom: 12px;
 }
 
@@ -381,7 +381,7 @@ function beforeAvatarUpload(file: File) {
 .actions--topline {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  border-top: 1px solid var(--card-divider);
 }
 
 .switch-list {
@@ -397,15 +397,15 @@ function beforeAvatarUpload(file: File) {
   gap: 16px;
   padding: 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--bg-200) 70%, transparent 30%);
-  border: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  background: var(--card-data-bg);
+  border: 1px solid var(--card-divider);
 }
 
 .switch-row--divider {
   padding: 0;
   height: 1px;
   border: none;
-  background: color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
+  background: var(--card-divider);
   border-radius: 0;
 }
 
