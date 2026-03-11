@@ -68,22 +68,42 @@ function exportData() {
 
 
 <template>
-  <div class="grading-page page">
-    <div class="page-header">
-      <h2>作业批改</h2>
-      <IntegrationHint />
+  <div class="grading-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">作业批改</h2>
+          <div class="page-head__desc">查看和评分学生提交的作业</div>
+        </div>
+        <IntegrationHint />
+      </div>
+      <div class="page-head__right">
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ pendingGrading.length }}</span>
+            <span class="stat-strip__label">总记录</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ pendingGrading.filter(g => g.status === 'pending').length }}</span>
+            <span class="stat-strip__label">待批改</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ pendingGrading.filter(g => g.status === 'graded').length }}</span>
+            <span class="stat-strip__label">已批改</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <el-card shadow="never" class="content-card">
-      <!-- 工具栏 -->
-      <div class="filter-bar toolbar-section">
+    <div class="panel">
+      <div class="toolbar-section">
         <div class="toolbar-left">
           <el-input
             v-model="searchQuery"
             placeholder="搜索学生姓名"
             :prefix-icon="Search"
             clearable
-            style="width: 300px;"
+            style="width: 260px;"
           />
           <el-select v-model="selectedStatus" placeholder="批改状态" clearable>
             <el-option label="待批改" value="pending" />
@@ -102,15 +122,15 @@ function exportData() {
         <el-table-column label="学生" min-width="180">
           <template #default="{ row }">
             <div class="student-info">
-              <el-avatar :size="40" :src="row.studentAvatar" />
-              <span>{{ row.studentName }}</span>
+              <el-avatar :size="36" :src="row.studentAvatar" />
+              <span class="student-name">{{ row.studentName }}</span>
             </div>
           </template>
         </el-table-column>
 
         <el-table-column prop="score" label="得分" width="100" align="center">
           <template #default="{ row }">
-            <span :style="{ color: row.score >= 60 ? '#67C23A' : '#F56C6C', fontWeight: 600 }">
+            <span :style="{ color: row.score >= 60 ? 'var(--el-color-success)' : 'var(--el-color-danger)', fontWeight: 700 }">
               {{ row.score }}
             </span>
           </template>
@@ -126,7 +146,7 @@ function exportData() {
 
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'graded' ? 'success' : 'warning'" size="small">
+            <el-tag :type="row.status === 'graded' ? 'success' : 'warning'" size="small" effect="plain">
               {{ row.status === 'graded' ? '已批改' : '待批改' }}
             </el-tag>
           </template>
@@ -139,77 +159,110 @@ function exportData() {
               link
               @click="openGrading(row)"
             >
-              {{ row.status === 'graded' ? '查看' : '批改' }}
+              {{ row.status === 'graded' ? '查看详情' : '开始批改' }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 批改弹窗 -->
-    <el-dialog v-model="showGradingDialog" title="作业批改" width="600px">
-      <div v-if="currentGrading" class="grading-content">
-        <div class="grading-info">
-          <div class="info-item">
-            <span class="label">学生：</span>
-            <span>{{ currentGrading.studentName }}</span>
+    <el-dialog v-model="showGradingDialog" title="作业批改" width="640px">
+      <div v-if="currentGrading">
+        <div class="dialog-summary">
+          <el-avatar :size="44" :src="currentGrading.studentAvatar" class="dialog-summary__avatar" />
+          <div class="dialog-summary__info">
+            <div class="dialog-summary__name">{{ currentGrading.studentName }}</div>
+            <div class="dialog-summary__meta">
+              <span>用时 {{ currentGrading.duration }} 分钟</span>
+              <span>满分 {{ currentGrading.totalScore }}</span>
+              <span>当前得分 {{ currentGrading.score }}</span>
+            </div>
           </div>
-          <div class="info-item">
-            <span class="label">当前得分：</span>
-            <span>{{ currentGrading.score }}</span>
+          <div class="dialog-summary__badge">
+            <el-tag :type="currentGrading.status === 'graded' ? 'success' : 'warning'" size="small" effect="plain">
+              {{ currentGrading.status === 'graded' ? '已批改' : '待批改' }}
+            </el-tag>
           </div>
         </div>
 
-        <el-divider />
+        <div class="dialog-section">
+          <div class="dialog-section__title">作答概况</div>
+          <div class="answer-overview">
+            <div class="answer-stat">
+              <span class="answer-stat__v" :style="{ color: 'var(--el-color-success)' }">{{ Math.round(currentGrading.score / currentGrading.totalScore * 100) }}%</span>
+              <span class="answer-stat__k">正确率</span>
+            </div>
+            <div class="answer-stat">
+              <span class="answer-stat__v">{{ currentGrading.duration }} 分钟</span>
+              <span class="answer-stat__k">答题用时</span>
+            </div>
+            <div class="answer-stat">
+              <span class="answer-stat__v">{{ currentGrading.score }} / {{ currentGrading.totalScore }}</span>
+              <span class="answer-stat__k">得分</span>
+            </div>
+          </div>
+        </div>
 
-        <el-form label-position="top">
-          <el-form-item label="评分">
-            <el-slider v-model="gradeScore" :max="currentGrading.totalScore" show-stops />
-            <div class="score-display">{{ gradeScore }} / {{ currentGrading.totalScore }}</div>
-          </el-form-item>
+        <div class="dialog-section">
+          <div class="dialog-section__title">评分与评语</div>
+          <el-form label-position="top">
+            <el-form-item label="评分">
+              <div class="score-row">
+                <el-slider v-model="gradeScore" :max="currentGrading.totalScore" class="score-slider" />
+                <span class="score-display">{{ gradeScore }} <span class="score-total">/ {{ currentGrading.totalScore }}</span></span>
+              </div>
+            </el-form-item>
 
-          <el-form-item label="评语">
-            <el-input
-              v-model="gradeComment"
-              type="textarea"
-              :rows="4"
-              placeholder="输入评语..."
-            />
-          </el-form-item>
-        </el-form>
+            <el-form-item label="教师评语">
+              <el-input
+                v-model="gradeComment"
+                type="textarea"
+                :rows="3"
+                placeholder="输入对本次作业的反馈和建议..."
+              />
+            </el-form-item>
+          </el-form>
+        </div>
       </div>
 
       <template #footer>
-        <el-button @click="showGradingDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitGrade">提交</el-button>
+        <div class="dialog-footer">
+          <span class="dialog-footer__hint">评分与评语仅为 UI 演示</span>
+          <div class="dialog-footer__actions">
+            <el-button @click="showGradingDialog = false">取消</el-button>
+            <el-button type="primary" @click="submitGrade">提交评分</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.grading-page {
-}
-
-.page-header {
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
 .toolbar-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--card-divider);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .toolbar-left {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .toolbar-right {
@@ -217,42 +270,88 @@ function exportData() {
   gap: 8px;
 }
 
-.filter-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
 .student-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.grading-content {
-  padding: 10px 0;
+.student-name {
+  font-weight: 600;
+  font-size: 13px;
 }
 
-.grading-info {
+/* Dialog enrichment */
+.answer-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.answer-stat {
   display: flex;
-  gap: 32px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 1px solid var(--card-divider);
+  border-radius: var(--radius-md);
+  background: var(--card-data-bg);
 }
 
-.info-item {
-  display: flex;
-  gap: 8px;
+.answer-stat__v {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-100);
 }
 
-.label {
+.answer-stat__k {
+  font-size: 11px;
   color: var(--text-200);
 }
 
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.score-slider {
+  flex: 1;
+}
+
 .score-display {
-  text-align: center;
-  font-size: 24px;
-  font-weight: 600;
-  color: #409EFF;
-  margin-top: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--primary-100);
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: right;
+}
+
+.score-total {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-200);
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.dialog-footer__hint {
+  font-size: 12px;
+  color: var(--text-200);
+}
+
+.dialog-footer__actions {
+  display: flex;
+  gap: 8px;
 }
 </style>
 

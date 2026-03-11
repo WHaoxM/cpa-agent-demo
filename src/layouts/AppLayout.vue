@@ -60,6 +60,7 @@ const breadcrumbs = computed(() => {
 // 学生菜单
 const studentMenus = [
   { index: '/app/student/learning', icon: ICONS.bookOpen, title: '学习中心' },
+  { index: '/app/student/knowledge-graph', icon: ICONS.network, title: '知识图谱' },
   { index: '/app/student/notes', icon: ICONS.fileText, title: '笔记管理' },
   { index: '/app/student/wrong-questions', icon: ICONS.closeCircle, title: '错题本' },
   { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },

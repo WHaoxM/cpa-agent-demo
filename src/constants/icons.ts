@@ -26,6 +26,7 @@ export const ICONS = {
   logOut: 'lucide:log-out',
   megaphone: 'lucide:megaphone',
   monitor: 'lucide:monitor',
+  network: 'lucide:network',
   palette: 'lucide:palette',
   panelClose: 'lucide:chevrons-right',
   panelOpen: 'lucide:chevrons-left',

@@ -95,16 +95,30 @@ function batchDelete() {
 
 
 <template>
-  <div class="teacher-courses-page page">
-    <div class="page-header">
-      <h2>课程管理</h2>
-      <el-button type="primary" :icon="Plus" @click="createCourse">
-        创建课程
-      </el-button>
+  <div class="teacher-courses-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">课程管理</h2>
+          <div class="page-head__desc">管理和编辑你创建的课程</div>
+        </div>
+      </div>
+      <div class="page-head__right">
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ courseStore.courses.length }}</span>
+            <span class="stat-strip__label">总课程</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ courseStore.courses.filter(c => c.status === 'published').length }}</span>
+            <span class="stat-strip__label">已发布</span>
+          </div>
+        </div>
+        <el-button type="primary" :icon="Plus" @click="createCourse">创建课程</el-button>
+      </div>
     </div>
 
-    <el-card shadow="never" class="content-card">
-      <!-- 工具栏 -->
+    <div class="panel">
       <div class="toolbar-section">
         <div class="toolbar-left">
           <el-input
@@ -112,7 +126,7 @@ function batchDelete() {
             placeholder="搜索课程名称"
             :prefix-icon="Search"
             clearable
-            class="search-input"
+            style="width: 260px;"
           />
           <el-select v-model="selectedStatus" placeholder="课程状态" clearable>
             <el-option label="已发布" value="published" />
@@ -132,7 +146,6 @@ function batchDelete() {
         </div>
       </div>
 
-      <!-- 课程表格 -->
       <el-table 
         :data="courses" 
         stripe 
@@ -140,7 +153,7 @@ function batchDelete() {
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column label="课程封面" width="120">
+        <el-table-column label="课程封面" width="100">
           <template #default="{ row }">
             <el-image :src="row.cover" class="course-cover" fit="cover" />
           </template>
@@ -155,15 +168,15 @@ function batchDelete() {
         
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusTag(row.status).type as any" size="small">
+            <el-tag :type="getStatusTag(row.status).type as any" size="small" effect="plain">
               {{ getStatusTag(row.status).label }}
             </el-tag>
           </template>
         </el-table-column>
         
-        <el-table-column prop="studentCount" label="学生数" width="100" align="center" />
+        <el-table-column prop="studentCount" label="学生数" width="90" align="center" />
         
-        <el-table-column prop="updatedAt" label="更新时间" width="120">
+        <el-table-column prop="updatedAt" label="更新时间" width="110">
           <template #default="{ row }">
             {{ formatDate(row.updatedAt) }}
           </template>
@@ -183,62 +196,52 @@ function batchDelete() {
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.teacher-courses-page {
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
 .toolbar-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--card-divider);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .toolbar-left {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .toolbar-right {
   display: flex;
   gap: 8px;
-}
-
-.filter-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.search-input {
-  width: 300px;
+  flex-wrap: wrap;
 }
 
 .course-cover {
-  width: 80px;
-  height: 50px;
+  width: 70px;
+  height: 44px;
   border-radius: 4px;
 }
 
 .course-title {
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 3px;
 }
 
 .course-desc {

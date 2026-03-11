@@ -113,24 +113,41 @@ function getRoleTag(role: UserRole) {
 
 
 <template>
-  <div class="admin-users-page page">
-    <div class="page-header">
-      <h2>用户管理</h2>
-      <div class="header-stats card-data">
-        <div class="stat-label">总用户数</div>
-        <div class="stat-value">{{ users.length }}</div>
+  <div class="admin-users-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">用户管理</h2>
+          <div class="page-head__desc">管理系统中的所有用户账号</div>
+        </div>
+      </div>
+      <div class="page-head__right">
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ mockUsers.length }}</span>
+            <span class="stat-strip__label">总用户</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ mockUsers.filter(u => u.status === 'active').length }}</span>
+            <span class="stat-strip__label">正常</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ mockUsers.filter(u => u.role === 'teacher').length }}</span>
+            <span class="stat-strip__label">教师</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <el-card shadow="never" class="content-card">
-      <div class="filter-bar toolbar-section">
+    <div class="panel">
+      <div class="toolbar-section">
         <div class="toolbar-left">
           <el-input
             v-model="searchQuery"
             placeholder="搜索用户名、姓名或邮箱"
             :prefix-icon="Search"
             clearable
-            style="width: 280px;"
+            style="width: 260px;"
           />
           <el-select v-model="selectedRole" placeholder="角色筛选" clearable>
             <el-option label="学生" value="student" />
@@ -162,7 +179,7 @@ function getRoleTag(role: UserRole) {
         <el-table-column label="用户信息" min-width="220">
           <template #default="{ row }">
             <div class="user-info">
-              <el-avatar :size="40" :src="row.avatar" />
+              <el-avatar :size="36" :src="row.avatar" />
               <div class="user-detail">
                 <div class="user-name">{{ row.name }}</div>
                 <div class="user-email">{{ row.email }}</div>
@@ -207,90 +224,98 @@ function getRoleTag(role: UserRole) {
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <!-- 编辑弹窗 -->
-    <el-dialog v-model="showEditDialog" title="编辑用户" width="500px">
-      <el-form :model="editForm" label-position="top">
-        <el-form-item label="姓名">
-          <el-input v-model="editForm.name" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="editForm.email" />
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="editForm.role" style="width: 100%;">
-            <el-option label="学生" value="student" />
-            <el-option label="教师" value="teacher" />
-            <el-option label="管理员" value="admin" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="editForm.status">
-            <el-radio label="active">正常</el-radio>
-            <el-radio label="disabled">禁用</el-radio>
-          </el-radio-group>
-        </el-form-item>
-      </el-form>
+    <el-dialog v-model="showEditDialog" title="编辑用户" width="560px">
+      <div v-if="currentEditUser" class="dialog-summary">
+        <el-avatar :size="44" :src="currentEditUser.avatar" class="dialog-summary__avatar" />
+        <div class="dialog-summary__info">
+          <div class="dialog-summary__name">{{ currentEditUser.name }}</div>
+          <div class="dialog-summary__meta">
+            <span>@{{ currentEditUser.username }}</span>
+            <span>{{ currentEditUser.email }}</span>
+            <span>注册于 {{ currentEditUser.createdAt }}</span>
+          </div>
+        </div>
+        <div class="dialog-summary__badge">
+          <el-tag :type="currentEditUser.status === 'active' ? 'success' : 'info'" size="small" effect="plain">
+            {{ currentEditUser.status === 'active' ? '正常' : '禁用' }}
+          </el-tag>
+        </div>
+      </div>
+
+      <div class="dialog-section">
+        <div class="dialog-section__title">基本信息</div>
+        <el-form :model="editForm" label-position="top">
+          <div class="form-2col">
+            <el-form-item label="姓名">
+              <el-input v-model="editForm.name" />
+            </el-form-item>
+            <el-form-item label="邮箱">
+              <el-input v-model="editForm.email" />
+            </el-form-item>
+          </div>
+        </el-form>
+      </div>
+
+      <div class="dialog-section">
+        <div class="dialog-section__title">权限与状态</div>
+        <el-form :model="editForm" label-position="top">
+          <div class="form-2col">
+            <el-form-item label="角色">
+              <el-select v-model="editForm.role" style="width: 100%;">
+                <el-option label="学生" value="student" />
+                <el-option label="教师" value="teacher" />
+                <el-option label="管理员" value="admin" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="账号状态">
+              <el-radio-group v-model="editForm.status">
+                <el-radio label="active">正常</el-radio>
+                <el-radio label="disabled">禁用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </div>
+        </el-form>
+      </div>
+
       <template #footer>
-        <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveUser">保存</el-button>
+        <div class="dialog-footer">
+          <span class="dialog-footer__hint">修改仅为 UI 演示，不会持久化</span>
+          <div class="dialog-footer__actions">
+            <el-button @click="showEditDialog = false">取消</el-button>
+            <el-button type="primary" @click="saveUser">保存修改</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.admin-users-page {
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.header-stats {
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: right;
-  border: 1px solid var(--card-divider);
-}
-
-.stat-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-200);
-  font-weight: 700;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--text-100);
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
 .toolbar-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--card-divider);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .toolbar-left {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -300,16 +325,10 @@ function getRoleTag(role: UserRole) {
   flex-wrap: wrap;
 }
 
-.filter-bar {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .user-detail {
@@ -319,11 +338,42 @@ function getRoleTag(role: UserRole) {
 
 .user-name {
   font-weight: 700;
+  font-size: 13px;
 }
 
 .user-email {
   font-size: 12px;
   color: var(--text-200);
+}
+
+/* Dialog enrichment */
+.form-2col {
+  display: grid;
+  gap: 0 20px;
+}
+
+@media (min-width: 480px) {
+  .form-2col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.dialog-footer__hint {
+  font-size: 12px;
+  color: var(--text-200);
+}
+
+.dialog-footer__actions {
+  display: flex;
+  gap: 8px;
 }
 </style>
 

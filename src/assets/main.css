@@ -126,6 +126,205 @@ a {
   box-shadow: var(--card-shadow);
 }
 
+/* ═══ Form Section System ═══ */
+.form-section {
+  padding: 16px 0;
+}
+
+.form-section + .form-section {
+  border-top: 1px solid var(--card-divider);
+}
+
+.form-section__head {
+  margin-bottom: 14px;
+}
+
+.form-section__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-100);
+  letter-spacing: 0.02em;
+}
+
+.form-section__desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-200);
+  line-height: 1.6;
+}
+
+/* ═══ KV Row (key-value info rows) ═══ */
+.kv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.kv-row + .kv-row {
+  border-top: 1px dashed var(--card-divider);
+}
+
+.kv-row__k {
+  font-size: 12px;
+  color: var(--text-200);
+  flex-shrink: 0;
+}
+
+.kv-row__v {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-100);
+  text-align: right;
+}
+
+/* ═══ Stat Strip (inline stat indicators) ═══ */
+.stat-strip {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-strip__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--card-data-bg);
+  min-width: 100px;
+}
+
+.stat-strip__value {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-100);
+  line-height: 1.1;
+}
+
+.stat-strip__label {
+  font-size: 11px;
+  color: var(--text-200);
+  letter-spacing: 0.04em;
+}
+
+/* ═══ Dialog Enrichment ═══ */
+.dialog-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-md);
+  background: var(--card-data-bg);
+  border: 1px solid var(--card-divider);
+}
+
+.dialog-summary__avatar {
+  flex-shrink: 0;
+}
+
+.dialog-summary__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog-summary__name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-100);
+}
+
+.dialog-summary__meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-200);
+  flex-wrap: wrap;
+}
+
+.dialog-summary__badge {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.dialog-section {
+  padding: 12px 0;
+}
+
+.dialog-section + .dialog-section {
+  border-top: 1px solid var(--card-divider);
+}
+
+.dialog-section__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-200);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+/* ═══ Page Header Enhanced ═══ */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  flex-wrap: wrap;
+}
+
+.page-head__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.page-head__title {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.page-head__desc {
+  font-size: 12px;
+  color: var(--text-200);
+  margin-top: 2px;
+}
+
+.page-head__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ═══ Two-col Form Layout ═══ */
+.form-2col {
+  display: grid;
+  gap: 0 20px;
+}
+
+@media (min-width: 768px) {
+  .form-2col {
+    grid-template-columns: 1fr 1fr;
+  }
+  .form-2col .form-2col__full {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ═══ Responsive ═══ */
 @media (max-width: 768px) {
   .page {
     padding: 16px;
@@ -137,5 +336,23 @@ a {
 
   .page-header {
     padding: 14px;
+  }
+
+  .page-head {
+    padding: 12px;
+  }
+
+  .stat-strip {
+    gap: 8px;
+  }
+
+  .stat-strip__item {
+    min-width: 80px;
+    padding: 8px 10px;
+  }
+
+  .dialog-summary {
+    flex-direction: column;
+    text-align: center;
   }
 }

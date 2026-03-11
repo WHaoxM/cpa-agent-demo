@@ -3,8 +3,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore, useCourseStore } from '@/stores'
+import { useUserStore, useCourseStore, useKnowledgeGraphStore } from '@/stores'
 import CalendarChart from '@/components/charts/CalendarChart.vue'
+import { getNetworkGraphData, layerLabelMap, layerColors } from '@/composables/useNetworkGraph'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,10 +17,15 @@ const isAdmin = computed(() => userStore.isAdmin)
 
 const favoriteCourses = computed(() => courseStore.userFavorites.slice(0, 4))
 
+const kgStore = useKnowledgeGraphStore()
+const graphData = getNetworkGraphData()
+const graphNodeCount = graphData.nodes.length
+const graphEdgeCount = graphData.edges.length
+
 const studentCards = [
+  { title: '知识图谱', desc: '探索网络工程知识', path: '/app/student/knowledge-graph' },
   { title: '学习中心', desc: '继续你的课程', path: '/app/student/learning' },
   { title: '学习报告', desc: '查看进度成绩', path: '/app/student/report' },
-  { title: '笔记管理', desc: '管理学习笔记', path: '/app/student/notes' },
 ]
 
 const teacherCards = [
@@ -72,57 +78,41 @@ const calendarData = [
   { day: 7, hours: 0, hasTask: false },
 ]
 
-// ===== 多模态融合能力面板数据 =====
-const multimodalModules = [
-  { name: 'VIDEO_PARSE', label: '视频理解', status: 'active', link: '/app/student/learning' },
-  { name: 'TEXT_ANALYSIS', label: '文本分析', status: 'active', link: '/app/student/notes' },
-  { name: 'VOICE_IO', label: '语音交互', status: 'standby', link: '/app/student/ai-assistant' },
-  { name: 'IMAGE_RECOG', label: '图像识别', status: 'active', link: '' },
+// ===== 知识图谱 & Agent 入口数据 =====
+const kgCapabilities = [
+  { icon: '◎', label: '多模态融合', desc: '文本·命令·拓扑·抓包 四模态并存', status: 'active' },
+  { icon: '⬡', label: '多Agent协作', desc: '知识定位·协议分析·故障诊断·学习建议', status: 'active' },
+  { icon: '◈', label: '知识图谱', desc: `${graphNodeCount} 个知识点 · ${graphEdgeCount} 条关系`, status: 'active' },
 ]
 
-const fusionPipeline = [
-  { from: '视频流', to: '文本提取', arrow: true },
-  { from: '文本提取', to: '知识图谱', arrow: true },
-  { from: '知识图谱', to: '个性推荐', arrow: false },
+const agentRoles = [
+  { id: 'locator', label: '知识定位 Agent', color: '#2E7D32', icon: '◉' },
+  { id: 'analyzer', label: '协议分析 Agent', color: '#1565C0', icon: '◉' },
+  { id: 'diagnoser', label: '故障诊断 Agent', color: '#E65100', icon: '◉' },
+  { id: 'advisor', label: '学习建议 Agent', color: '#6A1B9A', icon: '◉' },
 ]
-
-// ===== Agent 协作网络数据 =====
-const agents = [
-  { id: 'AI_TUTOR', label: 'AI 辅导员', status: 'online', tasks: 24, link: '/app/student/ai-assistant' },
-  { id: 'EVAL_AGENT', label: '评估引擎', status: 'online', tasks: 12, link: '/app/student/wrong-questions' },
-  { id: 'CAREER_AGENT', label: '职业规划师', status: 'online', tasks: 8, link: '/app/student/learning' },
-]
-
-const agentFlows = [
-  { desc: '提问', from: 'USER', to: 'AI_TUTOR', result: '智能解答' },
-  { desc: '错题', from: 'USER', to: 'EVAL_AGENT', result: '薄弱点分析' },
-  { desc: '学情', from: 'EVAL_AGENT', to: 'CAREER_AGENT', result: '路径规划' },
-]
-
-const onlineAgentCount = computed(() => agents.filter(a => a.status === 'online').length)
-const activeModuleCount = computed(() => multimodalModules.filter(m => m.status === 'active').length)
 
 const weeklyTotal = computed(() => calendarData.reduce((sum, d) => sum + d.hours, 0))
 
-const moduleStatusText = (status: string) => {
-  if (status === 'active') return '运行中'
-  if (status === 'standby') return '待命'
-  if (status === 'offline') return '离线'
-  return status
+const formatHistoryTime = (iso: string) => {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-const agentStatusText = (status: string) => {
-  if (status === 'online') return '在线'
-  if (status === 'offline') return '离线'
-  return status
-}
-
-const agentIdText = (id: string) => {
-  if (id === 'AI_TUTOR') return '辅导员'
-  if (id === 'EVAL_AGENT') return '评估引擎'
-  if (id === 'CAREER_AGENT') return '规划师'
-  return id
-}
+// 图谱层级分布统计（用于展示小图）
+const layerDistribution = computed(() => {
+  const map: Record<string, number> = {}
+  for (const n of graphData.nodes) {
+    map[n.layer] = (map[n.layer] || 0) + 1
+  }
+  return Object.entries(map).map(([k, v]) => ({
+    layer: k,
+    label: layerLabelMap[k as keyof typeof layerLabelMap] || k,
+    count: v,
+    color: layerColors[k as keyof typeof layerColors] || '#666',
+  })).sort((a, b) => b.count - a.count)
+})
 
 function navigateTo(path: string) {
   if (path) router.push(path)
@@ -167,9 +157,9 @@ onUnmounted(() => {
           </span>
         </div>
         <div class="header-sub">
-          <span class="sub-item">多模态引擎：<em class="sub-active">{{ activeModuleCount }}/{{ multimodalModules.length }} 运行中</em></span>
+          <span class="sub-item">知识图谱：<em class="sub-active">{{ graphNodeCount }} 节点 · {{ graphEdgeCount }} 关系</em></span>
           <span class="sub-sep">|</span>
-          <span class="sub-item">智能体集群：<em class="sub-active">{{ onlineAgentCount }}/{{ agents.length }} 就绪</em></span>
+          <span class="sub-item">Agent集群：<em class="sub-active">{{ agentRoles.length }}/{{ agentRoles.length }} 就绪</em></span>
         </div>
       </div>
       <div class="header-right">
@@ -208,72 +198,89 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <!-- ===== CAPABILITY PANEL ===== -->
+    <!-- ===== KNOWLEDGE GRAPH & AGENT ENTRY ===== -->
     <section class="zone-cap">
-      <span class="zone-tag">能力</span>
+      <span class="zone-tag">核心能力</span>
       <div class="cap-grid">
-        <!-- 多模态融合面板 -->
-        <div class="cap-card">
+        <!-- 知识图谱入口卡片 -->
+        <div class="cap-card cap-card--hero clickable" @click="navigateTo('/app/student/knowledge-graph')">
           <div class="cap-title">
-            <span class="cap-icon">◎</span>
-            <span>多模态融合</span>
+            <span class="cap-icon">◈</span>
+            <span>网络工程知识图谱</span>
+            <span class="cap-go">进入探索 ›</span>
           </div>
-          <div class="mod-list">
+          <div class="cap-desc">{{ graphNodeCount }} 个知识点 · {{ graphEdgeCount }} 条关系 · 按 OSI 层级组织</div>
+          <div class="kg-caps">
+            <div v-for="cap in kgCapabilities" :key="cap.label" class="kg-cap-item">
+              <span class="kg-cap-icon">{{ cap.icon }}</span>
+              <div class="kg-cap-info">
+                <span class="kg-cap-label">{{ cap.label }}</span>
+                <span class="kg-cap-desc">{{ cap.desc }}</span>
+              </div>
+              <span class="kg-cap-status active">运行中</span>
+            </div>
+          </div>
+          <div class="kg-layer-bar">
             <div
-              v-for="mod in multimodalModules"
-              :key="mod.name"
-              class="mod-item"
-              :class="{ clickable: !!mod.link }"
-              @click="navigateTo(mod.link)"
-            >
-              <span class="mod-dot" :class="mod.status"></span>
-              <span class="mod-name">{{ mod.label }}</span>
-              <span class="mod-label">{{ moduleStatusText(mod.status) }}</span>
-              <span class="mod-status" :class="mod.status">{{ moduleStatusText(mod.status) }}</span>
-            </div>
+              v-for="item in layerDistribution"
+              :key="item.layer"
+              class="kg-layer-seg"
+              :style="{ flex: item.count, background: item.color }"
+              :title="`${item.label}: ${item.count}`"
+            />
           </div>
-          <div class="pipeline">
-            <span class="pipeline-label">融合链路：</span>
-            <div class="pipeline-flow">
-              <template v-for="(step, i) in fusionPipeline" :key="i">
-                <span class="pipe-node">[{{ step.from }}]</span>
-                <span class="pipe-arrow" v-if="step.arrow">→</span>
-              </template>
-              <span class="pipe-node">[{{ fusionPipeline[fusionPipeline.length - 1]?.to }}]</span>
-            </div>
+          <div class="kg-layer-legend">
+            <span v-for="item in layerDistribution" :key="item.layer" class="kg-layer-tag">
+              <span class="kg-layer-dot" :style="{ background: item.color }" />
+              {{ item.label }} ({{ item.count }})
+            </span>
           </div>
         </div>
 
-        <!-- Agent 协作面板 -->
+        <!-- Agent 协作入口 -->
         <div class="cap-card">
           <div class="cap-title">
             <span class="cap-icon">⬡</span>
-            <span>智能体协作</span>
+            <span>多Agent协同分析</span>
           </div>
           <div class="agent-list">
-            <div
-              v-for="agent in agents"
-              :key="agent.id"
-              class="agent-item"
-              :class="{ clickable: !!agent.link }"
-              @click="navigateTo(agent.link)"
-            >
-              <span class="agent-dot" :class="agent.status"></span>
-              <span class="agent-id">{{ agentIdText(agent.id) }}</span>
-              <span class="agent-label">{{ agent.label }}</span>
-              <span class="agent-tasks">{{ agent.tasks }} 次</span>
-              <span class="agent-status" :class="agent.status">{{ agentStatusText(agent.status) }}</span>
+            <div v-for="role in agentRoles" :key="role.id" class="agent-item">
+              <span class="agent-dot online" :style="{ background: role.color }"></span>
+              <span class="agent-id">{{ role.label }}</span>
+              <span class="agent-status online">就绪</span>
             </div>
           </div>
           <div class="pipeline">
-            <span class="pipeline-label">协作流：</span>
-            <div class="flow-list">
-              <div v-for="(flow, i) in agentFlows" :key="i" class="flow-item">
-                <span class="flow-desc">{{ flow.desc }}</span>
-                <span class="flow-chain">{{ flow.from === 'USER' ? '用户' : agentIdText(flow.from) }} → {{ agentIdText(flow.to) }}</span>
-                <span class="flow-result">{{ flow.result }}</span>
+            <span class="pipeline-label">协作流程：</span>
+            <div class="pipeline-flow">
+              <span class="pipe-node">[知识定位]</span>
+              <span class="pipe-arrow">→</span>
+              <span class="pipe-node">[协议分析]</span>
+              <span class="pipe-arrow">→</span>
+              <span class="pipe-node">[故障诊断]</span>
+              <span class="pipe-arrow">→</span>
+              <span class="pipe-node">[学习建议]</span>
+            </div>
+          </div>
+          <!-- 分析历史 -->
+          <div v-if="kgStore.latestRecords.length > 0" class="kg-history">
+            <span class="pipeline-label">最近分析（{{ kgStore.recordCount }}）：</span>
+            <div class="kg-history-list">
+              <div
+                v-for="rec in kgStore.latestRecords.slice(0, 3)"
+                :key="rec.id"
+                class="kg-history-item clickable"
+                @click="navigateTo('/app/student/knowledge-graph')"
+              >
+                <span class="kg-history-name">{{ rec.nodeName }}</span>
+                <span class="kg-history-time">{{ formatHistoryTime(rec.timestamp) }}</span>
               </div>
             </div>
+          </div>
+          <div class="cap-cta">
+            <button class="cap-cta-btn" @click="navigateTo('/app/student/knowledge-graph')">
+              打开知识图谱 ›
+            </button>
           </div>
         </div>
       </div>
@@ -690,61 +697,147 @@ onUnmounted(() => {
 
 .cap-icon { color: var(--primary-100); font-size: 16px; }
 
-/* 多模态模块列表 */
-.mod-list {
+/* KG entry card */
+.cap-card--hero { cursor: pointer; transition: background 0.15s; }
+.cap-card--hero:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-200)); }
+
+.cap-desc {
+  font-size: 12px;
+  color: var(--text-200);
+  margin-bottom: 14px;
+  letter-spacing: 0.02em;
+}
+
+.cap-go {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary-100);
+  letter-spacing: 0.03em;
+}
+
+.kg-caps {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
-.mod-item {
+.kg-cap-item {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
   background: var(--bg-100);
-  transition: background 0.15s;
 }
 
-.mod-item.clickable { cursor: pointer; }
-.mod-item.clickable:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
+.kg-cap-icon { font-size: 15px; color: var(--primary-100); }
 
-.mod-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.kg-cap-info { flex: 1; }
+.kg-cap-label { font-size: 11px; font-weight: 600; color: var(--text-100); display: block; }
+.kg-cap-desc { font-size: 10px; color: var(--text-200); display: block; margin-top: 2px; }
 
-.mod-dot.active { background: var(--primary-100); }
-.mod-dot.standby { background: color-mix(in srgb, var(--accent-100) 80%, #f59e0b 20%); }
-.mod-dot.offline { background: var(--text-200); }
-
-.mod-name {
-  font-size: 11px;
+.kg-cap-status {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-100);
-  letter-spacing: 0.04em;
-  min-width: 100px;
+  padding: 2px 6px;
+  letter-spacing: 0.06em;
 }
 
-.mod-label {
-  flex: 1;
-  font-size: 11px;
+.kg-cap-status.active {
+  color: var(--primary-100);
+  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
+}
+
+.kg-layer-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.kg-layer-seg {
+  border-radius: 2px;
+  min-width: 4px;
+}
+
+.kg-layer-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
   color: var(--text-200);
 }
 
-.mod-status {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
+.kg-layer-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.mod-status.active { color: var(--primary-100); background: color-mix(in srgb, var(--primary-100) 10%, transparent); }
-.mod-status.standby { color: var(--accent-100); background: color-mix(in srgb, var(--accent-100) 10%, transparent); }
-.mod-status.offline { color: var(--text-200); background: var(--bg-300); }
+.kg-layer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* KG history */
+.kg-history {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bg-300);
+}
+
+.kg-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.kg-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-100);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.kg-history-item:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
+
+.kg-history-name { font-size: 12px; font-weight: 600; color: var(--text-100); }
+.kg-history-time { font-size: 10px; color: var(--text-200); }
+
+/* CTA button */
+.cap-cta {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bg-300);
+}
+
+.cap-cta-btn {
+  width: 100%;
+  padding: 10px;
+  background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100));
+  color: var(--primary-100);
+  border: 1px solid color-mix(in srgb, var(--primary-100) 20%, transparent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cap-cta-btn:hover {
+  background: color-mix(in srgb, var(--primary-100) 18%, var(--bg-100));
+}
+
+.clickable { cursor: pointer; }
 
 /* Pipeline */
 .pipeline {

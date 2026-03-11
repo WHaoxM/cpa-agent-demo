@@ -32,78 +32,44 @@ const courseData = mockAdminStats.courseStats.map(item => ({
 
 
 <template>
-  <div class="system-stats-page page">
-    <div class="page-header">
-      <h2>系统监控</h2>
-      <p class="subtitle">平台运营数据实时监控</p>
-      <IntegrationHint />
+  <div class="system-stats-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">系统监控</h2>
+          <div class="page-head__desc">平台运营数据实时监控</div>
+        </div>
+        <IntegrationHint />
+      </div>
+      <div class="page-head__right">
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">353</span>
+            <span class="stat-strip__label">总用户</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">51</span>
+            <span class="stat-strip__label">课程</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">180</span>
+            <span class="stat-strip__label">今日活跃</span>
+          </div>
+          <div class="stat-strip__item stat-strip__item--alert">
+            <span class="stat-strip__value">3</span>
+            <span class="stat-strip__label">待审核</span>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <!-- 核心指标卡片 -->
-    <el-row :gutter="20" class="stats-cards">
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #409EFF15; color: #409EFF;">
-              <el-icon size="28"><User /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">353</div>
-              <div class="stat-label">总用户数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #67C23A15; color: #67C23A;">
-              <el-icon size="28"><Reading /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">51</div>
-              <div class="stat-label">课程总数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #E6A23C15; color: #E6A23C;">
-              <el-icon size="28"><TrendCharts /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">180</div>
-              <div class="stat-label">今日活跃</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #F56C6C15; color: #F56C6C;">
-              <el-icon size="28"><DocumentChecked /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">3</div>
-              <div class="stat-label">待审核</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
 
     <div class="charts-grid">
       <!-- 用户分布 -->
-      <el-card class="chart-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>平台用户分布</span>
-            <el-tag size="small" type="info">饼图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <span class="panel-head__title">平台用户分布</span>
+          <el-tag size="small" type="info" effect="plain">饼图</el-tag>
+        </div>
         <div class="chart-wrapper">
           <PieChart
             :data="userDistributionData"
@@ -112,16 +78,14 @@ const courseData = mockAdminStats.courseStats.map(item => ({
             title="用户角色占比"
           />
         </div>
-      </el-card>
+      </div>
 
       <!-- 活跃度统计 -->
-      <el-card class="chart-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>日活跃用户数</span>
-            <el-tag size="small" type="info">折线图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <span class="panel-head__title">日活跃用户数</span>
+          <el-tag size="small" type="info" effect="plain">折线图</el-tag>
+        </div>
         <div class="chart-wrapper">
           <ScoreLineChart
             :data="activityData"
@@ -131,16 +95,14 @@ const courseData = mockAdminStats.courseStats.map(item => ({
             line-color="#409EFF"
           />
         </div>
-      </el-card>
+      </div>
 
       <!-- 课程数据 -->
-      <el-card class="chart-card full-width" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>各分类课程数量</span>
-            <el-tag size="small" type="info">柱状图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel full-width">
+        <div class="panel-head">
+          <span class="panel-head__title">各分类课程数量</span>
+          <el-tag size="small" type="info" effect="plain">柱状图</el-tag>
+        </div>
         <div class="chart-wrapper">
           <HistogramChart
             :data="courseData"
@@ -150,104 +112,76 @@ const courseData = mockAdminStats.courseStats.map(item => ({
             bar-color="#67C23A"
           />
         </div>
-      </el-card>
+      </div>
     </div>
 
     <!-- 平台公告 -->
-    <el-card class="notice-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>平台公告</span>
-          <el-button text type="primary">发布新公告</el-button>
-        </div>
-      </template>
+    <div class="panel notice-panel">
+      <div class="panel-head">
+        <span class="panel-head__title">平台公告</span>
+        <el-button text type="primary" size="small">发布新公告</el-button>
+      </div>
       <div class="notice-list">
         <div class="notice-item">
-          <div class="notice-title">系统维护通知</div>
-          <div class="notice-time">2024-02-10 10:00</div>
+          <div class="notice-row">
+            <div class="notice-title">系统维护通知</div>
+            <div class="notice-time">2024-02-10 10:00</div>
+          </div>
           <div class="notice-content">平台将于本周日凌晨 2:00-4:00 进行系统维护，届时部分功能可能无法使用。</div>
         </div>
-        <el-divider />
         <div class="notice-item">
-          <div class="notice-title">新课程上线</div>
-          <div class="notice-time">2024-02-09 15:30</div>
+          <div class="notice-row">
+            <div class="notice-title">新课程上线</div>
+            <div class="notice-time">2024-02-09 15:30</div>
+          </div>
           <div class="notice-content">《Python 人工智能入门》课程已通过审核并正式上线，欢迎学习！</div>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.system-stats-page {
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
-.page-header {
-  margin-bottom: 24px;
-}
-
-.page-header h2 {
-  margin: 0 0 8px;
-  font-size: 24px;
-}
-
-.subtitle {
-  color: var(--text-200);
-  margin: 0;
-}
-
-.stats-cards {
-  margin-bottom: 24px;
-}
-
-.stat-card {
+.panel-head {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 16px;
-  padding: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--card-divider);
 }
 
-.stat-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.panel-head__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-100);
 }
 
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--text-200);
-  margin-top: 6px;
+.stat-strip__item--alert .stat-strip__value {
+  color: var(--el-color-danger);
 }
 
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.chart-card {
-  min-height: 400px;
+.chart-panel {
+  min-height: 380px;
 }
 
-.chart-card.full-width {
+.full-width {
   grid-column: 1 / -1;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
 }
 
 .chart-wrapper {
@@ -257,33 +191,40 @@ const courseData = mockAdminStats.courseStats.map(item => ({
   min-height: 350px;
 }
 
-.notice-card {
-  margin-top: 20px;
-}
-
 .notice-list {
   display: flex;
   flex-direction: column;
 }
 
 .notice-item {
-  padding: 16px 0;
+  padding: 12px 0;
+}
+
+.notice-item + .notice-item {
+  border-top: 1px solid var(--card-divider);
+}
+
+.notice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
 }
 
 .notice-title {
-  font-weight: 600;
-  font-size: 16px;
-  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .notice-time {
   font-size: 12px;
   color: var(--text-200);
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .notice-content {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-200);
   line-height: 1.6;
 }

@@ -29,22 +29,40 @@ const studyTimeData = mockTeacherStats.dailyStudyTime.map(item => ({
 
 
 <template>
-  <div class="monitoring-page page">
-    <div class="page-header">
-      <h2>学情监控</h2>
-      <p class="subtitle">实时监控班级学习动态</p>
-      <IntegrationHint />
+  <div class="monitoring-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">学情监控</h2>
+          <div class="page-head__desc">实时监控班级学习动态</div>
+        </div>
+        <IntegrationHint />
+      </div>
+      <div class="page-head__right">
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ rankingData.length }}</span>
+            <span class="stat-strip__label">学生</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ classKnowledgeData.length }}</span>
+            <span class="stat-strip__label">知识点</span>
+          </div>
+          <div class="stat-strip__item stat-strip__item--alert">
+            <span class="stat-strip__value">2</span>
+            <span class="stat-strip__label">预警</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="charts-grid">
       <!-- 学生排名 -->
-      <el-card class="chart-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>学生成绩排名</span>
-            <el-tag size="small" type="info">横向柱状图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <span class="panel-head__title">学生成绩排名</span>
+          <el-tag size="small" type="info" effect="plain">横向柱状图</el-tag>
+        </div>
         <div class="chart-wrapper">
           <HorizontalBarChart
             :data="rankingData"
@@ -55,16 +73,14 @@ const studyTimeData = mockTeacherStats.dailyStudyTime.map(item => ({
             value-label="分数"
           />
         </div>
-      </el-card>
+      </div>
 
       <!-- 班级知识点掌握 -->
-      <el-card class="chart-card" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>班级知识点掌握</span>
-            <el-tag size="small" type="info">雷达图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <span class="panel-head__title">班级知识点掌握</span>
+          <el-tag size="small" type="info" effect="plain">雷达图</el-tag>
+        </div>
         <div class="chart-wrapper radar-wrapper">
           <KnowledgeRadarChart
             :data="classKnowledgeData"
@@ -75,16 +91,14 @@ const studyTimeData = mockTeacherStats.dailyStudyTime.map(item => ({
             color="#67C23A"
           />
         </div>
-      </el-card>
+      </div>
 
       <!-- 学习时长趋势 -->
-      <el-card class="chart-card full-width" shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>班级日均学习时长趋势</span>
-            <el-tag size="small" type="info">折线图</el-tag>
-          </div>
-        </template>
+      <div class="panel chart-panel full-width">
+        <div class="panel-head">
+          <span class="panel-head__title">班级日均学习时长趋势</span>
+          <el-tag size="small" type="info" effect="plain">折线图</el-tag>
+        </div>
         <div class="chart-wrapper">
           <ScoreLineChart
             :data="studyTimeData"
@@ -95,136 +109,136 @@ const studyTimeData = mockTeacherStats.dailyStudyTime.map(item => ({
             :show-area="false"
           />
         </div>
-      </el-card>
+      </div>
     </div>
 
     <!-- 预警信息 -->
-    <el-card class="alert-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span>学习预警</span>
-          <el-tag type="danger" size="small">需关注</el-tag>
-        </div>
-      </template>
+    <div class="panel alert-panel">
+      <div class="panel-head">
+        <span class="panel-head__title">学习预警</span>
+        <el-tag type="danger" size="small" effect="plain">需关注</el-tag>
+      </div>
       <div class="alert-list">
-        <div class="alert-item warning">
-          <el-icon size="20"><Warning /></el-icon>
+        <div class="alert-item alert-item--warning">
+          <el-icon size="18"><Warning /></el-icon>
           <div class="alert-content">
             <div class="alert-title">王同学连续3天未登录学习</div>
             <div class="alert-desc">建议及时联系了解情况</div>
           </div>
-          <el-button type="primary" link>查看详情</el-button>
+          <el-button type="primary" link size="small">查看详情</el-button>
         </div>
-        <div class="alert-item danger">
-          <el-icon size="20"><CircleClose /></el-icon>
+        <div class="alert-item alert-item--danger">
+          <el-icon size="18"><CircleClose /></el-icon>
           <div class="alert-content">
             <div class="alert-title">Composition API 知识点错误率超过40%</div>
             <div class="alert-desc">建议增加相关课时讲解</div>
           </div>
-          <el-button type="primary" link>查看详情</el-button>
+          <el-button type="primary" link size="small">查看详情</el-button>
         </div>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.monitoring-page {
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
-.page-header {
-  margin-bottom: 24px;
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--card-divider);
 }
 
-.page-header h2 {
-  margin: 0 0 8px;
-  font-size: 24px;
+.panel-head__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-100);
 }
 
-.subtitle {
-  color: var(--text-200);
-  margin: 0;
+.stat-strip__item--alert .stat-strip__value {
+  color: var(--el-color-danger);
 }
 
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.chart-card {
-  min-height: 400px;
+.chart-panel {
+  min-height: 380px;
 }
 
-.chart-card.full-width {
+.full-width {
   grid-column: 1 / -1;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
 }
 
 .chart-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 350px;
+  min-height: 320px;
 }
 
 .radar-wrapper {
-  min-height: 380px;
-}
-
-.alert-card {
-  margin-top: 20px;
+  min-height: 360px;
 }
 
 .alert-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .alert-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px;
-  border-radius: 8px;
-  background: var(--bg-200);
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--card-data-bg);
+  border: 1px solid var(--card-divider);
 }
 
-.alert-item.warning {
-  border-left: 4px solid #E6A23C;
+.alert-item--warning {
+  border-left: 3px solid var(--el-color-warning);
 }
 
-.alert-item.warning :deep(.el-icon) {
-  color: #E6A23C;
+.alert-item--warning :deep(.el-icon) {
+  color: var(--el-color-warning);
 }
 
-.alert-item.danger {
-  border-left: 4px solid #F56C6C;
+.alert-item--danger {
+  border-left: 3px solid var(--el-color-danger);
 }
 
-.alert-item.danger :deep(.el-icon) {
-  color: #F56C6C;
+.alert-item--danger :deep(.el-icon) {
+  color: var(--el-color-danger);
 }
 
 .alert-content {
   flex: 1;
+  min-width: 0;
 }
 
 .alert-title {
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 2px;
 }
 
 .alert-desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-200);
 }
 

@@ -40,6 +40,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '学习中心', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
+        path: 'student/knowledge-graph',
+        name: 'student-knowledge-graph',
+        component: () => import('@/views/student/KnowledgeExplorer.vue'),
+        meta: { title: '知识图谱', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
+      },
+      {
         path: 'student/course/:id',
         name: 'student-course-detail',
         component: () => import('@/views/student/CourseWorkspace.vue'),

@@ -61,12 +61,17 @@ function getProgressColor(percentage: number): string {
 
 
 <template>
-  <div class="teacher-students-page page">
-    <div class="page-header">
-      <h2>学生管理</h2>
-      <IntegrationHint />
-      <div class="header-actions">
-        <el-select v-model="selectedClass" placeholder="选择班级">
+  <div class="teacher-students-page page page--compact">
+    <div class="page-head">
+      <div class="page-head__left">
+        <div>
+          <h2 class="page-head__title">学生管理</h2>
+          <div class="page-head__desc">查看班级学生学习情况</div>
+        </div>
+        <IntegrationHint />
+      </div>
+      <div class="page-head__right">
+        <el-select v-model="selectedClass" placeholder="选择班级" style="width: 160px;">
           <el-option
             v-for="opt in classOptions"
             :key="opt.value"
@@ -74,67 +79,41 @@ function getProgressColor(percentage: number): string {
             :value="opt.value"
           />
         </el-select>
+        <div class="stat-strip">
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ students.length }}</span>
+            <span class="stat-strip__label">学生</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ Math.round(students.reduce((sum, s) => sum + s.avgScore, 0) / students.length) || 0 }}</span>
+            <span class="stat-strip__label">平均分</span>
+          </div>
+          <div class="stat-strip__item">
+            <span class="stat-strip__value">{{ Math.round(students.reduce((sum, s) => sum + s.studyTime, 0) / students.length) || 0 }}h</span>
+            <span class="stat-strip__label">均时长</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <el-row :gutter="20" class="stats-row">
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #409EFF15; color: #409EFF;">
-              <el-icon :size="24"><TrendCharts /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ students.length }}</div>
-              <div class="stat-label">学生总数</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #67C23A15; color: #67C23A;">
-              <el-icon :size="24"><DocumentChecked /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ Math.round(students.reduce((sum, s) => sum + s.avgScore, 0) / students.length) || 0 }}</div>
-              <div class="stat-label">班级平均分</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card shadow="hover">
-          <div class="stat-card">
-            <div class="stat-icon" style="background: #E6A23C15; color: #E6A23C;">
-              <el-icon :size="24"><TrendCharts /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">{{ Math.round(students.reduce((sum, s) => sum + s.studyTime, 0) / students.length) || 0 }}h</div>
-              <div class="stat-label">平均学习时长</div>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card shadow="never" class="content-card">
-      <div class="filter-bar toolbar-card">
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索学生姓名或学号"
-          :prefix-icon="Search"
-          clearable
-          style="width: 300px;"
-        />
+    <div class="panel">
+      <div class="toolbar-section">
+        <div class="toolbar-left">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索学生姓名或学号"
+            :prefix-icon="Search"
+            clearable
+            style="width: 260px;"
+          />
+        </div>
       </div>
 
       <el-table :data="students" stripe>
         <el-table-column label="学生信息" min-width="200">
           <template #default="{ row }">
             <div class="student-info">
-              <el-avatar :size="40" :src="row.avatar" />
+              <el-avatar :size="36" :src="row.avatar" />
               <div class="student-detail">
                 <div class="student-name">{{ row.name }}</div>
                 <div class="student-id">{{ row.username }}</div>
@@ -143,21 +122,21 @@ function getProgressColor(percentage: number): string {
           </template>
         </el-table-column>
 
-        <el-table-column label="完成课程" width="120" align="center">
+        <el-table-column label="完成课程" width="110" align="center">
           <template #default="{ row }">
             {{ row.completedCourses }} 门
           </template>
         </el-table-column>
 
-        <el-table-column label="平均成绩" width="120" align="center">
+        <el-table-column label="平均成绩" width="110" align="center">
           <template #default="{ row }">
-            <span :style="{ color: getProgressColor(row.avgScore), fontWeight: 600 }">
+            <span :style="{ color: getProgressColor(row.avgScore), fontWeight: 700 }">
               {{ row.avgScore }}
             </span>
           </template>
         </el-table-column>
 
-        <el-table-column label="学习时长" width="120" align="center">
+        <el-table-column label="学习时长" width="110" align="center">
           <template #default="{ row }">
             {{ row.studyTime }} 小时
           </template>
@@ -171,66 +150,37 @@ function getProgressColor(percentage: number): string {
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.teacher-students-page {
+.panel {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: 16px;
 }
 
-.page-header {
+.toolbar-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--card-divider);
 }
 
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.stats-row {
-  margin-bottom: 20px;
-}
-
-.stat-card {
+.toolbar-left {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 10px;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: var(--text-200);
-  margin-top: 4px;
-}
-
-.filter-bar {
-  margin-bottom: 20px;
+  gap: 10px;
 }
 
 .student-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .student-detail {
@@ -239,7 +189,8 @@ function getProgressColor(percentage: number): string {
 }
 
 .student-name {
-  font-weight: 500;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .student-id {
