@@ -1,130 +1,66 @@
+/* ═══ 古籍统一色板 ═══ */
 :root {
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.12);
-  --transition-fast: 160ms;
-  --transition-base: 240ms;
-  --noise-opacity: 0.09;
-  --card-bg: color-mix(in srgb, var(--bg-100) 97%, #ffffff 3%);
-  --card-border: color-mix(in srgb, var(--bg-300) 78%, transparent 22%);
-  --card-hover-border: color-mix(in srgb, var(--primary-100) 16%, var(--bg-300) 84%);
-  --card-shadow: var(--shadow-sm);
-  --card-emphasis-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-100) 94%);
-  --card-emphasis-border: color-mix(in srgb, var(--primary-100) 20%, var(--bg-300) 80%);
-  --card-data-bg: color-mix(in srgb, var(--bg-100) 98.5%, #ffffff 1.5%);
-  --card-subtle: color-mix(in srgb, var(--bg-200) 92%, transparent 8%);
-  --card-divider: color-mix(in srgb, var(--bg-300) 68%, transparent 32%);
-  --card-icon-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
-  --card-icon-color: color-mix(in srgb, var(--primary-100) 72%, var(--text-100) 28%);
-  --card-emphasis-icon-color: color-mix(in srgb, var(--primary-100) 80%, var(--text-100) 20%);
+  --primary-100: #8B2500;
+  --primary-200: #E8CEBF;
+  --primary-300: #5C1A00;
+  --accent-100: #2B4C6F;
+  --accent-200: #C5D4E3;
+  --text-100: #1A1410;
+  --text-200: #6B5D4F;
+  --text-300: #9C8B78;
+  --bg-100: #F7F2E8;
+  --bg-200: #EDE5D6;
+  --bg-300: #D4C9B5;
+  --bg-400: #C2B59E;
 }
 
-:root[data-theme='crystal'] {
-  --primary-100: #2F5B8C;
-  --primary-200: #C9D7E6;
-  --primary-300: #1B2A3A;
-  --accent-100: #7A5C3A;
-  --accent-200: #E5D8C7;
-  --text-100: #1E2A3A;
-  --text-200: #465568;
-  --bg-100: #F4F6F9;
-  --bg-200: #E9EDF3;
-  --bg-300: #D6DCE6;
-  --noise-opacity: 0.08;
-}
-
-:root[data-theme='xuanZhi'] {
-  --primary-100: #2E5E4E;
-  --primary-200: #C9D6C7;
-  --primary-300: #0E1C18;
-  --accent-100: #8C4C2D;
-  --accent-200: #E9D6C8;
-  --text-100: #1B1A17;
-  --text-200: #3F3A32;
-  --bg-100: #F6F1E8;
-  --bg-200: #ECE3D6;
-  --bg-300: #D8CCBB;
-  --noise-opacity: 0.08;
-}
-
-:root[data-theme='classicWhite'] {
-  --primary-100: #4A6F5D;
-  --primary-200: #D3E0D6;
-  --primary-300: #1E2C26;
-  --accent-100: #B46A3C;
-  --accent-200: #F1D9C7;
-  --text-100: #2C2A26;
-  --text-200: #5A534A;
-  --bg-100: #FAF7F0;
-  --bg-200: #F0E9DE;
-  --bg-300: #E3D8C9;
-  --noise-opacity: 0.06;
-}
-
-:root[data-theme='night'] {
-  --primary-100: #5DAA9F;
-  --primary-200: #2A4D47;
-  --primary-300: #0D1D1A;
-  --accent-100: #C2895B;
-  --accent-200: #3E2D1F;
-  --text-100: #E8ECEF;
-  --text-200: #B5BCC4;
-  --bg-100: #14171A;
-  --bg-200: #1D2227;
-  --bg-300: #2A3138;
-  --noise-opacity: 0.10;
-}
-
-:root[data-theme='cyberNexus'] {
-  --primary-100: #00e5c6;
-  --primary-200: #0a3d35;
-  --primary-300: #003d33;
-  --accent-100: #ff2d6a;
-  --accent-200: #3d0f1e;
-  --text-100: #e0f0ef;
-  --text-200: #6b8a8e;
-  --bg-100: #0a0e14;
-  --bg-200: #111820;
-  --bg-300: #1a2332;
-  --noise-opacity: 0.04;
+/* ═══ 古籍形状系统 ═══ */
+:root {
   --radius-sm: 2px;
   --radius-md: 3px;
-  --shadow-sm: 0 0 12px rgba(0, 229, 198, 0.06);
-  --shadow-md: 0 0 24px rgba(0, 229, 198, 0.10);
-  --card-bg: rgba(17, 24, 32, 0.85);
-  --card-border: rgba(0, 229, 198, 0.12);
-  --card-hover-border: rgba(0, 229, 198, 0.3);
-  --card-shadow: 0 0 12px rgba(0, 229, 198, 0.06);
-  --card-emphasis-bg: rgba(0, 229, 198, 0.06);
-  --card-emphasis-border: rgba(0, 229, 198, 0.2);
-  --card-data-bg: rgba(10, 14, 20, 0.9);
-  --card-subtle: rgba(26, 35, 50, 0.7);
-  --card-divider: rgba(0, 229, 198, 0.08);
-  --card-icon-bg: rgba(0, 229, 198, 0.08);
-  --card-icon-color: #00e5c6;
-  --card-emphasis-icon-color: #00ffcc;
-  /* cyber-specific tokens */
-  --cyber-glow: 0 0 8px rgba(0, 229, 198, 0.4), 0 0 24px rgba(0, 229, 198, 0.15);
-  --cyber-glow-strong: 0 0 12px rgba(0, 229, 198, 0.6), 0 0 40px rgba(0, 229, 198, 0.2);
-  --cyber-border: 1px solid rgba(0, 229, 198, 0.15);
-  --cyber-border-active: 1px solid rgba(0, 229, 198, 0.4);
-  --cyber-accent-glow: 0 0 8px rgba(255, 45, 106, 0.4);
-  --cyber-grid-color: rgba(0, 229, 198, 0.04);
-  --cyber-scanline-color: rgba(0, 229, 198, 0.03);
-  --cyber-font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  --radius-lg: 4px;
+
+  /* 书籍布局 */
+  --book-spine-width: 56px;
+  --book-spine-expanded: 220px;
+  --book-page-shadow: inset 6px 0 18px -8px rgba(26, 20, 16, 0.07);
+  --book-binding-color: var(--primary-100);
+  --book-binding-width: 3px;
+
+  /* 墨迹 & 印章 */
+  --ink-wash-color: rgba(26, 20, 16, 0.04);
+  --seal-red: #C23B22;
+  --bamboo-green: #5B7744;
+  --shadow-sm: 0 1px 3px rgba(26, 20, 16, 0.06);
+  --shadow-md: 0 2px 8px rgba(26, 20, 16, 0.08);
+  --transition-fast: 200ms;
+  --transition-base: 300ms;
+  --noise-opacity: 0.06;
+  --card-bg: var(--bg-200);
+  --card-border: var(--bg-300);
+  --card-hover-border: var(--primary-200);
+  --card-shadow: none;
+  --card-emphasis-bg: color-mix(in srgb, var(--primary-100) 4%, var(--bg-100) 96%);
+  --card-emphasis-border: color-mix(in srgb, var(--primary-100) 18%, var(--bg-300) 82%);
+  --card-data-bg: var(--bg-100);
+  --card-subtle: color-mix(in srgb, var(--bg-200) 90%, transparent 10%);
+  --card-divider: var(--bg-300);
+  --card-icon-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
+  --card-icon-color: var(--primary-100);
+  --card-emphasis-icon-color: var(--primary-100);
 }
 
+/* ═══ Element Plus 古籍覆盖 ═══ */
 :root {
   --el-color-primary: var(--primary-100);
-  --el-color-primary-light-3: color-mix(in srgb, var(--primary-100) 70%, #ffffff 30%);
-  --el-color-primary-light-5: color-mix(in srgb, var(--primary-100) 55%, #ffffff 45%);
-  --el-color-primary-light-7: color-mix(in srgb, var(--primary-100) 40%, #ffffff 60%);
-  --el-color-primary-light-9: color-mix(in srgb, var(--primary-100) 22%, #ffffff 78%);
-  --el-color-primary-dark-2: color-mix(in srgb, var(--primary-100) 80%, #000000 20%);
+  --el-color-primary-light-3: color-mix(in srgb, var(--primary-100) 70%, var(--bg-100) 30%);
+  --el-color-primary-light-5: color-mix(in srgb, var(--primary-100) 55%, var(--bg-100) 45%);
+  --el-color-primary-light-7: color-mix(in srgb, var(--primary-100) 40%, var(--bg-100) 60%);
+  --el-color-primary-light-9: color-mix(in srgb, var(--primary-100) 22%, var(--bg-100) 78%);
+  --el-color-primary-dark-2: var(--primary-300);
 
   --el-border-radius-base: var(--radius-sm);
-  --el-border-radius-round: 999px;
+  --el-border-radius-round: var(--radius-sm);
 
   --el-bg-color: var(--bg-100);
   --el-bg-color-page: var(--bg-100);
@@ -133,14 +69,16 @@
   --el-text-color-primary: var(--text-100);
   --el-text-color-regular: var(--text-200);
 
-  --el-fill-color-blank: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  --el-fill-color-light: color-mix(in srgb, var(--bg-100) 86%, #ffffff 14%);
-  --el-border-color: color-mix(in srgb, var(--bg-300) 70%, #000000 30%);
-  --el-border-color-light: color-mix(in srgb, var(--bg-300) 55%, #000000 45%);
+  --el-fill-color-blank: var(--bg-100);
+  --el-fill-color-light: var(--bg-200);
+  --el-border-color: var(--bg-300);
+  --el-border-color-light: var(--bg-300);
 
   --el-box-shadow: var(--shadow-sm);
   --el-box-shadow-light: var(--shadow-sm);
-  --el-box-shadow-lighter: 0 2px 10px rgba(0, 0, 0, 0.06);
+  --el-box-shadow-lighter: 0 1px 4px rgba(26, 20, 16, 0.04);
+
+  --el-font-family: var(--font-ui);
 }
 
 html,
@@ -150,26 +88,8 @@ body {
 
 body {
   position: relative;
-  background: radial-gradient(
-      1200px 600px at 20% -10%,
-      color-mix(in srgb, var(--primary-100) 16%, transparent 84%),
-      transparent
-    ),
-    radial-gradient(
-      900px 500px at 90% 10%,
-      color-mix(in srgb, var(--accent-100) 12%, transparent 88%),
-      transparent
-    ),
-    linear-gradient(
-      115deg,
-      color-mix(in srgb, var(--bg-200) 88%, #ffffff 12%),
-      color-mix(in srgb, var(--bg-100) 88%, #000000 12%)
-    );
+  background: var(--bg-100);
   color: var(--text-100);
-  transition:
-    background-color var(--transition-base),
-    color var(--transition-base),
-    filter var(--transition-base);
 }
 
 body::before {
@@ -179,8 +99,8 @@ body::before {
   pointer-events: none;
   z-index: 0;
   opacity: var(--noise-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.1'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
 }
 
 #app {
@@ -194,21 +114,20 @@ body::before {
 
 .ui-card {
   border-radius: var(--radius-md);
-  box-shadow: var(--card-shadow);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  border: 1px solid var(--card-border);
+  transition: border-color var(--transition-fast);
 }
 
 .ui-card:hover {
-  box-shadow: var(--card-shadow);
+  border-color: var(--card-hover-border);
 }
 
 .page-fade-enter-active,
 .page-fade-leave-active {
-  transition: opacity var(--transition-base), transform var(--transition-base);
+  transition: opacity var(--transition-base);
 }
 
 .page-fade-enter-from,
 .page-fade-leave-to {
   opacity: 0;
-  transform: translateY(6px);
 }

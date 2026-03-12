@@ -8,8 +8,10 @@ import { useUserStore, useCourseStore, useLearningStore } from '@/stores'
 import { mockUsers, mockClasses, getClassStudents } from '@/mock/data'
 import type { User } from '@/types'
 import IntegrationHint from '@/components/IntegrationHint.vue'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
 const router = useRouter()
+const { pageRef } = usePageEntrance()
 const courseStore = useCourseStore()
 const learningStore = useLearningStore()
 
@@ -61,7 +63,7 @@ function getProgressColor(percentage: number): string {
 
 
 <template>
-  <div class="teacher-students-page page page--compact">
+  <div ref="pageRef" class="teacher-students-page page page--compact">
     <div class="page-head">
       <div class="page-head__left">
         <div>

@@ -171,7 +171,7 @@ function getStatusClass(status: AgentStep['status']) {
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--primary-100) 40%, var(--bg-300) 60%);
   background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100) 90%);
   color: var(--primary-100);
@@ -249,7 +249,7 @@ function getStatusClass(status: AgentStep['status']) {
 .step-dot {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: 0;
   border: 2px solid var(--bg-300);
   background: var(--bg-100);
   display: grid;

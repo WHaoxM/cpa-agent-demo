@@ -98,7 +98,7 @@ function initChart() {
         .style('padding', '8px 12px')
         .style('background', 'rgba(0,0,0,0.8)')
         .style('color', 'white')
-        .style('border-radius', '4px')
+        .style('border-radius', '0')
         .style('font-size', '12px')
         .style('pointer-events', 'none')
         .html(`${d.name}<br/>${props.valueLabel}: ${d.value}%`)

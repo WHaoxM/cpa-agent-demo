@@ -2,11 +2,14 @@
 <script setup lang="ts">
 // @ts-nocheck
 import { computed } from 'vue'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 import PieChart from '@/components/charts/PieChart.vue'
 import ScoreLineChart from '@/components/charts/ScoreLineChart.vue'
 import HistogramChart from '@/components/charts/HistogramChart.vue'
 import { mockAdminStats } from '@/mock/data'
 import IntegrationHint from '@/components/IntegrationHint.vue'
+
+const { pageRef } = usePageEntrance()
 
 // 用户分布饼图数据
 const userDistributionData = mockAdminStats.userDistribution
@@ -32,7 +35,7 @@ const courseData = mockAdminStats.courseStats.map(item => ({
 
 
 <template>
-  <div class="system-stats-page page page--compact">
+  <div ref="pageRef" class="system-stats-page page page--compact">
     <div class="page-head">
       <div class="page-head__left">
         <div>

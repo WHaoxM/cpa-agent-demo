@@ -1,6 +1,6 @@
 @import './base.css';
 @import './theme.css';
-@import './cyber.css';
+@import './book-texture.css';
 
 #app {
   min-height: 100vh;
@@ -8,9 +8,9 @@
 
 .page {
   width: 100%;
-  max-width: 1240px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 22px;
+  padding: 28px 32px;
 }
 
 .page.page--compact {
@@ -22,10 +22,10 @@
 .page-header {
   margin-bottom: 18px;
   padding: 18px 18px;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
+  border-top: 2px solid var(--primary-100);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .page-header .subtitle {
@@ -34,25 +34,22 @@
 
 .toolbar-card {
   padding: 14px;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .content-card {
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .card-base {
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .card-base.is-interactive,
@@ -65,28 +62,25 @@ a.card-base {
 button.card-base:hover,
 a.card-base:hover {
   border-color: var(--card-hover-border);
-  box-shadow: var(--card-shadow);
 }
 
 .card-emphasis {
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
+  border-left: 3px solid var(--primary-100);
   background: var(--card-emphasis-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .card-data {
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-data-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .card-surface {
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
 }
 
 .grid-gap-md {
@@ -112,10 +106,10 @@ a {
 }
 
 .el-card {
-  --el-card-border-radius: var(--radius-md);
+  --el-card-border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
+  box-shadow: none;
 }
 
 .el-card :is(.el-card__header, .el-card__body) {
@@ -124,7 +118,8 @@ a {
 
 .el-card.is-hover-shadow:hover {
   transform: none;
-  box-shadow: var(--card-shadow);
+  box-shadow: none;
+  border-color: var(--card-hover-border);
 }
 
 /* ═══ Form Section System ═══ */
@@ -142,9 +137,10 @@ a {
 
 .form-section__title {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
+  font-family: var(--font-title);
   color: var(--text-100);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
 }
 
 .form-section__desc {
@@ -164,11 +160,12 @@ a {
 }
 
 .kv-row + .kv-row {
-  border-top: 1px dashed var(--card-divider);
+  border-top: 1px solid var(--card-divider);
 }
 
 .kv-row__k {
   font-size: 12px;
+  font-family: var(--font-accent);
   color: var(--text-200);
   flex-shrink: 0;
 }
@@ -193,14 +190,15 @@ a {
   gap: 2px;
   padding: 10px 14px;
   border: 1px solid var(--card-border);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   background: var(--card-data-bg);
   min-width: 100px;
 }
 
 .stat-strip__value {
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 700;
+  font-family: var(--font-title);
   color: var(--text-100);
   line-height: 1.1;
 }
@@ -218,7 +216,7 @@ a {
   gap: 14px;
   padding: 14px;
   margin-bottom: 16px;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   background: var(--card-data-bg);
   border: 1px solid var(--card-divider);
 }
@@ -234,7 +232,8 @@ a {
 
 .dialog-summary__name {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
+  font-family: var(--font-title);
   color: var(--text-100);
 }
 
@@ -276,10 +275,10 @@ a {
   gap: 16px;
   margin-bottom: 16px;
   padding: 14px 16px;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   border: 1px solid var(--card-border);
+  border-top: 2px solid var(--primary-100);
   background: var(--card-bg);
-  box-shadow: var(--card-shadow);
   flex-wrap: wrap;
 }
 
@@ -292,9 +291,11 @@ a {
 
 .page-head__title {
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 600;
+  font-family: var(--font-title);
+  letter-spacing: 0.06em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .page-head__desc {
@@ -356,4 +357,86 @@ a {
     flex-direction: column;
     text-align: center;
   }
+}
+
+/* ═══ 古籍装饰工具类 ═══ */
+
+.classical-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--bg-400);
+  margin: 16px 0;
+}
+.classical-divider::before,
+.classical-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--bg-300);
+}
+
+.corner-ornament {
+  position: relative;
+}
+.corner-ornament::before,
+.corner-ornament::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--primary-200);
+  border-style: solid;
+  pointer-events: none;
+}
+.corner-ornament::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+.corner-ornament::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+.seal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--primary-100);
+  color: var(--primary-100);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+}
+
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.2em;
+  font-family: var(--font-title);
+}
+
+.top-vermillion {
+  border-top: 2px solid var(--primary-100);
+}
+
+.left-vermillion {
+  border-left: 3px solid var(--primary-100);
+}
+
+.font-title {
+  font-family: var(--font-title);
+}
+
+.font-accent {
+  font-family: var(--font-accent);
+}
+
+.font-ui {
+  font-family: var(--font-ui);
 }

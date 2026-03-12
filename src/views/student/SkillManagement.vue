@@ -3,6 +3,7 @@
 // @ts-nocheck
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 import { Icon } from '@iconify/vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Delete, Edit, Star, Document, Refresh } from '@element-plus/icons-vue'
@@ -16,6 +17,7 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
 
 const router = useRouter()
+const { pageRef } = usePageEntrance()
 const userStore = useUserStore()
 const courseStore = useCourseStore()
 const learningStore = useLearningStore()
@@ -264,7 +266,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="skill-page">
+  <div ref="pageRef" class="skill-page">
     <!-- 顶部状态条 -->
     <div class="skill-header">
       <div class="skill-header__left">
@@ -778,7 +780,7 @@ onMounted(() => {
 }
 .fav-indicator {
   width: 6px; height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--accent-100, #ff2d6a);
   flex-shrink: 0;
 }

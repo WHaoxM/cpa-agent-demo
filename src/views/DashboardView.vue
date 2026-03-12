@@ -1,11 +1,12 @@
 ﻿<!-- 页面：首页；路由：/app（dashboard） -->
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore, useCourseStore, useKnowledgeGraphStore } from '@/stores'
 import CalendarChart from '@/components/charts/CalendarChart.vue'
 import { getNetworkGraphData, layerLabelMap, layerColors } from '@/composables/useNetworkGraph'
+import { gsap } from '@/plugins/gsap'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -80,9 +81,9 @@ const calendarData = [
 
 // ===== 知识图谱 & Agent 入口数据 =====
 const kgCapabilities = [
-  { icon: '◎', label: '多模态融合', desc: '文本·命令·拓扑·抓包 四模态并存', status: 'active' },
-  { icon: '⬡', label: '多Agent协作', desc: '知识定位·协议分析·故障诊断·学习建议', status: 'active' },
-  { icon: '◈', label: '知识图谱', desc: `${graphNodeCount} 个知识点 · ${graphEdgeCount} 条关系`, status: 'active' },
+  { icon: '融', label: '多模态融合', desc: '文本·命令·拓扑·抓包 四模态并存', status: 'active' },
+  { icon: '协', label: '多Agent协作', desc: '知识定位·协议分析·故障诊断·学习建议', status: 'active' },
+  { icon: '图', label: '知识图谱', desc: `${graphNodeCount} 个知识点 · ${graphEdgeCount} 条关系`, status: 'active' },
 ]
 
 const agentRoles = [
@@ -125,14 +126,42 @@ function toggleTodo(id: number) {
   }
 }
 
+/* ===== GSAP 章节入场 ===== */
+const dashRef = ref<HTMLElement | null>(null)
+let gsapCtx: ReturnType<typeof gsap.context> | null = null
+
 onMounted(() => {
   const el = document.querySelector('.content')
   if (el) el.classList.add('hide-scrollbar')
+
+  if (!dashRef.value) return
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (prefersReduced) return
+
+  gsapCtx = gsap.context(() => {
+    /* 区块交错入场 */
+    gsap.from('.zone-animate', {
+      opacity: 0, y: 18,
+      stagger: 0.1, duration: 0.45, ease: 'power2.out',
+      delay: 0.1,
+    })
+
+    /* 小卡片交错 */
+    gsap.from('.card-animate', {
+      opacity: 0, y: 12,
+      stagger: 0.06, duration: 0.35, ease: 'power2.out',
+      delay: 0.35,
+    })
+  }, dashRef.value)
 })
 
 onUnmounted(() => {
   const el = document.querySelector('.content')
   if (el) el.classList.remove('hide-scrollbar')
+})
+
+onBeforeUnmount(() => {
+  gsapCtx?.revert()
 })
 </script>
 
@@ -143,14 +172,14 @@ onUnmounted(() => {
 
 
 <template>
-  <div class="dash">
+  <div ref="dashRef" class="dash">
     <!-- ===== HEADER ===== -->
-    <header class="dash-header">
+    <header class="dash-header zone-animate">
       <div class="header-left">
         <div class="header-brand">
-          <span class="brand-icon">◆</span>
+          <span class="brand-icon">学</span>
           <span class="brand-name">课程系统</span>
-          <span class="brand-sep">::</span>
+          <span class="brand-sep">·</span>
           <span class="brand-live">
             <span class="live-dot"></span>
             <span>在线</span>
@@ -173,8 +202,8 @@ onUnmounted(() => {
     </header>
 
     <!-- ===== HERO BANNER ===== -->
-    <section class="zone-hero" v-if="isStudent">
-      <span class="zone-tag">概览</span>
+    <section class="zone-hero zone-animate" v-if="isStudent">
+      <span class="zone-tag">— 概览 —</span>
       <div class="hero-content">
         <div class="hero-streak">
           <span class="hero-num">7</span>
@@ -199,13 +228,13 @@ onUnmounted(() => {
     </section>
 
     <!-- ===== KNOWLEDGE GRAPH & AGENT ENTRY ===== -->
-    <section class="zone-cap">
-      <span class="zone-tag">核心能力</span>
+    <section class="zone-cap zone-animate">
+      <span class="zone-tag">— 核心能力 —</span>
       <div class="cap-grid">
         <!-- 知识图谱入口卡片 -->
         <div class="cap-card cap-card--hero clickable" @click="navigateTo('/app/student/knowledge-graph')">
           <div class="cap-title">
-            <span class="cap-icon">◈</span>
+            <span class="cap-icon">图</span>
             <span>网络工程知识图谱</span>
             <span class="cap-go">进入探索 ›</span>
           </div>
@@ -240,7 +269,7 @@ onUnmounted(() => {
         <!-- Agent 协作入口 -->
         <div class="cap-card">
           <div class="cap-title">
-            <span class="cap-icon">⬡</span>
+            <span class="cap-icon">协</span>
             <span>多Agent协同分析</span>
           </div>
           <div class="agent-list">
@@ -287,12 +316,12 @@ onUnmounted(() => {
     </section>
 
     <!-- ===== PRIMARY: 日历 + 本周统计 ===== -->
-    <section class="zone-primary">
-      <span class="zone-tag">核心</span>
+    <section class="zone-primary zone-animate">
+      <span class="zone-tag">— 核心 —</span>
       <div class="primary-grid">
         <div class="primary-calendar">
           <div class="sec-header">
-            <span class="sec-icon">◈</span>
+            <span class="sec-icon">历</span>
             <span>学习日历</span>
           </div>
           <div class="calendar-box">
@@ -301,7 +330,7 @@ onUnmounted(() => {
         </div>
         <div class="primary-week" v-if="isStudent">
           <div class="sec-header">
-            <span class="sec-icon">▥</span>
+            <span class="sec-icon">统</span>
             <span>本周统计</span>
           </div>
           <div class="week-total">
@@ -321,13 +350,13 @@ onUnmounted(() => {
     </section>
 
     <!-- ===== INFO: 快捷入口 + 公告 + 待办 ===== -->
-    <section class="zone-info">
-      <span class="zone-tag">信息</span>
+    <section class="zone-info zone-animate">
+      <span class="zone-tag">— 信息 —</span>
       <div class="info-grid">
         <!-- 快捷入口 -->
-        <div class="info-card">
+        <div class="info-card card-animate">
           <div class="sec-header">
-            <span class="sec-icon">▦</span>
+            <span class="sec-icon">入</span>
             <span>快捷入口</span>
           </div>
           <div class="qlist">
@@ -343,9 +372,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 公告 -->
-        <div class="info-card">
+        <div class="info-card card-animate">
           <div class="sec-header">
-            <span class="sec-icon">▤</span>
+            <span class="sec-icon">告</span>
             <span>公告</span>
             <span class="sec-badge">{{ announcements.length }}</span>
           </div>
@@ -361,9 +390,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 待办 -->
-        <div class="info-card">
+        <div class="info-card card-animate">
           <div class="sec-header">
-            <span class="sec-icon">▧</span>
+            <span class="sec-icon">办</span>
             <span>待办</span>
             <span class="sec-badge">{{ todos.filter(t => !t.completed).length }}</span>
           </div>
@@ -379,13 +408,13 @@ onUnmounted(() => {
     </section>
 
     <!-- ===== SECONDARY: 最近访问 + 收藏/教师/管理员 ===== -->
-    <section class="zone-secondary">
-      <span class="zone-tag">辅助</span>
+    <section class="zone-secondary zone-animate">
+      <span class="zone-tag">— 辅助 —</span>
       <div class="secondary-grid">
         <!-- 最近访问 -->
-        <div class="sec-card">
+        <div class="sec-card card-animate">
           <div class="sec-header">
-            <span class="sec-icon">▨</span>
+            <span class="sec-icon">近</span>
             <span>最近访问</span>
           </div>
           <div class="rlist">
@@ -397,9 +426,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 学生：收藏课程 -->
-        <div class="sec-card" v-if="isStudent">
+        <div class="sec-card card-animate" v-if="isStudent">
           <div class="sec-header">
-            <span class="sec-icon">★</span>
+            <span class="sec-icon">藏</span>
             <span>收藏课程</span>
             <span class="sec-badge">{{ favoriteCourses.length }}</span>
           </div>
@@ -416,9 +445,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 教师：待批改 + 班级 -->
-        <div class="sec-card" v-if="isTeacher">
+        <div class="sec-card card-animate" v-if="isTeacher">
           <div class="sec-header">
-            <span class="sec-icon">!</span>
+            <span class="sec-icon">待</span>
             <span>待处理</span>
           </div>
           <div class="pend-row">
@@ -434,9 +463,9 @@ onUnmounted(() => {
         </div>
 
         <!-- 管理员：系统概览 -->
-        <div class="sec-card" v-if="isAdmin">
+        <div class="sec-card card-animate" v-if="isAdmin">
           <div class="sec-header">
-            <span class="sec-icon">◉</span>
+            <span class="sec-icon">系</span>
             <span>系统概览</span>
           </div>
           <div class="sys-row">
@@ -510,30 +539,41 @@ onUnmounted(() => {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-100);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  font-family: var(--font-title);
 }
 
-.brand-icon { color: var(--primary-100); font-size: 22px; }
-.brand-sep { color: var(--text-200); }
+.brand-icon {
+  color: var(--bg-100);
+  background: var(--primary-100);
+  font-size: 14px;
+  font-family: var(--font-title);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.brand-sep { color: var(--text-300); }
 
 .brand-live {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 8px;
-  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
+  border: 1px solid var(--bg-300);
   color: var(--primary-100);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
+  font-family: var(--font-body);
 }
 
 .live-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--primary-100);
-  animation: pulse-live 1.2s infinite;
 }
 
 .header-sub {
@@ -569,10 +609,6 @@ onUnmounted(() => {
 
 .user-sep { color: var(--bg-300); }
 
-@keyframes pulse-live {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
 
 /* ===== ZONE TAG ===== */
 .zone-tag {
@@ -581,9 +617,9 @@ onUnmounted(() => {
   top: 10px;
   left: 14px;
   font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--text-200);
-  opacity: 0.5;
+  letter-spacing: 0.16em;
+  color: var(--text-300);
+  font-family: var(--font-body);
   pointer-events: none;
 }
 
@@ -610,10 +646,11 @@ onUnmounted(() => {
 }
 
 .hero-num {
-  font-size: 52px;
+  font-size: 48px;
   font-weight: 700;
   line-height: 1;
-  color: var(--accent-100);
+  color: var(--primary-100);
+  font-family: var(--font-title);
 }
 
 .hero-unit {
@@ -688,14 +725,25 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--text-100);
   margin-bottom: 16px;
+  font-family: var(--font-title);
 }
 
-.cap-icon { color: var(--primary-100); font-size: 16px; }
+.cap-icon {
+  color: var(--bg-100);
+  background: var(--primary-100);
+  font-size: 12px;
+  font-family: var(--font-title);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* KG entry card */
 .cap-card--hero { cursor: pointer; transition: background 0.15s; }
@@ -731,7 +779,18 @@ onUnmounted(() => {
   background: var(--bg-100);
 }
 
-.kg-cap-icon { font-size: 15px; color: var(--primary-100); }
+.kg-cap-icon {
+  font-size: 13px;
+  color: var(--bg-100);
+  background: var(--primary-100);
+  font-family: var(--font-title);
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
 .kg-cap-info { flex: 1; }
 .kg-cap-label { font-size: 11px; font-weight: 600; color: var(--text-100); display: block; }
@@ -752,14 +811,14 @@ onUnmounted(() => {
 .kg-layer-bar {
   display: flex;
   height: 6px;
-  border-radius: 3px;
+  border-radius: 0;
   overflow: hidden;
   gap: 2px;
   margin-bottom: 8px;
 }
 
 .kg-layer-seg {
-  border-radius: 2px;
+  border-radius: 0;
   min-width: 4px;
 }
 
@@ -780,7 +839,7 @@ onUnmounted(() => {
 .kg-layer-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 0;
   display: inline-block;
 }
 
@@ -892,13 +951,13 @@ onUnmounted(() => {
 .agent-item.clickable:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
 
 .agent-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
-.agent-dot.online { background: var(--primary-100); animation: pulse-live 1.5s infinite; }
+.agent-dot.online { background: var(--primary-100); }
 .agent-dot.offline { background: var(--text-200); }
 
 .agent-id {
@@ -996,13 +1055,24 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   margin-bottom: 14px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--text-100);
+  font-family: var(--font-title);
 }
 
-.sec-icon { color: var(--primary-100); font-size: 15px; }
+.sec-icon {
+  color: var(--primary-100);
+  font-size: 12px;
+  font-family: var(--font-title);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--primary-200);
+}
 
 .sec-badge {
   margin-left: auto;
@@ -1025,7 +1095,8 @@ onUnmounted(() => {
   font-size: 36px;
   font-weight: 700;
   line-height: 1;
-  color: var(--text-100);
+  color: var(--primary-100);
+  font-family: var(--font-title);
 }
 
 .week-unit {
@@ -1104,10 +1175,10 @@ onUnmounted(() => {
 .qitem:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
 
 .qdot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   background: var(--primary-100);
-  border-radius: 50%;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -1130,10 +1201,10 @@ onUnmounted(() => {
 }
 
 .ndot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   margin-top: 5px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--text-200);
   flex-shrink: 0;
 }
@@ -1278,7 +1349,8 @@ onUnmounted(() => {
   display: block;
   font-size: 36px;
   font-weight: 700;
-  color: var(--accent-100);
+  color: var(--primary-100);
+  font-family: var(--font-title);
   line-height: 1;
   margin-bottom: 8px;
 }
@@ -1306,6 +1378,7 @@ onUnmounted(() => {
   font-size: 30px;
   font-weight: 700;
   color: var(--primary-100);
+  font-family: var(--font-title);
   line-height: 1;
   margin-bottom: 6px;
 }
@@ -1363,234 +1436,5 @@ onUnmounted(() => {
   }
 }
 
-/* ═══ CYBER NEXUS 主题覆盖 ═══ */
-[data-theme='cyberNexus'] .dash {
-  font-family: var(--cyber-font-mono);
-}
-[data-theme='cyberNexus'] .dash-header {
-  background: rgba(10, 14, 20, 0.9);
-  border-bottom: 1px solid rgba(0, 229, 198, 0.1);
-  position: relative;
-}
-[data-theme='cyberNexus'] .dash-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
-  pointer-events: none;
-}
-[data-theme='cyberNexus'] .header-brand {
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-[data-theme='cyberNexus'] .brand-icon { color: #00e5c6; }
-[data-theme='cyberNexus'] .brand-live {
-  background: rgba(0, 229, 198, 0.08);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.15);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .live-dot { background: #00e5c6; }
-[data-theme='cyberNexus'] .sub-active { color: #00e5c6; }
-
-[data-theme='cyberNexus'] .zone-tag {
-  color: #00e5c6;
-  opacity: 0.35;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-}
-
-[data-theme='cyberNexus'] .zone-hero {
-  background: rgba(10, 14, 20, 0.7);
-  border-bottom-color: rgba(0, 229, 198, 0.08);
-}
-[data-theme='cyberNexus'] .hero-num {
-  color: #00e5c6;
-  text-shadow: 0 0 20px rgba(0, 229, 198, 0.3);
-}
-[data-theme='cyberNexus'] .hero-divider { background: rgba(0, 229, 198, 0.12); }
-[data-theme='cyberNexus'] .hero-bar { background: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .hero-bar-fill {
-  background: linear-gradient(90deg, #00e5c6, #00b8a0);
-  box-shadow: 0 0 8px rgba(0, 229, 198, 0.3);
-}
-
-[data-theme='cyberNexus'] .zone-cap {
-  border-bottom-color: rgba(0, 229, 198, 0.08);
-}
-[data-theme='cyberNexus'] .cap-card {
-  background: rgba(10, 14, 20, 0.6);
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .cap-card--hero:hover {
-  background: rgba(0, 229, 198, 0.04);
-  border-color: rgba(0, 229, 198, 0.2);
-  box-shadow: 0 0 20px rgba(0, 229, 198, 0.06);
-}
-[data-theme='cyberNexus'] .cap-icon { color: #00e5c6; }
-[data-theme='cyberNexus'] .cap-go { color: #00e5c6; }
-
-[data-theme='cyberNexus'] .kg-cap-item {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .kg-cap-icon { color: #00e5c6; }
-[data-theme='cyberNexus'] .kg-cap-status.active {
-  color: #00e5c6;
-  background: rgba(0, 229, 198, 0.08);
-  border: 1px solid rgba(0, 229, 198, 0.12);
-}
-
-[data-theme='cyberNexus'] .kg-layer-bar { border-radius: 0; }
-[data-theme='cyberNexus'] .kg-layer-seg { border-radius: 0; }
-[data-theme='cyberNexus'] .kg-layer-dot { border-radius: 0; }
-
-[data-theme='cyberNexus'] .kg-history-item {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .kg-history-item:hover {
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-}
-
-[data-theme='cyberNexus'] .agent-item {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .agent-dot.online {
-  box-shadow: 0 0 6px currentColor;
-  border-radius: 0;
-  width: 6px; height: 6px;
-}
-[data-theme='cyberNexus'] .agent-status.online {
-  color: #00e5c6;
-  background: rgba(0, 229, 198, 0.08);
-  border: 1px solid rgba(0, 229, 198, 0.12);
-}
-[data-theme='cyberNexus'] .pipe-node { color: #00e5c6; }
-[data-theme='cyberNexus'] .pipe-arrow { color: rgba(0, 229, 198, 0.3); }
-
-[data-theme='cyberNexus'] .cap-cta { border-top-color: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .cap-cta-btn {
-  background: rgba(0, 229, 198, 0.06);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.15);
-  border-radius: 0;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-[data-theme='cyberNexus'] .cap-cta-btn:hover {
-  background: rgba(0, 229, 198, 0.12);
-  box-shadow: 0 0 12px rgba(0, 229, 198, 0.1);
-}
-
-[data-theme='cyberNexus'] .pipeline { border-top-color: rgba(0, 229, 198, 0.08); }
-
-[data-theme='cyberNexus'] .zone-primary { border-bottom-color: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .primary-calendar,
-[data-theme='cyberNexus'] .primary-week {
-  background: rgba(10, 14, 20, 0.6);
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .sec-icon { color: #00e5c6; }
-[data-theme='cyberNexus'] .sec-badge {
-  background: rgba(0, 229, 198, 0.08);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.12);
-}
-[data-theme='cyberNexus'] .week-num { color: #00e5c6; }
-[data-theme='cyberNexus'] .wbar-track { background: rgba(0, 229, 198, 0.06); border-radius: 0; }
-[data-theme='cyberNexus'] .wbar-fill {
-  background: linear-gradient(0deg, #00e5c6, rgba(0, 229, 198, 0.5));
-  box-shadow: 0 0 6px rgba(0, 229, 198, 0.2);
-}
-
-[data-theme='cyberNexus'] .zone-info { border-bottom-color: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .info-card {
-  background: rgba(10, 14, 20, 0.6);
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .qitem,
-[data-theme='cyberNexus'] .nitem,
-[data-theme='cyberNexus'] .titem {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .qitem:hover,
-[data-theme='cyberNexus'] .titem:hover {
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-}
-[data-theme='cyberNexus'] .qdot { background: #00e5c6; border-radius: 0; }
-[data-theme='cyberNexus'] .qitem:hover .qarrow { color: #00e5c6; }
-[data-theme='cyberNexus'] .nitem.warning .ndot { background: #ff2d6a; border-radius: 0; }
-[data-theme='cyberNexus'] .nitem.success .ndot { background: #00e5c6; border-radius: 0; }
-[data-theme='cyberNexus'] .ndot { border-radius: 0; }
-[data-theme='cyberNexus'] .tcheck { font-family: var(--cyber-font-mono); }
-[data-theme='cyberNexus'] .titem.done .tcheck { color: #00e5c6; }
-[data-theme='cyberNexus'] .ttag {
-  background: rgba(0, 229, 198, 0.06);
-  border: 1px solid rgba(0, 229, 198, 0.1);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .ttag.high {
-  background: rgba(255, 45, 106, 0.1);
-  color: #ff2d6a;
-  border-color: rgba(255, 45, 106, 0.2);
-}
-[data-theme='cyberNexus'] .ttag.medium {
-  background: rgba(0, 229, 198, 0.08);
-  color: #00e5c6;
-  border-color: rgba(0, 229, 198, 0.15);
-}
-
-[data-theme='cyberNexus'] .sec-card {
-  background: rgba(10, 14, 20, 0.6);
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .ritem,
-[data-theme='cyberNexus'] .fitem {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .ritem:hover,
-[data-theme='cyberNexus'] .fitem:hover {
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-}
-[data-theme='cyberNexus'] .fthumb {
-  background: rgba(0, 229, 198, 0.08);
-  color: #00e5c6;
-  border-radius: 0;
-  border: 1px solid rgba(0, 229, 198, 0.12);
-}
-[data-theme='cyberNexus'] .pend-item {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .pend-item:hover {
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-}
-[data-theme='cyberNexus'] .pend-num { color: #ff2d6a; text-shadow: 0 0 12px rgba(255, 45, 106, 0.3); }
-[data-theme='cyberNexus'] .sys-cell {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.06);
-  border-radius: 0;
-}
-[data-theme='cyberNexus'] .sys-num { color: #00e5c6; text-shadow: 0 0 12px rgba(0, 229, 198, 0.3); }
 </style>
 

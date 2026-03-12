@@ -279,7 +279,7 @@ onMounted(() => {
   display: flex;
   gap: 14px;
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background:
     radial-gradient(700px 240px at 10% 10%, color-mix(in srgb, var(--primary-100) 18%, transparent 82%), transparent),
@@ -295,7 +295,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 16px;
+  border-radius: 0;
   background: linear-gradient(
     132deg,
     color-mix(in srgb, var(--bg-200) 82%, #ffffff 18%),
@@ -327,7 +327,7 @@ onMounted(() => {
 .kpi-chip {
   position: relative;
   padding: 12px 12px 10px;
-  border-radius: 16px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--bg-300) 45%, transparent 55%);
   background: color-mix(in srgb, var(--bg-100) 93%, #ffffff 7%);
 }
@@ -378,7 +378,7 @@ onMounted(() => {
 }
 
 .chart-card {
-  border-radius: 18px;
+  border-radius: 0;
 }
 
 .chart-header {

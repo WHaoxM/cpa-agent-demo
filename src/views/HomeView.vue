@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import { getNetworkGraphData, layerLabelMap, layerColors } from '@/composables/useNetworkGraph'
+import { gsap } from '@/plugins/gsap'
+import BrushText from '@/components/book/BrushText.vue'
+import SealStamp from '@/components/book/SealStamp.vue'
+import InkWash from '@/components/book/InkWash.vue'
 
 const router = useRouter()
 const graphData = getNetworkGraphData()
@@ -11,19 +16,16 @@ const coreFeatures = [
     icon: 'lucide:network',
     title: '知识图谱',
     desc: `${graphData.nodes.length} 个网络工程知识节点，按 OSI 层级组织，力导向图交互探索。`,
-    tone: 'primary',
   },
   {
     icon: 'lucide:bot',
     title: '多Agent协同',
     desc: '知识定位 → 协议分析 → 故障诊断 → 学习建议，四步闭环可视化。',
-    tone: 'accent',
   },
   {
     icon: 'lucide:layers',
     title: '多模态融合',
     desc: '概念文本 · 配置命令 · 拓扑示意 · 抓包分析，四模态并存展示。',
-    tone: 'ice',
   },
 ]
 
@@ -42,676 +44,471 @@ const layerStats = Object.entries(
 function goToLogin() {
   router.push('/login')
 }
+
+/* ===== GSAP 动画 ===== */
+const shellRef = ref<HTMLElement | null>(null)
+const showContent = ref(false)
+let ctx: ReturnType<typeof gsap.context> | null = null
+
+onMounted(() => {
+  if (!shellRef.value) return
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (prefersReduced) {
+    showContent.value = true
+    return
+  }
+
+  ctx = gsap.context(() => {
+    const tl = gsap.timeline({
+      onComplete: () => { showContent.value = true },
+    })
+
+    /* 封面整体淡入 */
+    tl.from('.cover-frame', {
+      opacity: 0, scale: 0.96,
+      duration: 0.7, ease: 'power2.out',
+    })
+
+    /* 四角花纹绘制 */
+    tl.from('.cover-corner', {
+      scaleX: 0, scaleY: 0, opacity: 0,
+      stagger: 0.08, duration: 0.5, ease: 'power3.out',
+    }, '-=0.3')
+
+    /* 标题与副标题淡入（BrushText 自己也有动画） */
+    tl.from('.cover-subtitle', {
+      opacity: 0, y: 8,
+      duration: 0.5, ease: 'power2.out',
+    }, '-=0.2')
+
+    /* 特色卡片交错入场 */
+    tl.from('.feature-scroll', {
+      opacity: 0, y: 16,
+      stagger: 0.1, duration: 0.4, ease: 'power2.out',
+    }, '-=0.1')
+
+    /* 底部行动按钮 */
+    tl.from('.cover-actions', {
+      opacity: 0, y: 10,
+      duration: 0.4, ease: 'power2.out',
+    }, '-=0.15')
+
+    /* 统计数据行交错 */
+    tl.from('.ledger-row', {
+      opacity: 0, x: -12,
+      stagger: 0.06, duration: 0.35, ease: 'power2.out',
+    }, '-=0.2')
+  }, shellRef.value)
+})
+
+onBeforeUnmount(() => {
+  ctx?.revert()
+})
 </script>
 
 <template>
-  <div class="home-shell">
-    <header class="masthead">
-      <div class="brand">
-        <div class="brand__mark">KG</div>
-        <div class="brand__text">
-          <p class="brand__eyebrow">KNOWLEDGE GRAPH + MULTI-AGENT</p>
-          <h2 class="brand__name">智能课程系统</h2>
+  <div ref="shellRef" class="home-shell book-paper">
+    <!-- 墨迹晕染背景 -->
+    <InkWash :trigger="true" :intensity="30" :duration="3" />
+
+    <!-- ===== 书封面 ===== -->
+    <div class="cover-frame">
+      <!-- 四角花纹 -->
+      <span class="cover-corner cover-corner--tl"></span>
+      <span class="cover-corner cover-corner--tr"></span>
+      <span class="cover-corner cover-corner--bl"></span>
+      <span class="cover-corner cover-corner--br"></span>
+
+      <!-- 封面主体 -->
+      <header class="cover-head">
+        <p class="cover-subtitle">知识图谱 · 多智能体 · 多模态</p>
+        <BrushText text="网络工程" tag="h1" class="cover-title" :delay="0.3" :stagger="0.12" :duration="0.6" />
+        <BrushText text="智能学习平台" tag="h2" class="cover-title-sub" :delay="0.8" :stagger="0.1" :duration="0.5" />
+
+        <div class="cover-seal-row">
+          <SealStamp text="学" :size="52" shape="square" :delay="1.2" />
+          <div class="cover-divider"></div>
+          <SealStamp text="智" :size="42" shape="round" :delay="1.5" />
         </div>
-      </div>
+      </header>
 
-      <div class="masthead__actions">
-        <button class="btn btn--ghost" @click="goToLogin">登录</button>
-        <button class="btn btn--solid" @click="goToLogin">
-          进入系统
-          <Icon icon="solar:arrow-right-up-linear" />
-        </button>
-      </div>
-    </header>
+      <!-- 描述 -->
+      <p class="cover-desc">
+        以知识图谱为骨架，多Agent协同为引擎，多模态内容为载体——构建网络工程领域的结构化、可交互、可溯源的智能学习体验。
+      </p>
 
-    <main class="canvas">
-      <section class="hero">
-        <div class="hero__copy">
-          <p class="hero__kicker">知识图谱 + 多智能体 + 多模态</p>
-          <h1 class="hero__title">
-            网络工程
-            <span>智能学习平台</span>
-          </h1>
-          <p class="hero__desc">
-            以知识图谱为骨架，多Agent协同为引擎，多模态内容为载体——构建网络工程领域的结构化、可交互、可溯源的智能学习体验。
-          </p>
-
-          <div class="hero__actions">
-            <button class="btn-primary" @click="goToLogin">
-              进入系统
-              <Icon icon="solar:arrow-right-linear" />
-            </button>
-            <div class="hero__links">
-              <button class="btn-text" @click="goToLogin">登录</button>
-              <span class="link-separator">·</span>
-              <button class="btn-text" @click="goToLogin">演示账号：student / 123456</button>
+      <!-- 三特色卷轴条 -->
+      <div class="feature-scrolls">
+        <article v-for="feat in coreFeatures" :key="feat.title" class="feature-scroll">
+          <div class="feature-scroll__bar"></div>
+          <div class="feature-scroll__body">
+            <div class="feature-scroll__head">
+              <Icon :icon="feat.icon" class="feature-scroll__icon" />
+              <span class="feature-scroll__title">{{ feat.title }}</span>
             </div>
+            <p class="feature-scroll__desc">{{ feat.desc }}</p>
           </div>
-        </div>
+        </article>
+      </div>
 
-        <div class="signal-stage">
-          <div class="signal-stage__frame">
-            <article v-for="feat in coreFeatures" :key="feat.title" :class="['signal-strip', `signal-strip--${feat.tone}`]">
-              <div class="signal-strip__head">
-                <span class="signal-strip__label">{{ feat.title }}</span>
-                <Icon :icon="feat.icon" class="signal-strip__icon" />
-              </div>
-              <p class="signal-strip__note">{{ feat.desc }}</p>
-            </article>
-          </div>
-        </div>
-      </section>
+      <!-- 行动按钮 -->
+      <div class="cover-actions">
+        <button class="cover-btn cover-btn--primary" @click="goToLogin">
+          翻开此书
+          <Icon icon="lucide:book-open" />
+        </button>
+        <button class="cover-btn cover-btn--ghost" @click="goToLogin">
+          登录
+        </button>
+        <span class="cover-hint">演示账号：student / 123456</span>
+      </div>
+    </div>
 
-      <section class="metric-ledger" aria-label="系统概览">
-        <div class="metric-ledger__row">
-          <div class="metric-ledger__value">{{ graphData.nodes.length }}</div>
-          <div class="metric-ledger__meta">
-            <div class="metric-ledger__label">知识节点</div>
-            <div class="metric-ledger__note">覆盖物理层到应用层 + 安全与运维</div>
-          </div>
+    <!-- ===== 数据概览（目录页风格） ===== -->
+    <section class="ledger-section">
+      <h3 class="ledger-title">目 · 录</h3>
+      <div class="ledger-grid">
+        <div class="ledger-row">
+          <span class="ledger-value">{{ graphData.nodes.length }}</span>
+          <span class="ledger-label">知识节点</span>
+          <span class="ledger-note">覆盖物理层到应用层</span>
         </div>
-        <div class="metric-ledger__row">
-          <div class="metric-ledger__value">{{ graphData.edges.length }}</div>
-          <div class="metric-ledger__meta">
-            <div class="metric-ledger__label">关系边</div>
-            <div class="metric-ledger__note">先修 · 依赖 · 关联 三种关系</div>
-          </div>
+        <div class="ledger-row">
+          <span class="ledger-value">{{ graphData.edges.length }}</span>
+          <span class="ledger-label">关系边</span>
+          <span class="ledger-note">先修 · 依赖 · 关联</span>
         </div>
-        <div class="metric-ledger__row">
-          <div class="metric-ledger__value">4</div>
-          <div class="metric-ledger__meta">
-            <div class="metric-ledger__label">协同Agent</div>
-            <div class="metric-ledger__note">知识定位 · 协议分析 · 故障诊断 · 学习建议</div>
-          </div>
+        <div class="ledger-row">
+          <span class="ledger-value">4</span>
+          <span class="ledger-label">协同Agent</span>
+          <span class="ledger-note">四步闭环</span>
         </div>
-        <div class="metric-ledger__row">
-          <div class="metric-ledger__value">4</div>
-          <div class="metric-ledger__meta">
-            <div class="metric-ledger__label">内容模态</div>
-            <div class="metric-ledger__note">文本 · 命令 · 拓扑图 · 抓包证据</div>
-          </div>
+        <div class="ledger-row">
+          <span class="ledger-value">4</span>
+          <span class="ledger-label">内容模态</span>
+          <span class="ledger-note">文 · 令 · 图 · 据</span>
         </div>
-      </section>
+      </div>
 
-      <section class="command-slab">
-        <div class="command-slab__intro">
-          <p class="command-slab__eyebrow">图谱覆盖</p>
-          <h2 class="command-slab__title">
-            {{ layerStats.length }} 个知识类别，
-            <span>完整映射网络工程技术栈。</span>
-          </h2>
-        </div>
-
-        <div class="route-stream">
-          <article v-for="item in layerStats" :key="item.layer" class="route-stream__item">
-            <p class="route-stream__time" :style="{ color: item.color }">{{ item.count }} 个节点</p>
-            <h3 class="route-stream__title">{{ item.label }}</h3>
-          </article>
-        </div>
-
-        <div class="command-slab__cta">
-          <button class="btn-primary" @click="goToLogin">
-            立即体验
-            <Icon icon="solar:arrow-right-linear" />
-          </button>
-        </div>
-      </section>
-    </main>
+      <!-- 知识层级 -->
+      <div class="layer-chips">
+        <span v-for="item in layerStats" :key="item.layer" class="layer-chip" :style="{ borderColor: item.color }">
+          <span class="layer-chip__count" :style="{ color: item.color }">{{ item.count }}</span>
+          {{ item.label }}
+        </span>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
+/* ═══ 古籍封面 ═══ */
 .home-shell {
   min-height: 100vh;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   color: var(--text-100);
-  background: var(--bg-100);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
 }
 
-.home-shell::before,
-.home-shell::after {
-  content: '';
+/* 封面外框 */
+.cover-frame {
+  position: relative;
+  width: min(680px, 100%);
+  padding: 48px 40px;
+  border: 2px solid color-mix(in srgb, var(--primary-100) 40%, var(--bg-300) 60%);
+  background:
+    radial-gradient(ellipse at 35% 25%, rgba(218, 200, 168, 0.25) 0%, transparent 55%),
+    var(--bg-100);
+  z-index: 1;
+}
+
+/* 四角花纹 */
+.cover-corner {
   position: absolute;
-  inset: 0;
+  width: 32px;
+  height: 32px;
+  border-color: var(--primary-100);
+  border-style: solid;
+  opacity: 0.5;
   pointer-events: none;
 }
+.cover-corner--tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; transform-origin: top left; }
+.cover-corner--tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; transform-origin: top right; }
+.cover-corner--bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; transform-origin: bottom left; }
+.cover-corner--br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; transform-origin: bottom right; }
 
-.home-shell::before {
-  display: none;
+/* 封面头部 */
+.cover-head {
+  text-align: center;
+  margin-bottom: 28px;
 }
 
-.home-shell::after {
-  display: none;
-}
-
-.masthead,
-.canvas {
-  position: relative;
-  z-index: 1;
-  width: min(1680px, calc(100vw - 64px));
-  margin: 0 auto;
-}
-
-.masthead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 26px 0 0;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.brand__mark {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--card-divider) 45%, transparent);
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-}
-
-.brand__eyebrow,
-.hero__kicker,
-.command-slab__eyebrow,
-.signal-strip__label {
-  margin: 0;
+.cover-subtitle {
+  margin: 0 0 12px;
+  font-family: var(--font-accent);
+  font-size: 13px;
+  letter-spacing: 0.2em;
   color: var(--text-200);
+}
+
+.cover-title {
+  font-size: clamp(40px, 8vw, 72px);
+  line-height: 1.1;
+  color: var(--text-100);
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.cover-title-sub {
+  font-size: clamp(24px, 5vw, 40px);
+  line-height: 1.2;
+  color: var(--primary-100);
   letter-spacing: 0.06em;
-  font-size: 11px;
+  margin: 8px 0 0;
 }
 
-.brand__name {
-  margin: 4px 0 0;
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.masthead__actions {
+/* 印章行 */
+.cover-seal-row {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.btn-primary {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 20px;
-  border: none;
-  border-radius: var(--radius-md);
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.cover-divider {
+  width: 48px;
+  height: 1px;
+  background: var(--bg-300);
+}
+
+/* 封面描述 */
+.cover-desc {
+  max-width: 500px;
+  margin: 0 auto 28px;
+  font-size: 15px;
+  line-height: 2;
+  color: var(--text-200);
+  text-align: center;
+  font-family: var(--font-body);
+}
+
+/* 三特色卷轴条 */
+.feature-scrolls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.feature-scroll {
+  display: flex;
+  border: 1px solid var(--bg-300);
+  background: color-mix(in srgb, var(--bg-200) 60%, var(--bg-100) 40%);
+  overflow: hidden;
+}
+
+.feature-scroll__bar {
+  width: 3px;
   background: var(--primary-100);
-  color: var(--bg-100);
+  flex-shrink: 0;
+}
+
+.feature-scroll__body {
+  padding: 12px 14px;
+  flex: 1;
+}
+
+.feature-scroll__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-scroll__icon {
+  font-size: 16px;
+  color: var(--primary-100);
+}
+
+.feature-scroll__title {
+  font-family: var(--font-title);
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--transition-fast), background var(--transition-fast);
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  background: color-mix(in srgb, var(--primary-100) 92%, var(--bg-100) 8%);
-}
-
-.btn-text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--primary-100);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.btn-text:hover {
-  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
-}
-
-.hero__actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
-  margin-top: 34px;
-}
-
-.hero__links {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.link-separator {
-  color: var(--text-200);
-  font-size: 13px;
-}
-
-.canvas {
-  padding: 52px 0 44px;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
-  align-items: start;
-  gap: 48px;
-  min-height: calc(100vh - 200px);
-}
-
-.hero__copy {
-  max-width: 760px;
-  padding: 36px 0 40px;
-}
-
-.hero__title {
-  margin: 18px 0 0;
-  max-width: 8.5em;
-  font-size: clamp(56px, 7.4vw, 108px);
-  line-height: 0.92;
-  font-weight: 500;
-  letter-spacing: -0.045em;
-  font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
-}
-
-.hero__title span {
-  display: block;
-  color: var(--primary-100);
-}
-
-.hero__desc {
-  max-width: 520px;
-  margin: 28px 0 0;
-  font-size: 18px;
-  line-height: 1.9;
-  color: var(--text-200);
-}
-
-.hero__cta {
-  margin-top: 34px;
-}
-
-.signal-stage {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.signal-stage__frame {
-  width: min(100%, 720px);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 14px;
-  padding: 8px 0 0;
-}
-
-.signal-strip {
-  position: relative;
-  padding: 18px 18px 16px;
-  border-radius: 18px;
-  border: 1px solid var(--card-border);
-  background: color-mix(in srgb, var(--bg-200) 60%, var(--bg-100) 40%);
-}
-
-.signal-strip::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 2px;
-  background: color-mix(in srgb, var(--band-accent, var(--primary-100)) 18%, transparent);
-  pointer-events: none;
-}
-
-.signal-strip--slate,
-.signal-strip--primary {
-  --band-accent: var(--primary-100);
-}
-
-.signal-strip--steel,
-.signal-strip--accent {
-  --band-accent: var(--accent-100);
-}
-
-.signal-strip--ice {
-  --band-accent: var(--primary-100);
-}
-
-.signal-strip__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.signal-strip__icon {
-  font-size: 18px;
-  color: var(--band-accent, var(--primary-100));
-}
-
-.signal-strip__note {
-  max-width: 30em;
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.85;
-  color: var(--text-200);
-}
-
-.metric-ledger {
-  margin-top: 18px;
-  padding: 18px 0 8px;
-  border-top: 1px solid var(--card-divider);
-  display: grid;
-  gap: 12px;
-}
-
-.metric-ledger__row {
-  display: grid;
-  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: baseline;
-  padding: 16px 18px;
-  border: 1px solid var(--card-border);
-  border-radius: 18px;
-  background: var(--card-data-bg);
-}
-
-.metric-ledger__value {
-  font-size: 28px;
-  line-height: 1.1;
-  letter-spacing: -0.04em;
-  font-weight: 700;
-}
-
-.metric-ledger__label {
-  font-size: 12px;
   letter-spacing: 0.06em;
-  color: var(--text-200);
 }
 
-.metric-ledger__note {
-  margin-top: 6px;
-  font-size: 13px;
+.feature-scroll__desc {
+  margin: 6px 0 0;
+  font-size: 12px;
   line-height: 1.8;
   color: var(--text-200);
 }
 
-.command-slab {
-  margin-top: 64px;
-  padding: 34px 0 8px;
-  border-top: 1px solid var(--card-divider);
+/* 行动按钮 */
+.cover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.command-slab__title {
-  margin: 16px 0 0;
-  max-width: 11em;
-  font-size: clamp(38px, 4.4vw, 68px);
-  line-height: 0.98;
+.cover-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 22px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  font-family: var(--font-title);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.25s ease;
 }
 
-.command-slab__title span {
-  display: block;
+.cover-btn--primary {
+  background: var(--primary-100);
+  color: var(--bg-100);
+  border: 2px solid var(--primary-100);
+}
+
+.cover-btn--primary:hover {
+  background: transparent;
   color: var(--primary-100);
 }
 
-.command-slab__desc {
-  max-width: 44em;
-  margin: 20px 0 0;
-  font-size: 15px;
-  line-height: 1.9;
-  color: var(--text-200);
+.cover-btn--ghost {
+  background: transparent;
+  color: var(--text-100);
+  border: 1px solid var(--bg-300);
 }
 
-.route-stream {
+.cover-btn--ghost:hover {
+  border-color: var(--primary-100);
+  color: var(--primary-100);
+}
+
+.cover-hint {
+  font-size: 12px;
+  color: var(--text-300);
+  font-family: var(--font-accent);
+  letter-spacing: 0.05em;
+}
+
+/* ═══ 数据概览（目录页风格） ═══ */
+.ledger-section {
+  width: min(680px, 100%);
+  padding: 32px 40px;
+  border: 1px solid var(--bg-300);
+  background: var(--bg-100);
+  position: relative;
+  z-index: 1;
+}
+
+.ledger-title {
+  text-align: center;
+  font-family: var(--font-brush);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--primary-100);
+  letter-spacing: 0.4em;
+  margin: 0 0 24px;
+}
+
+.ledger-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 34px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.route-stream__item {
-  min-height: 220px;
-  padding: 22px 22px 24px;
-  border-top: 1px solid var(--card-divider);
-  background: var(--card-data-bg);
+.ledger-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border: 1px solid color-mix(in srgb, var(--bg-300) 70%, transparent 30%);
+  background: color-mix(in srgb, var(--bg-200) 40%, var(--bg-100) 60%);
 }
 
-.route-stream__time {
-  margin: 0;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  color: var(--text-200);
-}
-
-.route-stream__title {
-  margin: 18px 0 0;
-  max-width: 9em;
+.ledger-value {
   font-size: 28px;
-  line-height: 1.08;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  font-family: var(--font-title);
+  color: var(--primary-100);
+  line-height: 1.2;
 }
 
-.route-stream__text {
-  margin: 14px 0 0;
-  max-width: 22em;
-  font-size: 14px;
-  line-height: 1.85;
+.ledger-label {
+  font-size: 13px;
+  font-family: var(--font-title);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}
+
+.ledger-note {
+  font-size: 11px;
+  color: var(--text-300);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* 知识层级标签 */
+.layer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid;
+  font-size: 12px;
+  font-family: var(--font-title);
+  letter-spacing: 0.04em;
   color: var(--text-200);
 }
 
-.command-slab__cta {
-  margin-top: 30px;
+.layer-chip__count {
+  font-weight: 700;
+  font-size: 14px;
 }
 
-@media (max-width: 1320px) {
-  .masthead,
-  .canvas {
-    width: min(1680px, calc(100vw - 40px));
+/* ═══ 响应式 ═══ */
+@media (max-width: 768px) {
+  .home-shell {
+    padding: 24px 16px;
+    gap: 32px;
   }
-
-  .hero {
-    grid-template-columns: 1fr;
-    min-height: auto;
-    gap: 18px;
+  .cover-frame {
+    padding: 32px 20px;
   }
-
-  .hero__copy {
-    padding-bottom: 0;
+  .ledger-section {
+    padding: 24px 20px;
   }
-
-  .signal-stage {
-    justify-content: flex-start;
-  }
-
-  .signal-stage__frame {
-    width: 100%;
-  }
-
-  .stream-manual {
+  .ledger-grid {
     grid-template-columns: 1fr;
   }
-
-  .stream-manual__notes {
-    position: static;
-  }
-
-  .route-stream {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 820px) {
-  .masthead {
+  .cover-actions {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 18px;
   }
-
-  .metric-ledger__row {
-    grid-template-columns: 1fr;
-  }
-
-  .command-slab__title {
-    font-size: clamp(34px, 11vw, 52px);
-  }
-}
-
-@media (max-width: 640px) {
-  .masthead,
-  .canvas {
-    width: calc(100vw - 28px);
-  }
-
-  .canvas {
-    padding-top: 40px;
-  }
-
-  .btn-primary {
+  .cover-btn {
     width: 100%;
-  }
-
-  .hero__actions {
-    align-items: stretch;
-  }
-
-  .hero__links {
     justify-content: center;
   }
-
-  .hero__desc,
-  .command-slab__desc,
-  .manual-chapter__desc,
-  .route-stream__text,
-  .metric-ledger__note,
-  .manual-note__desc {
-    max-width: none;
-  }
-
-  .signal-strip,
-  .manual-chapter,
-  .manual-note,
-  .metric-ledger__row,
-  .route-stream__item,
-  .stream-manual__notes {
-    border-radius: 24px;
-  }
-
-  .manual-chapter__footer {
-    margin-top: 24px;
-  }
-}
-
-/* ═══ CYBER NEXUS 主题覆盖 ═══ */
-[data-theme='cyberNexus'] .home-shell {
-  font-family: var(--cyber-font-mono);
-}
-[data-theme='cyberNexus'] .brand__mark {
-  border-radius: 2px;
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-  color: #00e5c6;
-}
-[data-theme='cyberNexus'] .brand__eyebrow,
-[data-theme='cyberNexus'] .hero__kicker,
-[data-theme='cyberNexus'] .command-slab__eyebrow,
-[data-theme='cyberNexus'] .signal-strip__label {
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-[data-theme='cyberNexus'] .hero__title {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: -0.02em;
-}
-[data-theme='cyberNexus'] .hero__title span { color: #00e5c6; }
-[data-theme='cyberNexus'] .hero__desc {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.02em;
-}
-[data-theme='cyberNexus'] .btn--ghost {
-  border-color: rgba(0, 229, 198, 0.2);
-  color: #00e5c6;
-}
-[data-theme='cyberNexus'] .btn--solid,
-[data-theme='cyberNexus'] .btn-primary {
-  background: rgba(0, 229, 198, 0.12);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.35);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-[data-theme='cyberNexus'] .btn--solid:hover,
-[data-theme='cyberNexus'] .btn-primary:hover {
-  transform: none;
-  background: rgba(0, 229, 198, 0.2);
-  border-color: rgba(0, 229, 198, 0.5);
-  box-shadow: 0 0 16px rgba(0, 229, 198, 0.15);
-  color: #00ffcc;
-}
-[data-theme='cyberNexus'] .btn-text {
-  color: #00e5c6;
-  border-radius: 2px;
-}
-[data-theme='cyberNexus'] .btn-text:hover {
-  background: rgba(0, 229, 198, 0.08);
-}
-[data-theme='cyberNexus'] .signal-strip {
-  border-radius: 2px;
-  border-color: rgba(0, 229, 198, 0.1);
-  background: rgba(17, 24, 32, 0.6);
-}
-[data-theme='cyberNexus'] .signal-strip::before {
-  background: rgba(0, 229, 198, 0.25);
-}
-[data-theme='cyberNexus'] .signal-strip--accent::before {
-  background: rgba(255, 45, 106, 0.25);
-}
-[data-theme='cyberNexus'] .signal-strip__icon { color: #00e5c6; }
-[data-theme='cyberNexus'] .signal-strip--accent .signal-strip__icon { color: #ff2d6a; }
-[data-theme='cyberNexus'] .metric-ledger { border-top-color: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .metric-ledger__row {
-  border-radius: 2px;
-  border-color: rgba(0, 229, 198, 0.08);
-  background: rgba(17, 24, 32, 0.5);
-}
-[data-theme='cyberNexus'] .metric-ledger__value {
-  color: #00e5c6;
-  text-shadow: 0 0 16px rgba(0, 229, 198, 0.3);
-}
-[data-theme='cyberNexus'] .command-slab { border-top-color: rgba(0, 229, 198, 0.08); }
-[data-theme='cyberNexus'] .command-slab__title {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: -0.01em;
-}
-[data-theme='cyberNexus'] .command-slab__title span { color: #00e5c6; }
-[data-theme='cyberNexus'] .route-stream__item {
-  border-top-color: rgba(0, 229, 198, 0.08);
-  background: rgba(17, 24, 32, 0.5);
-  border-radius: 2px;
-}
-[data-theme='cyberNexus'] .route-stream__title {
-  font-family: var(--cyber-font-mono);
 }
 </style>
+

@@ -301,9 +301,6 @@ function formatTime(sec: number) {
   justify-content: center;
 }
 
-[data-theme='night'] .mm-topo-wrap {
-  background: color-mix(in srgb, var(--bg-200) 80%, #000000 20%);
-}
 
 .mm-topo-wrap :deep(svg) {
   width: 100%;

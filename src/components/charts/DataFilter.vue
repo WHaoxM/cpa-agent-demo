@@ -192,8 +192,8 @@ defineExpose({
 }
 
 .filter-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .filter-header {

@@ -35,7 +35,7 @@
 
 .empty-panel {
   height: 480px;
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid #eef2f7;
   background: #ffffff;
   display: grid;

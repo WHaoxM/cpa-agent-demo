@@ -4,6 +4,7 @@
 <script setup lang="ts">
 
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
 import { Icon } from '@iconify/vue'
 
@@ -36,6 +37,7 @@ echarts.use([BarChart, LineChart, PieChart, GridComponent, TooltipComponent, Leg
 const learningStore = useLearningStore()
 
 const router = useRouter()
+const { pageRef } = usePageEntrance()
 
 
 
@@ -1163,7 +1165,7 @@ onUnmounted(() => {
 
 <template>
 
-  <div class="report-page page">
+  <div ref="pageRef" class="report-page page">
 
     <div class="page-header">
 
@@ -1505,7 +1507,7 @@ onUnmounted(() => {
   border: none;
   background: transparent;
   padding: 6px 8px;
-  border-radius: 8px;
+  border-radius: 0;
   cursor: pointer;
   font-size: 13px;
   font-weight: 700;
@@ -1538,7 +1540,7 @@ onUnmounted(() => {
   display: flex;
   gap: 6px;
   padding: 4px;
-  border-radius: 12px;
+  border-radius: 0;
   background: color-mix(in srgb, var(--bg-200) 76%, transparent 24%);
   border: 1px solid var(--card-divider);
 }
@@ -1548,7 +1550,7 @@ onUnmounted(() => {
   border: 0;
   background: transparent;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: 0;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
@@ -1588,7 +1590,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 0;
   border: 1px solid var(--card-divider);
   background: var(--card-icon-bg);
   color: var(--card-icon-color);
@@ -1705,7 +1707,7 @@ onUnmounted(() => {
   align-self: flex-start;
   margin-top: 4px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid var(--card-divider);
   background: var(--card-data-bg);
   color: var(--text-100);

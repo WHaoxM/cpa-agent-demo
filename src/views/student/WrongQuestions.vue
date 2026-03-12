@@ -1,4 +1,5 @@
-﻿<!-- 页面：错题本；路由：student/wrong-questions（student-wrong-questions）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：错题本；路由：student/wrong-questions（student-wrong-questions）；角色：STUDENT/TEACHER -->
+
 <script setup lang="ts">
 // @ts-nocheck
 import { computed, onMounted, ref, watch } from 'vue'
@@ -388,8 +389,10 @@ onMounted(() => {
 })
 </script>
 
-
-
+
+
+
+
 <template>
   <div class="wrongbook page page--compact">
     <div v-if="filteredQuestions.length > 0" class="wb-topbar" aria-label="错题本工具条">
@@ -686,7 +689,7 @@ onMounted(() => {
 .wb-toolbar {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 16px;
+  border-radius: 0;
   padding: 12px;
   display: grid;
   grid-template-columns: 320px 1fr auto;
@@ -947,7 +950,7 @@ onMounted(() => {
 
 .detail__block {
   padding: 12px 12px;
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid var(--card-border);
   background: var(--card-data-bg);
 }
@@ -998,7 +1001,7 @@ onMounted(() => {
   height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 0;
   font-weight: 1000;
   background: var(--card-data-bg);
   border: 1px solid var(--card-border);
@@ -1022,7 +1025,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 0;
   border: 1px solid #eef2f7;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -1081,7 +1084,7 @@ onMounted(() => {
 
 .flat-list {
   border: 1px solid #eef2f7;
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -1164,7 +1167,7 @@ onMounted(() => {
 
 .msg__bubble {
   max-width: 86%;
-  border-radius: 14px;
+  border-radius: 0;
   padding: 10px 12px;
   border: 1px solid var(--bg-300);
   background: #ffffff;
@@ -1229,5 +1232,7 @@ onMounted(() => {
   }
 }
 </style>
-
-
+
+
+
+

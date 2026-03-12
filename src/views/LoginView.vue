@@ -1,13 +1,16 @@
 ﻿<!-- 页面：登录；路由：/login（login） -->
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { ICONS } from '@/constants/icons'
 import { useUserStore } from '@/stores'
 import { UserRole } from '@/types'
+import { gsap } from '@/plugins/gsap'
+import BrushText from '@/components/book/BrushText.vue'
+import SealStamp from '@/components/book/SealStamp.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -57,6 +60,50 @@ function quickLogin(role: UserRole, account: string) {
   selectedRole.value = role
   handleLogin()
 }
+
+/* ===== 卷轴展开 + 入场动画 ===== */
+const pageRef = ref<HTMLElement | null>(null)
+const scrollReady = ref(false)
+let ctx: ReturnType<typeof gsap.context> | null = null
+
+onMounted(() => {
+  if (!pageRef.value) return
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (prefersReduced) {
+    scrollReady.value = true
+    return
+  }
+
+  ctx = gsap.context(() => {
+    const tl = gsap.timeline({ delay: 0.15 })
+
+    /* 卷轴外框展开 */
+    tl.fromTo('.login-scroll', {
+      scaleY: 0, opacity: 0,
+    }, {
+      scaleY: 1, opacity: 1,
+      duration: 0.8, ease: 'power2.inOut',
+      onComplete: () => { scrollReady.value = true },
+    })
+
+    /* 左侧品牌区内容交错淡入 */
+    tl.from('.brand-animate', {
+      opacity: 0, y: 14,
+      stagger: 0.08, duration: 0.4, ease: 'power2.out',
+    }, '-=0.2')
+
+    /* 右侧表单区 */
+    tl.from('.form-animate', {
+      opacity: 0, y: 10,
+      stagger: 0.06, duration: 0.35, ease: 'power2.out',
+    }, '-=0.3')
+  }, pageRef.value)
+})
+
+onBeforeUnmount(() => {
+  ctx?.revert()
+})
 </script>
 
 
@@ -64,135 +111,111 @@ function quickLogin(role: UserRole, account: string) {
 
 
 <template>
-  <div class="login-page">
-    <!-- 左侧品牌区 - 占 60% -->
-    <div class="login-brand-side">
-      <div class="brand-content">
-        <div class="brand-badge">
-          <Icon :icon="ICONS.sparkles" />
-          <span>课程管理系统</span>
-        </div>
-        <h1 class="brand-title">
-          学习
-          <br />
-          <span class="title-emp">不费劲</span>
-        </h1>
-        <p class="brand-desc">
-          数据可视化。
-          <br />
-          AI 辅助。
-          <br />
-          进度追踪。
-        </p>
-        
-        <div class="feature-list">
-          <div class="feature-item">
-            <Icon :icon="ICONS.trendingUp" class="feature-icon" />
-            <span>学习数据一目了然</span>
-          </div>
-          <div class="feature-item">
-            <Icon :icon="ICONS.bot" class="feature-icon" />
-            <span>AI 答疑随时在线</span>
-          </div>
-          <div class="feature-item">
-            <Icon :icon="ICONS.smartphone" class="feature-icon" />
-            <span>多端同步随时学</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 装饰元素 -->
-      <div class="brand-deco">
-        <div class="deco-blob" />
-        <div class="deco-ring" />
-        <div class="deco-dots" />
-      </div>
-    </div>
+  <div ref="pageRef" class="login-page book-paper">
+    <!-- 宣纸纹理由 book-paper 类提供 -->
 
-    <!-- 右侧登录区 - 占 40% -->
-    <div class="login-form-side">
-      <div class="form-card">
-        <h2 class="form-title">欢迎回来</h2>
-        
-        <!-- 角色切换标签 -->
-        <div class="role-tabs">
-          <button
-            v-for="tab in roleTabs"
-            :key="tab.role"
-            class="role-tab"
-            :class="{ active: selectedRole === tab.role }"
-            :style="selectedRole === tab.role ? { '--tab-color': tab.color } : {}"
-            @click="selectedRole = tab.role"
-          >
-            <Icon :icon="tab.icon" class="tab-icon" />
-            <span>{{ tab.label }}</span>
-          </button>
+    <!-- 卷轴式主容器 -->
+    <div class="login-scroll">
+      <div class="login-inner">
+        <!-- ===== 左侧：品牌/诗文区 ===== -->
+        <div class="login-brand-side">
+          <div class="brand-content">
+            <div class="brand-animate brand-badge">
+              <SealStamp text="课" :size="36" shape="square" :delay="0.9" />
+              <span>课程管理系统</span>
+            </div>
+
+            <BrushText text="读书之法" tag="h1" class="brand-animate brand-title" :delay="1.0" :stagger="0.14" :duration="0.6" />
+
+            <p class="brand-animate brand-desc">
+              博学之，审问之，<br />
+              慎思之，明辨之，<br />
+              笃行之。
+            </p>
+
+            <div class="brand-animate feature-list">
+              <div class="feature-item">
+                <Icon :icon="ICONS.trendingUp" class="feature-icon" />
+                <span>学习数据一目了然</span>
+              </div>
+              <div class="feature-item">
+                <Icon :icon="ICONS.bot" class="feature-icon" />
+                <span>AI 答疑随时在线</span>
+              </div>
+              <div class="feature-item">
+                <Icon :icon="ICONS.smartphone" class="feature-icon" />
+                <span>多端同步随时学</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 竖排装饰 -->
+          <div class="brand-vertical">知行合一</div>
         </div>
 
-        <!-- 输入框 -->
-        <div class="input-group">
-          <div class="input-wrap">
-            <Icon :icon="ICONS.user" class="input-icon" />
-            <input
-              v-model="username"
-              type="text"
-              placeholder="账号"
-              class="custom-input"
-              @keydown.enter="handleLogin"
-            />
-          </div>
-          
-          <div class="input-wrap">
-            <Icon :icon="ICONS.lock" class="input-icon" />
-            <input
-              v-model="password"
-              :type="showPassword ? 'text' : 'password'"
-              placeholder="密码"
-              class="custom-input"
-              @keydown.enter="handleLogin"
-            />
-            <button class="password-toggle" @click="showPassword = !showPassword">
-              <Icon :icon="showPassword ? ICONS.eye : ICONS.eyeOff" />
+        <!-- 装订线 -->
+        <div class="login-binding"></div>
+
+        <!-- ===== 右侧：登录表单 ===== -->
+        <div class="login-form-side">
+          <div class="form-card">
+            <!-- 四角花纹 -->
+            <span class="form-corner form-corner--tl"></span>
+            <span class="form-corner form-corner--br"></span>
+
+            <h2 class="form-animate form-title">欢迎回来</h2>
+
+            <!-- 角色切换 -->
+            <div class="form-animate role-tabs">
+              <button
+                v-for="tab in roleTabs"
+                :key="tab.role"
+                class="role-tab"
+                :class="{ active: selectedRole === tab.role }"
+                @click="selectedRole = tab.role"
+              >
+                <Icon :icon="tab.icon" class="tab-icon" />
+                <span>{{ tab.label }}</span>
+              </button>
+            </div>
+
+            <!-- 输入框 -->
+            <div class="form-animate input-group">
+              <div class="input-wrap">
+                <Icon :icon="ICONS.user" class="input-icon" />
+                <input v-model="username" type="text" placeholder="账号" class="custom-input" @keydown.enter="handleLogin" />
+              </div>
+              <div class="input-wrap">
+                <Icon :icon="ICONS.lock" class="input-icon" />
+                <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="密码" class="custom-input" @keydown.enter="handleLogin" />
+                <button class="password-toggle" @click="showPassword = !showPassword">
+                  <Icon :icon="showPassword ? ICONS.eye : ICONS.eyeOff" />
+                </button>
+              </div>
+            </div>
+
+            <!-- 登录按钮 -->
+            <button class="form-animate login-btn" :class="{ loading }" :disabled="loading" @click="handleLogin">
+              <span v-if="!loading">立即登录 <Icon icon="lucide:arrow-right" class="btn-icon" /></span>
+              <span v-else>登录中...</span>
             </button>
-          </div>
-        </div>
 
-        <!-- 登录按钮 -->
-        <button
-          class="login-btn"
-          :class="{ loading }"
-          :disabled="loading"
-          @click="handleLogin"
-        >
-          <span v-if="!loading">
-            立即登录
-            <Icon :icon="ICONS.rocket" class="btn-icon" />
-          </span>
-          <span v-else>登录中...</span>
-        </button>
+            <!-- 快速体验 -->
+            <div class="form-animate quick-section">
+              <div class="quick-divider"><span>或快速体验</span></div>
+              <div class="quick-buttons">
+                <button v-for="item in quickLogins" :key="item.role" class="quick-btn" @click="quickLogin(item.role, item.account)">
+                  {{ item.name }}
+                </button>
+              </div>
+            </div>
 
-        <!-- 快速体验 -->
-        <div class="quick-section">
-          <div class="quick-divider">
-            <span>或者快速体验</span>
+            <!-- 提示 -->
+            <div class="form-animate login-hint">
+              <Icon :icon="ICONS.lightbulb" class="hint-icon" />
+              <span>默认密码都是 123456</span>
+            </div>
           </div>
-          
-          <div class="quick-buttons">
-            <button
-              v-for="item in quickLogins"
-              :key="item.role"
-              class="quick-btn"
-              @click="quickLogin(item.role, item.account)"
-            >
-              {{ item.name }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 提示 -->
-        <div class="login-hint">
-          <Icon :icon="ICONS.lightbulb" class="hint-icon" />
-          <span>默认密码都是 123456</span>
         </div>
       </div>
     </div>
@@ -200,177 +223,168 @@ function quickLogin(role: UserRole, account: string) {
 </template>
 
 <style scoped>
+/* ═══ 古籍卷轴登录页 ═══ */
 .login-page {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  background: var(--bg-100);
-  position: relative;
-  overflow: hidden;
-}
-
-/* 噪点纹理 */
-.login-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: var(--noise-opacity, 0.08);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
-}
-
-/* 左侧品牌区 */
-.login-brand-side {
-  position: relative;
-  z-index: 1;
-  background: 
-    radial-gradient(ellipse 100% 100% at 0% 0%, color-mix(in srgb, var(--primary-100) 20%, transparent) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 80% at 100% 100%, color-mix(in srgb, var(--accent-100) 15%, transparent) 0%, transparent 40%);
   display: flex;
   align-items: center;
-  padding: 60px 80px;
+  justify-content: center;
+  padding: 32px;
+  position: relative;
   overflow: hidden;
+}
+
+/* 卷轴式主容器 */
+.login-scroll {
+  width: min(960px, 100%);
+  border: 2px solid color-mix(in srgb, var(--primary-100) 35%, var(--bg-300) 65%);
+  background: var(--bg-100);
+  position: relative;
+  z-index: 1;
+  transform-origin: center center;
+}
+
+/* 卷轴上下轴 */
+.login-scroll::before,
+.login-scroll::after {
+  content: '';
+  display: block;
+  height: 10px;
+  background: linear-gradient(to right,
+    color-mix(in srgb, var(--primary-100) 30%, var(--bg-300) 70%),
+    color-mix(in srgb, var(--primary-100) 55%, var(--bg-300) 45%) 50%,
+    color-mix(in srgb, var(--primary-100) 30%, var(--bg-300) 70%)
+  );
+}
+
+.login-inner {
+  display: grid;
+  grid-template-columns: 1.1fr 3px 0.9fr;
+  min-height: 520px;
+}
+
+/* ===== 左侧品牌区 ===== */
+.login-brand-side {
+  position: relative;
+  padding: 40px 36px;
+  background: color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .brand-content {
   position: relative;
   z-index: 2;
-  max-width: 480px;
 }
 
 .brand-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: color-mix(in srgb, var(--primary-100) 12%, transparent);
+  gap: 10px;
   color: var(--primary-100);
-  padding: 8px 16px;
-  border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 32px;
+  font-family: var(--font-title);
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
 }
 
 .brand-title {
-  font-size: 64px;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: clamp(36px, 5vw, 52px);
+  line-height: 1.2;
   color: var(--text-100);
-  margin: 0 0 24px;
-  letter-spacing: -0.03em;
-}
-
-.title-emp {
-  background: linear-gradient(135deg, var(--primary-100) 0%, var(--accent-100) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  margin: 0 0 20px;
+  letter-spacing: 0.06em;
 }
 
 .brand-desc {
-  font-size: 20px;
+  font-size: 16px;
+  font-family: var(--font-body);
   color: var(--text-200);
-  line-height: 1.8;
-  margin: 0 0 48px;
+  line-height: 2.2;
+  margin: 0 0 32px;
 }
 
 .feature-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .feature-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 16px;
+  gap: 10px;
+  font-size: 14px;
   color: var(--text-200);
 }
 
 .feature-icon {
-  font-size: 24px;
+  font-size: 18px;
+  color: var(--primary-200);
 }
 
-/* 装饰元素 */
-.brand-deco {
+/* 竖排装饰文字 */
+.brand-vertical {
   position: absolute;
-  inset: 0;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  font-family: var(--font-brush);
+  font-size: 20px;
+  color: color-mix(in srgb, var(--primary-100) 15%, transparent 85%);
+  letter-spacing: 0.6em;
   pointer-events: none;
+  user-select: none;
 }
 
-.deco-blob {
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  background: color-mix(in srgb, var(--primary-100) 8%, transparent);
-  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-  top: -100px;
-  right: -100px;
-  animation: blob 20s ease-in-out infinite;
+/* 装订线 */
+.login-binding {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    color-mix(in srgb, var(--primary-100) 40%, transparent 60%) 10%,
+    color-mix(in srgb, var(--primary-100) 60%, transparent 40%) 50%,
+    color-mix(in srgb, var(--primary-100) 40%, transparent 60%) 90%,
+    transparent 100%
+  );
 }
 
-.deco-ring {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border: 3px solid color-mix(in srgb, var(--accent-100) 30%, transparent);
-  border-radius: 50%;
-  bottom: 10%;
-  right: 10%;
-  animation: rotate 30s linear infinite;
-}
-
-.deco-dots {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  background-image: radial-gradient(circle, var(--text-200) 2px, transparent 2px);
-  background-size: 24px 24px;
-  opacity: 0.3;
-  bottom: 20%;
-  left: 10%;
-}
-
-@keyframes blob {
-  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
-  50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
-}
-
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* 右侧表单区 */
+/* ===== 右侧表单区 ===== */
 .login-form-side {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 60px 40px;
+  justify-content: center;
+  padding: 40px 32px;
 }
 
 .form-card {
   width: 100%;
-  max-width: 400px;
-  background: color-mix(in srgb, var(--bg-100) 92%, white 8%);
-  border: 1px solid var(--bg-300);
-  border-radius: 24px;
-  padding: 40px;
-  box-shadow: 
-    0 20px 60px color-mix(in srgb, var(--primary-100) 10%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--bg-300) 50%, transparent);
+  max-width: 360px;
+  position: relative;
 }
 
+/* 四角花纹 */
+.form-corner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--primary-200);
+  border-style: solid;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.form-corner--tl { top: -8px; left: -8px; border-width: 2px 0 0 2px; }
+.form-corner--br { bottom: -8px; right: -8px; border-width: 0 2px 2px 0; }
+
 .form-title {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 600;
+  font-family: var(--font-title);
+  letter-spacing: 0.1em;
   color: var(--text-100);
-  margin: 0 0 32px;
+  margin: 0 0 28px;
   text-align: center;
 }
 
@@ -378,7 +392,7 @@ function quickLogin(role: UserRole, account: string) {
 .role-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .role-tab {
@@ -386,39 +400,34 @@ function quickLogin(role: UserRole, account: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px 8px;
+  gap: 4px;
+  padding: 10px 6px;
   background: var(--bg-200);
-  border: 2px solid transparent;
-  border-radius: 12px;
+  border: 1px solid var(--bg-300);
+  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-size: 13px;
+  transition: all 0.2s ease;
+  font-size: 12px;
   color: var(--text-200);
 }
 
-.role-tab:hover {
-  transform: translateY(-2px);
-  background: var(--bg-300);
-}
+.role-tab:hover { background: var(--bg-300); }
 
 .role-tab.active {
-  background: color-mix(in srgb, var(--tab-color) 10%, var(--bg-100));
-  border-color: var(--tab-color);
-  color: var(--tab-color);
+  background: var(--bg-100);
+  border-bottom-color: var(--primary-100);
+  color: var(--primary-100);
   font-weight: 600;
 }
 
-.tab-icon {
-  font-size: 24px;
-}
+.tab-icon { font-size: 20px; }
 
 /* 输入框 */
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: 14px;
+  margin-bottom: 20px;
 }
 
 .input-wrap {
@@ -429,21 +438,21 @@ function quickLogin(role: UserRole, account: string) {
 
 .input-icon {
   position: absolute;
-  left: 16px;
-  font-size: 20px;
+  left: 14px;
+  font-size: 18px;
   color: var(--text-200);
   pointer-events: none;
 }
 
 .custom-input {
   width: 100%;
-  padding: 14px 16px 14px 48px;
+  padding: 12px 14px 12px 44px;
   background: var(--bg-200);
-  border: 2px solid transparent;
-  border-radius: 12px;
-  font-size: 15px;
+  border: 1px solid var(--bg-300);
+  font-size: 14px;
+  font-family: var(--font-body);
   color: var(--text-100);
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
 .custom-input:focus {
@@ -452,37 +461,33 @@ function quickLogin(role: UserRole, account: string) {
   background: var(--bg-100);
 }
 
-.custom-input::placeholder {
-  color: var(--text-200);
-}
+.custom-input::placeholder { color: var(--text-300); }
 
 .password-toggle {
   position: absolute;
-  right: 16px;
+  right: 14px;
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.5;
   transition: opacity 0.2s;
 }
-
-.password-toggle:hover {
-  opacity: 1;
-}
+.password-toggle:hover { opacity: 1; }
 
 /* 登录按钮 */
 .login-btn {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   background: var(--primary-100);
   color: var(--bg-100);
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
+  border: 2px solid var(--primary-100);
+  font-size: 15px;
   font-weight: 600;
+  font-family: var(--font-title);
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -490,31 +495,24 @@ function quickLogin(role: UserRole, account: string) {
 }
 
 .login-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary-100) 40%, transparent);
+  background: transparent;
+  color: var(--primary-100);
 }
 
-.login-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
+.login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.btn-icon {
-  font-size: 18px;
-}
+.btn-icon { font-size: 16px; }
 
-/* 快速体验区 */
-.quick-section {
-  margin-top: 24px;
-}
+/* 快速体验 */
+.quick-section { margin-top: 20px; }
 
 .quick-divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  color: var(--text-200);
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--text-300);
 }
 
 .quick-divider::before,
@@ -525,299 +523,73 @@ function quickLogin(role: UserRole, account: string) {
   background: var(--bg-300);
 }
 
-.quick-buttons {
-  display: flex;
-  gap: 8px;
-}
+.quick-buttons { display: flex; gap: 8px; }
 
 .quick-btn {
   flex: 1;
-  padding: 10px 8px;
+  padding: 9px 6px;
   background: var(--bg-200);
   border: 1px solid var(--bg-300);
-  border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-200);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .quick-btn:hover {
-  background: var(--bg-300);
-  color: var(--text-100);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-200));
+  color: var(--primary-100);
 }
 
 /* 提示 */
 .login-hint {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  margin-top: 20px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--accent-100) 8%, transparent);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--accent-100);
+  margin-top: 16px;
+  padding: 10px;
+  border-left: 3px solid var(--primary-100);
+  font-size: 12px;
+  color: var(--text-300);
 }
 
-.hint-icon {
-  font-size: 16px;
-}
+.hint-icon { font-size: 14px; }
 
-/* 响应式 */
-@media (max-width: 1024px) {
-  .login-page {
+/* ═══ 响应式 ═══ */
+@media (max-width: 768px) {
+  .login-page { padding: 16px; }
+
+  .login-inner {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
   }
-  
+
+  .login-binding { display: none; }
+
   .login-brand-side {
-    padding: 40px 32px;
-    min-height: auto;
+    padding: 28px 24px;
   }
-  
-  .brand-title {
-    font-size: 48px;
-  }
-  
-  .brand-desc {
-    font-size: 18px;
-    margin-bottom: 32px;
-  }
-  
+
+  .brand-vertical { display: none; }
+
+  .brand-desc { margin-bottom: 20px; }
+
   .feature-list {
     flex-direction: row;
     flex-wrap: wrap;
+    gap: 10px;
   }
-  
-  .login-form-side {
-    padding: 32px;
-    justify-content: center;
-  }
-  
-  .form-card {
-    max-width: 100%;
-  }
-}
 
-@media (max-width: 640px) {
-  .login-brand-side {
-    padding: 32px 24px;
-  }
-  
-  .brand-title {
-    font-size: 36px;
-  }
-  
-  .brand-desc {
-    font-size: 16px;
-  }
-  
-  .feature-item span {
-    font-size: 14px;
-  }
-  
   .login-form-side {
-    padding: 24px;
-  }
-  
-  .form-card {
     padding: 28px 24px;
-    border-radius: 20px;
   }
-  
-  .form-title {
-    font-size: 24px;
-    margin-bottom: 24px;
-  }
-  
-  .role-tab {
-    padding: 10px 6px;
-    font-size: 12px;
-  }
-  
-  .tab-icon {
-    font-size: 20px;
-  }
+
+  .form-card { max-width: 100%; }
 }
 
-/* ═══ CYBER NEXUS 主题覆盖 ═══ */
-[data-theme='cyberNexus'] .login-page {
-  background: #0a0e14;
-}
-[data-theme='cyberNexus'] .login-page::before {
-  opacity: 0;
-}
-[data-theme='cyberNexus'] .login-brand-side {
-  background:
-    radial-gradient(ellipse 100% 100% at 0% 0%, rgba(0, 229, 198, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 80% at 100% 100%, rgba(255, 45, 106, 0.06) 0%, transparent 40%);
-}
-[data-theme='cyberNexus'] .brand-badge {
-  background: rgba(0, 229, 198, 0.08);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.2);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-[data-theme='cyberNexus'] .brand-title {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.02em;
-}
-[data-theme='cyberNexus'] .title-emp {
-  background: linear-gradient(135deg, #00e5c6 0%, #ff2d6a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-[data-theme='cyberNexus'] .brand-desc {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.04em;
-}
-[data-theme='cyberNexus'] .feature-item {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.04em;
-}
-[data-theme='cyberNexus'] .feature-icon {
-  color: #00e5c6;
-}
-[data-theme='cyberNexus'] .deco-blob {
-  background: rgba(0, 229, 198, 0.04);
-  border-radius: 0;
-  animation: none;
-  border: 1px solid rgba(0, 229, 198, 0.06);
-}
-[data-theme='cyberNexus'] .deco-ring {
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 0;
-  transform: rotate(45deg);
-  animation: none;
-}
-[data-theme='cyberNexus'] .deco-dots {
-  background-image: 
-    linear-gradient(rgba(0, 229, 198, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 229, 198, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.6;
-}
-[data-theme='cyberNexus'] .form-card {
-  background: rgba(17, 24, 32, 0.85);
-  border: 1px solid rgba(0, 229, 198, 0.12);
-  border-radius: 2px;
-  box-shadow: 0 0 40px rgba(0, 229, 198, 0.06);
-  backdrop-filter: blur(12px);
-  position: relative;
-}
-[data-theme='cyberNexus'] .form-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
-  pointer-events: none;
-}
-[data-theme='cyberNexus'] .form-title {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-size: 20px;
-}
-[data-theme='cyberNexus'] .role-tab {
-  background: rgba(0, 229, 198, 0.03);
-  border: 1px solid rgba(0, 229, 198, 0.08);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 11px;
-  transition: all 0.15s;
-}
-[data-theme='cyberNexus'] .role-tab:hover {
-  transform: none;
-  background: rgba(0, 229, 198, 0.06);
-  border-color: rgba(0, 229, 198, 0.15);
-}
-[data-theme='cyberNexus'] .role-tab.active {
-  background: rgba(0, 229, 198, 0.08);
-  border-color: #00e5c6;
-  color: #00e5c6;
-  box-shadow: 0 0 12px rgba(0, 229, 198, 0.1);
-  --tab-color: #00e5c6 !important;
-}
-[data-theme='cyberNexus'] .custom-input {
-  background: rgba(10, 14, 20, 0.8);
-  border: 1px solid rgba(0, 229, 198, 0.1);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  color: var(--text-100);
-  letter-spacing: 0.04em;
-}
-[data-theme='cyberNexus'] .custom-input:focus {
-  border-color: rgba(0, 229, 198, 0.4);
-  background: rgba(10, 14, 20, 0.9);
-  box-shadow: 0 0 8px rgba(0, 229, 198, 0.15);
-}
-[data-theme='cyberNexus'] .custom-input::placeholder {
-  color: rgba(107, 138, 142, 0.5);
-}
-[data-theme='cyberNexus'] .input-icon { color: rgba(0, 229, 198, 0.4); }
-[data-theme='cyberNexus'] .password-toggle { color: rgba(0, 229, 198, 0.4); }
-
-[data-theme='cyberNexus'] .login-btn {
-  background: rgba(0, 229, 198, 0.12);
-  color: #00e5c6;
-  border: 1px solid rgba(0, 229, 198, 0.35);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  font-size: 13px;
-  transition: all 0.15s;
-}
-[data-theme='cyberNexus'] .login-btn:hover:not(:disabled) {
-  transform: none;
-  background: rgba(0, 229, 198, 0.2);
-  border-color: rgba(0, 229, 198, 0.5);
-  box-shadow: 0 0 20px rgba(0, 229, 198, 0.2);
-  color: #00ffcc;
-}
-[data-theme='cyberNexus'] .quick-divider {
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 10px;
-}
-[data-theme='cyberNexus'] .quick-divider::before,
-[data-theme='cyberNexus'] .quick-divider::after {
-  background: rgba(0, 229, 198, 0.1);
-}
-[data-theme='cyberNexus'] .quick-btn {
-  background: rgba(0, 229, 198, 0.04);
-  border: 1px solid rgba(0, 229, 198, 0.1);
-  border-radius: 2px;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 11px;
-  transition: all 0.15s;
-}
-[data-theme='cyberNexus'] .quick-btn:hover {
-  background: rgba(0, 229, 198, 0.08);
-  border-color: rgba(0, 229, 198, 0.25);
-  color: #00e5c6;
-  transform: none;
-}
-[data-theme='cyberNexus'] .login-hint {
-  background: rgba(255, 45, 106, 0.06);
-  border: 1px solid rgba(255, 45, 106, 0.12);
-  border-radius: 2px;
-  color: #ff2d6a;
-  font-family: var(--cyber-font-mono);
-  letter-spacing: 0.04em;
-  font-size: 11px;
+@media (max-width: 480px) {
+  .brand-title { font-size: 32px; }
+  .feature-item span { font-size: 13px; }
 }
 </style>
+

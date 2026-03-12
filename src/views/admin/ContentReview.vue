@@ -5,7 +5,9 @@ import { ElMessage } from 'element-plus'
 import { Search, Check, Close, View } from '@element-plus/icons-vue'
 import { useCourseStore } from '@/stores'
 import type { Course } from '@/types'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
+const { pageRef } = usePageEntrance()
 const courseStore = useCourseStore()
 
 const searchQuery = ref('')
@@ -71,7 +73,7 @@ function getStatusTag(status: string) {
 
 
 <template>
-  <div class="content-review-page page page--compact">
+  <div ref="pageRef" class="content-review-page page page--compact">
     <div class="page-head">
       <div class="page-head__left">
         <div>
@@ -288,7 +290,7 @@ function getStatusTag(status: string) {
 .course-cover {
   width: 70px;
   height: 44px;
-  border-radius: 4px;
+  border-radius: 0;
 }
 
 .course-title {
@@ -321,7 +323,7 @@ function getStatusTag(status: string) {
 .detail-cover-thumb {
   width: 64px;
   height: 40px;
-  border-radius: 4px;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -353,7 +355,7 @@ function getStatusTag(status: string) {
   height: 22px;
   background: var(--primary-100);
   color: var(--bg-100);
-  border-radius: 50%;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -339,7 +339,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--card-bg);
 }

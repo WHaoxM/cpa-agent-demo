@@ -2,12 +2,14 @@
 <script setup lang="ts">
 // @ts-nocheck
 import { computed } from 'vue'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 import PieChart from '@/components/charts/PieChart.vue'
 import HistogramChart from '@/components/charts/HistogramChart.vue'
 import HorizontalBarChart from '@/components/charts/HorizontalBarChart.vue'
 import { mockTeacherStats } from '@/mock/data'
 import IntegrationHint from '@/components/IntegrationHint.vue'
 
+const { pageRef } = usePageEntrance()
 const chartColors = ['var(--primary-100)', 'var(--primary-200)', 'var(--accent-100)']
 
 // 作业完成情况饼图数据
@@ -33,7 +35,7 @@ const errorRateData = mockTeacherStats.knowledgeErrorRate.map(item => ({
 
 
 <template>
-  <div class="class-report-page page">
+  <div ref="pageRef" class="class-report-page page">
     <div class="page-header">
       <h2>班级报告</h2>
       <p class="subtitle">班级整体学习情况数据分析</p>

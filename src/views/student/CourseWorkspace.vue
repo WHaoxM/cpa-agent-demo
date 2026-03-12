@@ -246,7 +246,7 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 10px 12px;
   cursor: pointer;
   font-weight: 800;
@@ -262,7 +262,7 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100) 90%);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 10px 12px;
   cursor: pointer;
   font-weight: 800;
@@ -301,8 +301,8 @@ function goBack() {
 .chapter-panel {
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   min-height: 640px;
@@ -371,7 +371,7 @@ function goBack() {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 10px;
-  border-radius: 12px;
+  border-radius: 0;
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
@@ -434,10 +434,10 @@ function goBack() {
 .workspace-content {
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  border-radius: 14px;
+  border-radius: 0;
   padding: 0;
   min-height: 640px;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.06);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
@@ -491,7 +491,7 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  border-radius: 10px;
+  border-radius: 0;
   padding: 8px 10px;
   cursor: pointer;
   font-weight: 800;

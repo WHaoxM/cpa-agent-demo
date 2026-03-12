@@ -39,7 +39,7 @@ const route = useRoute()
 
 .empty-panel {
   height: 480px;
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid #eef2f7;
   background: radial-gradient(1200px 400px at 20% 0%, rgba(59, 130, 246, 0.09), transparent 55%),
     radial-gradient(900px 320px at 90% 100%, rgba(16, 185, 129, 0.10), transparent 60%),

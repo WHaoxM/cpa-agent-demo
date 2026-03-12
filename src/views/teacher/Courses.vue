@@ -6,8 +6,10 @@ import { useRouter } from 'vue-router'
 import { Search, Plus, View, Edit, Delete, Refresh, Download, Grid } from '@element-plus/icons-vue'
 import { useCourseStore } from '@/stores'
 import type { Course } from '@/types'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
 const router = useRouter()
+const { pageRef } = usePageEntrance()
 const courseStore = useCourseStore()
 
 const searchQuery = ref('')
@@ -95,7 +97,7 @@ function batchDelete() {
 
 
 <template>
-  <div class="teacher-courses-page page page--compact">
+  <div ref="pageRef" class="teacher-courses-page page page--compact">
     <div class="page-head">
       <div class="page-head__left">
         <div>

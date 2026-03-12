@@ -1,72 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Crimson+Text:wght@400;600;700&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&display=swap');
 
-/* color palette from <https://github.com/vuejs/theme> */
+/* ═══ 古籍风字体系统 ═══ */
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  --font-title: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-body: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  --font-ui: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-accent: 'KaiTi', 'STKaiti', 'Noto Serif SC', serif;
+  --font-latin: 'Crimson Text', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-brush: 'Ma Shan Zheng', 'STXingkai', 'Noto Serif SC', cursive;
+  --font-cjk: var(--font-title);
+  --el-font-family: var(--font-ui);
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
-
-  --vt-c-indigo: #1F2937;
-
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
-
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
-}
-
-/* semantic color variables for this project */
-:root {
   --color-background: var(--bg-100);
   --color-background-soft: var(--bg-200);
   --color-background-mute: var(--bg-300);
 
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
+  --color-border: color-mix(in srgb, var(--bg-300) 80%, transparent 20%);
+  --color-border-hover: var(--bg-400, var(--bg-300));
 
   --color-heading: var(--text-100);
   --color-text: var(--text-100);
 
-  --section-gap: 160px;
-
-  --font-cjk: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei';
-  --font-latin: 'Inter', 'Noto Sans SC';
-  --font-body:
-    'Inter',
-    'Noto Sans SC',
-    'Source Han Sans SC',
-    'PingFang SC',
-    'Microsoft YaHei',
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
-  --el-font-family: var(--font-body);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: var(--bg-100);
-    --color-background-soft: var(--bg-200);
-    --color-background-mute: var(--bg-300);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--text-100);
-    --color-text: var(--text-100);
-  }
+  --section-gap: 120px;
 }
 
 *,
@@ -80,13 +36,12 @@
 body {
   min-height: 100vh;
   color: var(--color-text);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
+  line-height: 1.8;
   font-family: var(--font-body);
   font-size: 15px;
+  letter-spacing: 0.03em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
 }

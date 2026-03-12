@@ -4,7 +4,9 @@ import { ref, computed, nextTick } from 'vue'
 import { Promotion, ChatLineRound, User } from '@element-plus/icons-vue'
 import { useUserStore, useLearningStore } from '@/stores'
 import IntegrationHint from '@/components/IntegrationHint.vue'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
+const { pageRef } = usePageEntrance()
 const userStore = useUserStore()
 const learningStore = useLearningStore()
 
@@ -84,7 +86,7 @@ function clearChat() {
 
 
 <template>
-  <div class="ai-assistant-page page page--compact">
+  <div ref="pageRef" class="ai-assistant-page page page--compact">
     <div class="chat-container">
       <!-- 头部 -->
       <div class="chat-header">
@@ -186,7 +188,7 @@ function clearChat() {
   flex-direction: column;
   height: 100%;
   background: var(--bg-100);
-  border-radius: 16px;
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -271,7 +273,7 @@ function clearChat() {
 
 .message-bubble {
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 0;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   line-height: 1.6;
@@ -338,7 +340,7 @@ function clearChat() {
   gap: 6px;
   padding: 16px;
   background: #fff;
-  border-radius: 12px;
+  border-radius: 0;
   cursor: pointer;
   transition: all 0.2s;
   border: 2px solid transparent;
@@ -377,13 +379,13 @@ function clearChat() {
 }
 
 .input-area :deep(.el-textarea__inner) {
-  border-radius: 12px;
+  border-radius: 0;
   padding: 12px 16px;
 }
 
 .input-area .el-button {
   align-self: flex-end;
-  border-radius: 12px;
+  border-radius: 0;
   padding: 12px 24px;
 }
 

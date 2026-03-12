@@ -4,7 +4,9 @@ import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Bell, Message } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
+const { pageRef } = usePageEntrance()
 const userStore = useUserStore()
 
 const activeTab = ref('profile')
@@ -77,7 +79,7 @@ function beforeAvatarUpload(file: File) {
 
 
 <template>
-  <div class="settings-page page page--compact">
+  <div ref="pageRef" class="settings-page page page--compact">
     <div class="settings-shell">
       <aside class="rail">
         <div class="panel rail__panel">
@@ -396,7 +398,7 @@ function beforeAvatarUpload(file: File) {
   justify-content: space-between;
   gap: 16px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 0;
   background: var(--card-data-bg);
   border: 1px solid var(--card-divider);
 }

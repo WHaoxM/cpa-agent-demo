@@ -6,7 +6,9 @@ import { Search, Lock, Unlock, UserFilled, Refresh, Download, Grid } from '@elem
 import { useUserStore } from '@/stores'
 import { mockUsers } from '@/mock/data'
 import type { User, UserRole } from '@/types'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 
+const { pageRef } = usePageEntrance()
 const userStore = useUserStore()
 
 const searchQuery = ref('')
@@ -113,7 +115,7 @@ function getRoleTag(role: UserRole) {
 
 
 <template>
-  <div class="admin-users-page page page--compact">
+  <div ref="pageRef" class="admin-users-page page page--compact">
     <div class="page-head">
       <div class="page-head__left">
         <div>

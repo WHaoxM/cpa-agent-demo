@@ -333,7 +333,7 @@ function goBack() {
 .chapter-order {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--primary-100);
   color: var(--bg-100);
   display: flex;
@@ -386,7 +386,7 @@ function goBack() {
 .preview-cover {
   width: 100%;
   height: 140px;
-  border-radius: 6px;
+  border-radius: 0;
   margin-bottom: 12px;
   display: block;
 }
@@ -394,7 +394,7 @@ function goBack() {
 .preview-placeholder {
   width: 100%;
   height: 100px;
-  border-radius: 6px;
+  border-radius: 0;
   background: var(--bg-200);
   display: flex;
   align-items: center;

@@ -6,11 +6,13 @@ import VChart from 'vue-echarts'
 import { useNetworkGraph, layerLabelMap, layerColors, difficultyLabelMap, kindLabelMap } from '@/composables/useNetworkGraph'
 import { useThemePalette } from '@/composables/useThemePalette'
 import { useKnowledgeGraphStore } from '@/stores'
+import { usePageEntrance } from '@/composables/usePageEntrance'
 import MultimodalDetail from '@/components/MultimodalDetail.vue'
 import AgentStepPanel from '@/components/AgentStepPanel.vue'
 import type { KnowledgeLayer, KnowledgeDifficulty, KnowledgeKind } from '@/types'
 
 const kgStore = useKnowledgeGraphStore()
+const { pageRef } = usePageEntrance()
 
 const {
   filteredNodes,
@@ -202,7 +204,7 @@ watch(selectedNodeId, () => {
 </script>
 
 <template>
-  <div class="kg-page page page--compact">
+  <div ref="pageRef" class="kg-page page page--compact">
     <!-- 顶栏 -->
     <div class="kg-topbar card-base">
       <div class="kg-topbar__left">
@@ -451,7 +453,7 @@ watch(selectedNodeId, () => {
   height: 36px;
   padding: 0 32px 0 32px;
   border: 1px solid var(--card-border);
-  border-radius: 8px;
+  border-radius: 0;
   background: var(--bg-100);
   color: var(--text-100);
   font-size: 13px;
@@ -548,7 +550,7 @@ watch(selectedNodeId, () => {
 .kg-filter-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -568,7 +570,7 @@ watch(selectedNodeId, () => {
 .kg-legend-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -691,7 +693,7 @@ watch(selectedNodeId, () => {
   justify-content: center;
   gap: 8px;
   padding: 10px 0;
-  border-radius: 8px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--primary-100) 40%, var(--bg-300) 60%);
   background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100) 90%);
   color: var(--primary-100);

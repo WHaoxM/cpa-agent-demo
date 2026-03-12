@@ -101,7 +101,7 @@ function initChart() {
         .style('padding', '8px 12px')
         .style('background', 'rgba(0,0,0,0.8)')
         .style('color', 'white')
-        .style('border-radius', '4px')
+        .style('border-radius', '0')
         .style('font-size', '12px')
         .style('pointer-events', 'none')
         .html(`分数段: ${d.range}<br/>人数: ${d.count}`)

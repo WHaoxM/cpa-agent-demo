@@ -109,7 +109,7 @@ function markRead(id: string) {
   gap: 12px;
   flex-wrap: wrap;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
   box-shadow: var(--shadow-sm);
@@ -125,12 +125,12 @@ function markRead(id: string) {
 }
 
 .toolbar__seg {
-  border-radius: 12px;
+  border-radius: 0;
 }
 
 .msg-list {
   margin-top: 10px;
-  border-radius: 14px;
+  border-radius: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
