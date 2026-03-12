@@ -1,0 +1,655 @@
+/* ═══════════════════════════════════════════════════
+   CYBER NEXUS — 赛博枢纽主题专用全局样式
+   仅在 [data-theme='cyberNexus'] 下激活
+   ═══════════════════════════════════════════════════ */
+
+/* ─── 扫描线叠加层 ─── */
+[data-theme='cyberNexus'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--cyber-scanline-color) 2px,
+    var(--cyber-scanline-color) 4px
+  );
+  opacity: 0.6;
+  mix-blend-mode: normal;
+}
+
+/* ─── 背景网格 ─── */
+[data-theme='cyberNexus'] body::before {
+  background-image:
+    linear-gradient(var(--cyber-grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--cyber-grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 1;
+  mix-blend-mode: normal;
+}
+
+/* ─── 全局字体覆盖 ─── */
+[data-theme='cyberNexus'] body {
+  background:
+    radial-gradient(ellipse 800px 400px at 15% 0%, rgba(0, 229, 198, 0.08), transparent),
+    radial-gradient(ellipse 600px 350px at 85% 10%, rgba(255, 45, 106, 0.04), transparent),
+    linear-gradient(180deg, #0a0e14 0%, #080c12 100%);
+  font-family: var(--cyber-font-mono), -apple-system, sans-serif;
+}
+
+/* ─── .cyber-panel — 基础面板 ─── */
+[data-theme='cyberNexus'] .cyber-panel,
+[data-theme='cyberNexus'] .content-card,
+[data-theme='cyberNexus'] .card-base,
+[data-theme='cyberNexus'] .card-surface,
+[data-theme='cyberNexus'] .card-data,
+[data-theme='cyberNexus'] .card-emphasis,
+[data-theme='cyberNexus'] .toolbar-card,
+[data-theme='cyberNexus'] .page-header,
+[data-theme='cyberNexus'] .page-head {
+  background: rgba(17, 24, 32, 0.75);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.04);
+  backdrop-filter: blur(8px);
+  position: relative;
+}
+
+[data-theme='cyberNexus'] .cyber-panel::before,
+[data-theme='cyberNexus'] .content-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
+  pointer-events: none;
+}
+
+/* ─── Element Plus 卡片覆盖 ─── */
+[data-theme='cyberNexus'] .el-card {
+  background: rgba(17, 24, 32, 0.75);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.04);
+}
+
+[data-theme='cyberNexus'] .el-card:hover {
+  border-color: rgba(0, 229, 198, 0.25);
+}
+
+/* ─── 发光文字 ─── */
+[data-theme='cyberNexus'] .cyber-glow-text {
+  color: #00e5c6;
+  text-shadow: 0 0 6px rgba(0, 229, 198, 0.5), 0 0 20px rgba(0, 229, 198, 0.2);
+}
+
+[data-theme='cyberNexus'] .cyber-glow-accent {
+  color: #ff2d6a;
+  text-shadow: 0 0 6px rgba(255, 45, 106, 0.5), 0 0 20px rgba(255, 45, 106, 0.2);
+}
+
+/* ─── 数据进度条 ─── */
+[data-theme='cyberNexus'] .cyber-bar {
+  height: 4px;
+  background: rgba(0, 229, 198, 0.1);
+  border-radius: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+[data-theme='cyberNexus'] .cyber-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00e5c6, #00ffcc);
+  box-shadow: 0 0 8px rgba(0, 229, 198, 0.5);
+  position: relative;
+}
+
+[data-theme='cyberNexus'] .cyber-bar__fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 3px;
+  background: #00ffcc;
+  box-shadow: 0 0 6px #00ffcc, 0 0 12px rgba(0, 255, 204, 0.5);
+}
+
+/* ─── 状态标签 ─── */
+[data-theme='cyberNexus'] .cyber-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 1px;
+  font-family: var(--cyber-font-mono);
+}
+
+[data-theme='cyberNexus'] .cyber-tag--active {
+  color: #00e5c6;
+  background: rgba(0, 229, 198, 0.1);
+  border: 1px solid rgba(0, 229, 198, 0.25);
+}
+
+[data-theme='cyberNexus'] .cyber-tag--warning {
+  color: #ffb800;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+}
+
+[data-theme='cyberNexus'] .cyber-tag--critical {
+  color: #ff2d6a;
+  background: rgba(255, 45, 106, 0.1);
+  border: 1px solid rgba(255, 45, 106, 0.25);
+}
+
+[data-theme='cyberNexus'] .cyber-tag--stable {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+/* ─── 脉冲圆点 ─── */
+[data-theme='cyberNexus'] .cyber-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00e5c6;
+  box-shadow: 0 0 4px #00e5c6;
+  animation: cyber-pulse 2s infinite;
+}
+
+[data-theme='cyberNexus'] .cyber-dot--accent {
+  background: #ff2d6a;
+  box-shadow: 0 0 4px #ff2d6a;
+}
+
+/* ─── 终端日志面板 ─── */
+[data-theme='cyberNexus'] .cyber-terminal {
+  background: rgba(10, 14, 20, 0.95);
+  border: 1px solid rgba(0, 229, 198, 0.1);
+  padding: 12px 14px;
+  font-family: var(--cyber-font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: #6b8a8e;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+[data-theme='cyberNexus'] .cyber-terminal .log-time {
+  color: #4a5568;
+}
+
+[data-theme='cyberNexus'] .cyber-terminal .log-sys {
+  color: #00e5c6;
+}
+
+[data-theme='cyberNexus'] .cyber-terminal .log-warn {
+  color: #ffb800;
+}
+
+[data-theme='cyberNexus'] .cyber-terminal .log-err {
+  color: #ff2d6a;
+}
+
+[data-theme='cyberNexus'] .cyber-terminal .log-agent {
+  color: #a78bfa;
+}
+
+/* ─── 区域分隔线 ─── */
+[data-theme='cyberNexus'] .cyber-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.2), transparent);
+  margin: 12px 0;
+}
+
+/* ─── 按钮覆盖 ─── */
+[data-theme='cyberNexus'] .el-button--primary {
+  background: rgba(0, 229, 198, 0.12);
+  border: 1px solid rgba(0, 229, 198, 0.35);
+  color: #00e5c6;
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+[data-theme='cyberNexus'] .el-button--primary:hover,
+[data-theme='cyberNexus'] .el-button--primary:focus {
+  background: rgba(0, 229, 198, 0.2);
+  border-color: rgba(0, 229, 198, 0.5);
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.25);
+  color: #00ffcc;
+}
+
+[data-theme='cyberNexus'] .el-button--default {
+  background: rgba(26, 35, 50, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  color: var(--text-200);
+  border-radius: 2px;
+}
+
+[data-theme='cyberNexus'] .el-button--default:hover {
+  border-color: rgba(0, 229, 198, 0.3);
+  color: var(--text-100);
+}
+
+/* ─── 输入框覆盖 ─── */
+[data-theme='cyberNexus'] .el-input__wrapper,
+[data-theme='cyberNexus'] .el-textarea__inner {
+  background: rgba(10, 14, 20, 0.8) !important;
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  border-radius: 2px;
+  box-shadow: none !important;
+  font-family: var(--cyber-font-mono);
+  color: var(--text-100);
+}
+
+[data-theme='cyberNexus'] .el-input__wrapper:hover,
+[data-theme='cyberNexus'] .el-textarea__inner:hover {
+  border-color: rgba(0, 229, 198, 0.25);
+}
+
+[data-theme='cyberNexus'] .el-input__wrapper.is-focus,
+[data-theme='cyberNexus'] .el-textarea__inner:focus {
+  border-color: rgba(0, 229, 198, 0.4) !important;
+  box-shadow: 0 0 8px rgba(0, 229, 198, 0.15) !important;
+}
+
+/* ─── 标签页覆盖 ─── */
+[data-theme='cyberNexus'] .el-tabs__item {
+  font-family: var(--cyber-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-200);
+}
+
+[data-theme='cyberNexus'] .el-tabs__item.is-active {
+  color: #00e5c6;
+}
+
+[data-theme='cyberNexus'] .el-tabs__active-bar {
+  background: #00e5c6;
+  box-shadow: 0 1px 8px rgba(0, 229, 198, 0.4);
+}
+
+[data-theme='cyberNexus'] .el-tabs__nav-wrap::after {
+  background: rgba(0, 229, 198, 0.08);
+}
+
+/* ─── 表格覆盖 ─── */
+[data-theme='cyberNexus'] .el-table {
+  background: transparent;
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(0, 229, 198, 0.04);
+  --el-table-row-hover-bg-color: rgba(0, 229, 198, 0.06);
+  --el-table-border-color: rgba(0, 229, 198, 0.08);
+  font-family: var(--cyber-font-mono);
+}
+
+[data-theme='cyberNexus'] .el-table th.el-table__cell {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-200);
+}
+
+/* ─── 对话框覆盖 ─── */
+[data-theme='cyberNexus'] .el-dialog {
+  background: rgba(17, 24, 32, 0.95);
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 3px;
+  box-shadow: 0 0 40px rgba(0, 229, 198, 0.1);
+}
+
+/* ─── 弹出层覆盖 ─── */
+[data-theme='cyberNexus'] .el-popover.el-popper {
+  background: rgba(17, 24, 32, 0.95);
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 2px;
+}
+
+/* ─── 标签覆盖 ─── */
+[data-theme='cyberNexus'] .el-tag {
+  border-radius: 1px;
+  font-family: var(--cyber-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+/* ─── Switch 覆盖 ─── */
+[data-theme='cyberNexus'] .el-switch.is-checked .el-switch__core {
+  background: rgba(0, 229, 198, 0.3);
+  border-color: rgba(0, 229, 198, 0.5);
+}
+
+/* ─── 分页覆盖 ─── */
+[data-theme='cyberNexus'] .el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-button-bg-color: rgba(26, 35, 50, 0.6);
+  font-family: var(--cyber-font-mono);
+}
+
+/* ─── 滚动条 ─── */
+[data-theme='cyberNexus'] ::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+[data-theme='cyberNexus'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme='cyberNexus'] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 198, 0.15);
+  border-radius: 0;
+}
+
+[data-theme='cyberNexus'] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 198, 0.3);
+}
+
+/* ─── 动画 Keyframes ─── */
+@keyframes cyber-pulse {
+  0%, 100% { opacity: 0.4; box-shadow: 0 0 4px currentColor; }
+  50% { opacity: 1; box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+}
+
+@keyframes cyber-scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes cyber-data-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@keyframes cyber-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.7; }
+  94% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+}
+
+@keyframes cyber-border-glow {
+  0%, 100% { border-color: rgba(0, 229, 198, 0.12); }
+  50% { border-color: rgba(0, 229, 198, 0.25); }
+}
+
+@keyframes cyber-typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* ─── 页面容器覆盖 ─── */
+[data-theme='cyberNexus'] .page {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+[data-theme='cyberNexus'] .page.page--compact {
+  padding: 0;
+}
+
+/* ─── 工具类 ─── */
+[data-theme='cyberNexus'] .cyber-uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+[data-theme='cyberNexus'] .cyber-mono {
+  font-family: var(--cyber-font-mono);
+}
+
+[data-theme='cyberNexus'] .cyber-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-200);
+  font-family: var(--cyber-font-mono);
+}
+
+[data-theme='cyberNexus'] .cyber-section-label::before {
+  content: '●';
+  font-size: 6px;
+  color: #00e5c6;
+}
+
+/* ─── 底部状态栏 ─── */
+[data-theme='cyberNexus'] .cyber-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  font-family: var(--cyber-font-mono);
+  font-size: 10px;
+  color: var(--text-200);
+  border-top: 1px solid rgba(0, 229, 198, 0.08);
+  background: rgba(10, 14, 20, 0.6);
+  letter-spacing: 0.06em;
+}
+
+[data-theme='cyberNexus'] .cyber-statusbar .status-online {
+  color: #00e5c6;
+}
+
+/* ─── Select / Dropdown 覆盖 ─── */
+[data-theme='cyberNexus'] .el-select-dropdown {
+  background: rgba(17, 24, 32, 0.95) !important;
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .el-select-dropdown__item.is-hovering {
+  background: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .el-select-dropdown__item.is-selected {
+  color: #00e5c6;
+}
+
+/* ─── Checkbox / Radio 覆盖 ─── */
+[data-theme='cyberNexus'] .el-checkbox__input.is-checked .el-checkbox__inner {
+  background: rgba(0, 229, 198, 0.2);
+  border-color: #00e5c6;
+}
+[data-theme='cyberNexus'] .el-checkbox__input.is-checked + .el-checkbox__label {
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .el-radio__input.is-checked .el-radio__inner {
+  background: rgba(0, 229, 198, 0.2);
+  border-color: #00e5c6;
+}
+
+/* ─── Empty 覆盖 ─── */
+[data-theme='cyberNexus'] .el-empty__description p {
+  color: var(--text-200);
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Message / Notification 覆盖 ─── */
+[data-theme='cyberNexus'] .el-message {
+  background: rgba(17, 24, 32, 0.95);
+  border: 1px solid rgba(0, 229, 198, 0.2);
+  border-radius: 2px;
+}
+
+/* ─── Skeleton 覆盖 ─── */
+[data-theme='cyberNexus'] .el-skeleton__item {
+  background: rgba(0, 229, 198, 0.04);
+}
+
+/* ─── 页面标题覆盖 ─── */
+[data-theme='cyberNexus'] .page-header h2,
+[data-theme='cyberNexus'] .page-head h2,
+[data-theme='cyberNexus'] .page-header .page-title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ─── 通用子标题覆盖 ─── */
+[data-theme='cyberNexus'] .subtitle,
+[data-theme='cyberNexus'] .page-header p {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* ─── 统计条覆盖 ─── */
+[data-theme='cyberNexus'] .stat-strip,
+[data-theme='cyberNexus'] .kv-row {
+  font-family: var(--cyber-font-mono);
+}
+
+/* ─── Form section 覆盖 ─── */
+[data-theme='cyberNexus'] .form-section {
+  background: rgba(17, 24, 32, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 2px;
+}
+
+/* ─── Drawer 覆盖 ─── */
+[data-theme='cyberNexus'] .el-drawer {
+  background: rgba(10, 14, 20, 0.98) !important;
+  border-left: 1px solid rgba(0, 229, 198, 0.12);
+}
+
+/* ─── Progress 覆盖 ─── */
+[data-theme='cyberNexus'] .el-progress-bar__outer {
+  background: rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .el-progress-bar__inner {
+  background: linear-gradient(90deg, #00e5c6, #00b8a0);
+  border-radius: 0;
+}
+
+/* ─── Tooltip 覆盖 ─── */
+[data-theme='cyberNexus'] .el-tooltip__popper {
+  background: rgba(10, 14, 20, 0.95) !important;
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  font-size: 11px;
+}
+
+/* ─── Divider 覆盖 ─── */
+[data-theme='cyberNexus'] .el-divider {
+  border-top-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .el-divider__text {
+  background: rgba(17, 24, 32, 0.75);
+  color: var(--text-200);
+  font-family: var(--cyber-font-mono);
+}
+
+/* ─── Grid gap 覆盖 ─── */
+[data-theme='cyberNexus'] .grid-gap-md > * {
+  border-radius: 2px;
+}
+
+/* ─── Breadcrumb 覆盖 ─── */
+[data-theme='cyberNexus'] .el-breadcrumb {
+  font-family: var(--cyber-font-mono);
+}
+
+/* ─── Badge 覆盖 ─── */
+[data-theme='cyberNexus'] .el-badge__content {
+  background: #ff2d6a;
+  border: none;
+  border-radius: 0;
+}
+
+/* ─── 页面 section 标题样式 ─── */
+[data-theme='cyberNexus'] .section-title,
+[data-theme='cyberNexus'] .section-header .section-title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+}
+
+/* ─── .panel 通用面板覆盖（teacher/admin 页面） ─── */
+[data-theme='cyberNexus'] .panel {
+  background: rgba(17, 24, 32, 0.75);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.04);
+}
+[data-theme='cyberNexus'] .panel-head {
+  border-bottom-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .panel-head__title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .toolbar-section {
+  border-bottom-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .charts-grid .chart-panel {
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .notice-item + .notice-item {
+  border-top-color: rgba(0, 229, 198, 0.06);
+}
+
+/* ─── 通用 course-title/course-desc 覆盖 ─── */
+[data-theme='cyberNexus'] .course-title {
+  font-family: var(--cyber-font-mono);
+}
+[data-theme='cyberNexus'] .course-cover {
+  border-radius: 2px;
+}
+
+/* ─── Alert/Danger 颜色覆盖 ─── */
+[data-theme='cyberNexus'] .stat-strip__item--alert .stat-strip__value {
+  color: #ff2d6a;
+}
+
+/* ─── Menu / Dropdown 覆盖 ─── */
+[data-theme='cyberNexus'] .el-dropdown-menu {
+  background: rgba(17, 24, 32, 0.95) !important;
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .el-dropdown-menu__item:hover {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+}
+
+/* ─── MessageBox 覆盖 ─── */
+[data-theme='cyberNexus'] .el-message-box {
+  background: rgba(17, 24, 32, 0.95);
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 3px;
+}
+
+/* ─── Loading 覆盖 ─── */
+[data-theme='cyberNexus'] .el-loading-mask {
+  background: rgba(10, 14, 20, 0.7);
+}
+[data-theme='cyberNexus'] .el-loading-spinner .circular .path {
+  stroke: #00e5c6;
+}

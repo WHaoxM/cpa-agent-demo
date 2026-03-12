@@ -109,16 +109,10 @@ export const routes: RouteRecordRaw[] = [
         ],
       },
       {
-        path: 'student/notes',
-        name: 'student-notes',
-        component: () => import('@/views/student/Notes.vue'),
-        meta: { title: '笔记管理', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
-      },
-      {
-        path: 'student/wrong-questions',
-        name: 'student-wrong-questions',
-        component: () => import('@/views/student/WrongQuestions.vue'),
-        meta: { title: '错题本', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
+        path: 'student/skills',
+        name: 'student-skills',
+        component: () => import('@/views/student/SkillManagement.vue'),
+        meta: { title: '技能管理', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
         path: 'student/ai-assistant',
@@ -144,10 +138,10 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '学习报告', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
-        path: 'student/favorites',
-        name: 'student-favorites',
-        component: () => import('@/views/student/Favorites.vue'),
-        meta: { title: '我的收藏', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
+        path: 'student/career',
+        name: 'student-career',
+        component: () => import('@/views/student/CareerCenter.vue'),
+        meta: { title: '职业发展中心', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
         path: 'student/settings',

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-const availableThemes = ['xuanZhi', 'classicWhite', 'crystal', 'night'] as const
+const availableThemes = ['xuanZhi', 'classicWhite', 'crystal', 'night', 'cyberNexus'] as const
 export type ThemeName = (typeof availableThemes)[number]
 const allowedThemeSet = new Set<ThemeName>(availableThemes)
 const fallbackTheme: ThemeName = 'xuanZhi'
@@ -19,6 +19,8 @@ export const useThemeStore = defineStore(
           return '米白晨读'
         case 'night':
           return '松烟夜读'
+        case 'cyberNexus':
+          return '赛博枢纽'
         default:
           return '宣纸理性'
       }

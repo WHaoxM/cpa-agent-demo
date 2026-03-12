@@ -61,11 +61,10 @@ const breadcrumbs = computed(() => {
 const studentMenus = [
   { index: '/app/student/learning', icon: ICONS.bookOpen, title: '学习中心' },
   { index: '/app/student/knowledge-graph', icon: ICONS.network, title: '知识图谱' },
-  { index: '/app/student/notes', icon: ICONS.fileText, title: '笔记管理' },
-  { index: '/app/student/wrong-questions', icon: ICONS.closeCircle, title: '错题本' },
+  { index: '/app/student/skills', icon: ICONS.layers, title: '技能管理' },
   { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
   { index: '/app/student/report', icon: ICONS.trendingUp, title: '学习报告' },
-  { index: '/app/student/favorites', icon: ICONS.star, title: '我的收藏' },
+  { index: '/app/student/career', icon: ICONS.compass, title: '职业发展中心' },
   { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
 ]
 
@@ -129,6 +128,7 @@ const themeOptions: Array<{ label: string; value: ThemeName }> = [
   { label: '晨读', value: 'classicWhite' },
   { label: '石墨', value: 'crystal' },
   { label: '夜读', value: 'night' },
+  { label: '赛博', value: 'cyberNexus' },
 ]
 
 function onThemeChange(v: ThemeName) {
@@ -141,6 +141,7 @@ function getThemeGradient(theme: ThemeName): string {
     classicWhite: 'linear-gradient(120deg, #4A6F5D 0%, #FAF7F0 55%, #B46A3C 120%)',
     crystal: 'linear-gradient(118deg, #2F5B8C 0%, #F4F6F9 52%, #7A5C3A 100%)',
     night: 'linear-gradient(120deg, #5DAA9F 0%, #14171A 55%, #C2895B 120%)',
+    cyberNexus: 'linear-gradient(120deg, #00e5c6 0%, #0a0e14 50%, #ff2d6a 120%)',
   }
   return gradients[theme]
 }
@@ -2617,5 +2618,225 @@ function switchRole(role: UserRole) {
 
 }
 
+/* ═══ CYBER NEXUS 主题覆盖 ═══ */
+[data-theme='cyberNexus'] .aside {
+  background: rgba(10, 14, 20, 0.95);
+  border-right: 1px solid rgba(0, 229, 198, 0.1);
+  position: relative;
+}
+[data-theme='cyberNexus'] .aside::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(0, 229, 198, 0.3), transparent 30%, transparent 70%, rgba(0, 229, 198, 0.3));
+  pointer-events: none;
+}
+[data-theme='cyberNexus'] .nav-card__head {
+  border-bottom-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .nav-avatar-wrap {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.2);
+  background: rgba(0, 229, 198, 0.04);
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .nav-avatar {
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .nav-user__name {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+[data-theme='cyberNexus'] .nav-user__role {
+  font-family: var(--cyber-font-mono);
+  color: #00e5c6;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .aside__menu--compact :deep(.el-menu-item) {
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+}
+[data-theme='cyberNexus'] .aside__menu--compact :deep(.el-menu-item:hover) {
+  background: rgba(0, 229, 198, 0.06);
+  color: var(--text-100);
+}
+[data-theme='cyberNexus'] .aside__menu--compact :deep(.el-menu-item.is-active) {
+  background: rgba(0, 229, 198, 0.1);
+  color: #00e5c6;
+  box-shadow: inset 0 0 12px rgba(0, 229, 198, 0.06);
+  border: 1px solid rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .aside__menu--compact :deep(.el-menu-item.is-active::before) {
+  background: #00e5c6;
+  box-shadow: 0 0 6px #00e5c6;
+  border-radius: 0;
+  width: 2px;
+  left: 0;
+}
+[data-theme='cyberNexus'] .aside__menu--compact :deep(.el-menu-item.is-active .menu-icon) {
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .nav-collapse-btn {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.12);
+  background: rgba(0, 229, 198, 0.04);
+  font-family: var(--cyber-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-200);
+}
+[data-theme='cyberNexus'] .nav-collapse-btn:hover {
+  border-color: rgba(0, 229, 198, 0.3);
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+}
+
+/* Header */
+[data-theme='cyberNexus'] .header {
+  background: rgba(10, 14, 20, 0.95);
+  border-bottom: 1px solid rgba(0, 229, 198, 0.1);
+  position: relative;
+}
+[data-theme='cyberNexus'] .header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
+  pointer-events: none;
+}
+[data-theme='cyberNexus'] .header__logo {
+  border-radius: 2px;
+  background: rgba(0, 229, 198, 0.08);
+  border-color: rgba(0, 229, 198, 0.2);
+  color: #00e5c6;
+  font-family: var(--cyber-font-mono);
+}
+[data-theme='cyberNexus'] .header__brand-name {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .header__brand-sub {
+  font-family: var(--cyber-font-mono);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .header__brand:hover {
+  border-color: rgba(0, 229, 198, 0.2);
+  background: rgba(0, 229, 198, 0.04);
+}
+[data-theme='cyberNexus'] .breadcrumb {
+  font-family: var(--cyber-font-mono);
+}
+[data-theme='cyberNexus'] .breadcrumb__sep {
+  color: #00e5c6;
+  opacity: 0.5;
+}
+[data-theme='cyberNexus'] .header__title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+}
+[data-theme='cyberNexus'] .header__icon-btn {
+  border-radius: 2px;
+  color: var(--text-200);
+}
+[data-theme='cyberNexus'] .header__icon-btn:hover {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .header__user {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.12);
+  background: rgba(0, 229, 198, 0.04);
+}
+[data-theme='cyberNexus'] .header__user:hover {
+  border-color: rgba(0, 229, 198, 0.3);
+}
+[data-theme='cyberNexus'] .header__user-name {
+  font-family: var(--cyber-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 12px;
+}
+[data-theme='cyberNexus'] .header__user-account {
+  font-family: var(--cyber-font-mono);
+  color: #00e5c6;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+/* Content area */
+[data-theme='cyberNexus'] .content {
+  background: rgba(10, 14, 20, 0.5);
+  padding: 0;
+}
+@media (min-width: 1024px) {
+  [data-theme='cyberNexus'] .content {
+    padding: 0;
+  }
+}
+
+/* Theme popover */
+[data-theme='cyberNexus'] .theme-swatch {
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .theme-swatch.active {
+  border-color: #00e5c6;
+  background: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .swatch-color {
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .swatch-label {
+  font-family: var(--cyber-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+/* User popover */
+[data-theme='cyberNexus'] .user-pop__role-item {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.1);
+  background: rgba(0, 229, 198, 0.04);
+  font-family: var(--cyber-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+[data-theme='cyberNexus'] .user-pop__role-item:hover {
+  border-color: rgba(0, 229, 198, 0.3);
+  background: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .user-pop__role-item.active {
+  border-color: rgba(0, 229, 198, 0.5);
+  background: rgba(0, 229, 198, 0.12);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .user-pop__btn {
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  font-size: 12px;
+  background: rgba(0, 229, 198, 0.04);
+}
+[data-theme='cyberNexus'] .user-pop__btn:hover {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .user-pop__section-title {
+  font-family: var(--cyber-font-mono);
+  color: #00e5c6;
+}
 </style>
 

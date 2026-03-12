@@ -1,4 +1,5 @@
-﻿<!-- 页面：登录；路由：/login（login） -->
+﻿<!-- 页面：登录；路由：/login（login） -->
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -58,8 +59,10 @@ function quickLogin(role: UserRole, account: string) {
 }
 </script>
 
-
-
+
+
+
+
 <template>
   <div class="login-page">
     <!-- 左侧品牌区 - 占 60% -->
@@ -639,6 +642,182 @@ function quickLogin(role: UserRole, account: string) {
     font-size: 20px;
   }
 }
+
+/* ═══ CYBER NEXUS 主题覆盖 ═══ */
+[data-theme='cyberNexus'] .login-page {
+  background: #0a0e14;
+}
+[data-theme='cyberNexus'] .login-page::before {
+  opacity: 0;
+}
+[data-theme='cyberNexus'] .login-brand-side {
+  background:
+    radial-gradient(ellipse 100% 100% at 0% 0%, rgba(0, 229, 198, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 80% at 100% 100%, rgba(255, 45, 106, 0.06) 0%, transparent 40%);
+}
+[data-theme='cyberNexus'] .brand-badge {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.2);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+[data-theme='cyberNexus'] .brand-title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.02em;
+}
+[data-theme='cyberNexus'] .title-emp {
+  background: linear-gradient(135deg, #00e5c6 0%, #ff2d6a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+[data-theme='cyberNexus'] .brand-desc {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+}
+[data-theme='cyberNexus'] .feature-item {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+}
+[data-theme='cyberNexus'] .feature-icon {
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .deco-blob {
+  background: rgba(0, 229, 198, 0.04);
+  border-radius: 0;
+  animation: none;
+  border: 1px solid rgba(0, 229, 198, 0.06);
+}
+[data-theme='cyberNexus'] .deco-ring {
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 0;
+  transform: rotate(45deg);
+  animation: none;
+}
+[data-theme='cyberNexus'] .deco-dots {
+  background-image: 
+    linear-gradient(rgba(0, 229, 198, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 198, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.6;
+}
+[data-theme='cyberNexus'] .form-card {
+  background: rgba(17, 24, 32, 0.85);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+  border-radius: 2px;
+  box-shadow: 0 0 40px rgba(0, 229, 198, 0.06);
+  backdrop-filter: blur(12px);
+  position: relative;
+}
+[data-theme='cyberNexus'] .form-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
+  pointer-events: none;
+}
+[data-theme='cyberNexus'] .form-title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 20px;
+}
+[data-theme='cyberNexus'] .role-tab {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+[data-theme='cyberNexus'] .role-tab:hover {
+  transform: none;
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .role-tab.active {
+  background: rgba(0, 229, 198, 0.08);
+  border-color: #00e5c6;
+  color: #00e5c6;
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.1);
+  --tab-color: #00e5c6 !important;
+}
+[data-theme='cyberNexus'] .custom-input {
+  background: rgba(10, 14, 20, 0.8);
+  border: 1px solid rgba(0, 229, 198, 0.1);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  color: var(--text-100);
+  letter-spacing: 0.04em;
+}
+[data-theme='cyberNexus'] .custom-input:focus {
+  border-color: rgba(0, 229, 198, 0.4);
+  background: rgba(10, 14, 20, 0.9);
+  box-shadow: 0 0 8px rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .custom-input::placeholder {
+  color: rgba(107, 138, 142, 0.5);
+}
+[data-theme='cyberNexus'] .input-icon { color: rgba(0, 229, 198, 0.4); }
+[data-theme='cyberNexus'] .password-toggle { color: rgba(0, 229, 198, 0.4); }
+
+[data-theme='cyberNexus'] .login-btn {
+  background: rgba(0, 229, 198, 0.12);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.35);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+[data-theme='cyberNexus'] .login-btn:hover:not(:disabled) {
+  transform: none;
+  background: rgba(0, 229, 198, 0.2);
+  border-color: rgba(0, 229, 198, 0.5);
+  box-shadow: 0 0 20px rgba(0, 229, 198, 0.2);
+  color: #00ffcc;
+}
+[data-theme='cyberNexus'] .quick-divider {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+[data-theme='cyberNexus'] .quick-divider::before,
+[data-theme='cyberNexus'] .quick-divider::after {
+  background: rgba(0, 229, 198, 0.1);
+}
+[data-theme='cyberNexus'] .quick-btn {
+  background: rgba(0, 229, 198, 0.04);
+  border: 1px solid rgba(0, 229, 198, 0.1);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+[data-theme='cyberNexus'] .quick-btn:hover {
+  background: rgba(0, 229, 198, 0.08);
+  border-color: rgba(0, 229, 198, 0.25);
+  color: #00e5c6;
+  transform: none;
+}
+[data-theme='cyberNexus'] .login-hint {
+  background: rgba(255, 45, 106, 0.06);
+  border: 1px solid rgba(255, 45, 106, 0.12);
+  border-radius: 2px;
+  color: #ff2d6a;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
 </style>
-
-

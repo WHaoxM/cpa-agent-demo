@@ -64,8 +64,8 @@ const todos = ref([
 const recentVisits = [
   { id: 1, title: 'Vue3入门基础', type: 'course', time: '10分钟前', path: '/app/student/course/course_001' },
   { id: 2, title: 'JavaScript高级', type: 'course', time: '2小时前', path: '/app/student/course/course_002' },
-  { id: 3, title: '学习笔记 #23', type: 'note', time: '昨天', path: '/app/student/notes' },
-  { id: 4, title: '错题本复习', type: 'quiz', time: '2天前', path: '/app/student/wrong-questions' },
+  { id: 3, title: '学习笔记 #23', type: 'note', time: '昨天', path: '/app/student/skills' },
+  { id: 4, title: '错题本复习', type: 'quiz', time: '2天前', path: '/app/student/skills' },
 ]
 
 const calendarData = [
@@ -1362,5 +1362,235 @@ onUnmounted(() => {
     padding-right: 14px;
   }
 }
+
+/* ═══ CYBER NEXUS 主题覆盖 ═══ */
+[data-theme='cyberNexus'] .dash {
+  font-family: var(--cyber-font-mono);
+}
+[data-theme='cyberNexus'] .dash-header {
+  background: rgba(10, 14, 20, 0.9);
+  border-bottom: 1px solid rgba(0, 229, 198, 0.1);
+  position: relative;
+}
+[data-theme='cyberNexus'] .dash-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 198, 0.3), transparent);
+  pointer-events: none;
+}
+[data-theme='cyberNexus'] .header-brand {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .brand-icon { color: #00e5c6; }
+[data-theme='cyberNexus'] .brand-live {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .live-dot { background: #00e5c6; }
+[data-theme='cyberNexus'] .sub-active { color: #00e5c6; }
+
+[data-theme='cyberNexus'] .zone-tag {
+  color: #00e5c6;
+  opacity: 0.35;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+[data-theme='cyberNexus'] .zone-hero {
+  background: rgba(10, 14, 20, 0.7);
+  border-bottom-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .hero-num {
+  color: #00e5c6;
+  text-shadow: 0 0 20px rgba(0, 229, 198, 0.3);
+}
+[data-theme='cyberNexus'] .hero-divider { background: rgba(0, 229, 198, 0.12); }
+[data-theme='cyberNexus'] .hero-bar { background: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .hero-bar-fill {
+  background: linear-gradient(90deg, #00e5c6, #00b8a0);
+  box-shadow: 0 0 8px rgba(0, 229, 198, 0.3);
+}
+
+[data-theme='cyberNexus'] .zone-cap {
+  border-bottom-color: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .cap-card {
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .cap-card--hero:hover {
+  background: rgba(0, 229, 198, 0.04);
+  border-color: rgba(0, 229, 198, 0.2);
+  box-shadow: 0 0 20px rgba(0, 229, 198, 0.06);
+}
+[data-theme='cyberNexus'] .cap-icon { color: #00e5c6; }
+[data-theme='cyberNexus'] .cap-go { color: #00e5c6; }
+
+[data-theme='cyberNexus'] .kg-cap-item {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .kg-cap-icon { color: #00e5c6; }
+[data-theme='cyberNexus'] .kg-cap-status.active {
+  color: #00e5c6;
+  background: rgba(0, 229, 198, 0.08);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+}
+
+[data-theme='cyberNexus'] .kg-layer-bar { border-radius: 0; }
+[data-theme='cyberNexus'] .kg-layer-seg { border-radius: 0; }
+[data-theme='cyberNexus'] .kg-layer-dot { border-radius: 0; }
+
+[data-theme='cyberNexus'] .kg-history-item {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .kg-history-item:hover {
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+}
+
+[data-theme='cyberNexus'] .agent-item {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .agent-dot.online {
+  box-shadow: 0 0 6px currentColor;
+  border-radius: 0;
+  width: 6px; height: 6px;
+}
+[data-theme='cyberNexus'] .agent-status.online {
+  color: #00e5c6;
+  background: rgba(0, 229, 198, 0.08);
+  border: 1px solid rgba(0, 229, 198, 0.12);
+}
+[data-theme='cyberNexus'] .pipe-node { color: #00e5c6; }
+[data-theme='cyberNexus'] .pipe-arrow { color: rgba(0, 229, 198, 0.3); }
+
+[data-theme='cyberNexus'] .cap-cta { border-top-color: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .cap-cta-btn {
+  background: rgba(0, 229, 198, 0.06);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.15);
+  border-radius: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .cap-cta-btn:hover {
+  background: rgba(0, 229, 198, 0.12);
+  box-shadow: 0 0 12px rgba(0, 229, 198, 0.1);
+}
+
+[data-theme='cyberNexus'] .pipeline { border-top-color: rgba(0, 229, 198, 0.08); }
+
+[data-theme='cyberNexus'] .zone-primary { border-bottom-color: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .primary-calendar,
+[data-theme='cyberNexus'] .primary-week {
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .sec-icon { color: #00e5c6; }
+[data-theme='cyberNexus'] .sec-badge {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.12);
+}
+[data-theme='cyberNexus'] .week-num { color: #00e5c6; }
+[data-theme='cyberNexus'] .wbar-track { background: rgba(0, 229, 198, 0.06); border-radius: 0; }
+[data-theme='cyberNexus'] .wbar-fill {
+  background: linear-gradient(0deg, #00e5c6, rgba(0, 229, 198, 0.5));
+  box-shadow: 0 0 6px rgba(0, 229, 198, 0.2);
+}
+
+[data-theme='cyberNexus'] .zone-info { border-bottom-color: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .info-card {
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .qitem,
+[data-theme='cyberNexus'] .nitem,
+[data-theme='cyberNexus'] .titem {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .qitem:hover,
+[data-theme='cyberNexus'] .titem:hover {
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .qdot { background: #00e5c6; border-radius: 0; }
+[data-theme='cyberNexus'] .qitem:hover .qarrow { color: #00e5c6; }
+[data-theme='cyberNexus'] .nitem.warning .ndot { background: #ff2d6a; border-radius: 0; }
+[data-theme='cyberNexus'] .nitem.success .ndot { background: #00e5c6; border-radius: 0; }
+[data-theme='cyberNexus'] .ndot { border-radius: 0; }
+[data-theme='cyberNexus'] .tcheck { font-family: var(--cyber-font-mono); }
+[data-theme='cyberNexus'] .titem.done .tcheck { color: #00e5c6; }
+[data-theme='cyberNexus'] .ttag {
+  background: rgba(0, 229, 198, 0.06);
+  border: 1px solid rgba(0, 229, 198, 0.1);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .ttag.high {
+  background: rgba(255, 45, 106, 0.1);
+  color: #ff2d6a;
+  border-color: rgba(255, 45, 106, 0.2);
+}
+[data-theme='cyberNexus'] .ttag.medium {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+  border-color: rgba(0, 229, 198, 0.15);
+}
+
+[data-theme='cyberNexus'] .sec-card {
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid rgba(0, 229, 198, 0.08);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .ritem,
+[data-theme='cyberNexus'] .fitem {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .ritem:hover,
+[data-theme='cyberNexus'] .fitem:hover {
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .fthumb {
+  background: rgba(0, 229, 198, 0.08);
+  color: #00e5c6;
+  border-radius: 0;
+  border: 1px solid rgba(0, 229, 198, 0.12);
+}
+[data-theme='cyberNexus'] .pend-item {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .pend-item:hover {
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+}
+[data-theme='cyberNexus'] .pend-num { color: #ff2d6a; text-shadow: 0 0 12px rgba(255, 45, 106, 0.3); }
+[data-theme='cyberNexus'] .sys-cell {
+  background: rgba(0, 229, 198, 0.03);
+  border: 1px solid rgba(0, 229, 198, 0.06);
+  border-radius: 0;
+}
+[data-theme='cyberNexus'] .sys-num { color: #00e5c6; text-shadow: 0 0 12px rgba(0, 229, 198, 0.3); }
 </style>
 

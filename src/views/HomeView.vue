@@ -621,4 +621,97 @@ function goToLogin() {
     margin-top: 24px;
   }
 }
+
+/* ═══ CYBER NEXUS 主题覆盖 ═══ */
+[data-theme='cyberNexus'] .home-shell {
+  font-family: var(--cyber-font-mono);
+}
+[data-theme='cyberNexus'] .brand__mark {
+  border-radius: 2px;
+  background: rgba(0, 229, 198, 0.06);
+  border-color: rgba(0, 229, 198, 0.15);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .brand__eyebrow,
+[data-theme='cyberNexus'] .hero__kicker,
+[data-theme='cyberNexus'] .command-slab__eyebrow,
+[data-theme='cyberNexus'] .signal-strip__label {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .hero__title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: -0.02em;
+}
+[data-theme='cyberNexus'] .hero__title span { color: #00e5c6; }
+[data-theme='cyberNexus'] .hero__desc {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.02em;
+}
+[data-theme='cyberNexus'] .btn--ghost {
+  border-color: rgba(0, 229, 198, 0.2);
+  color: #00e5c6;
+}
+[data-theme='cyberNexus'] .btn--solid,
+[data-theme='cyberNexus'] .btn-primary {
+  background: rgba(0, 229, 198, 0.12);
+  color: #00e5c6;
+  border: 1px solid rgba(0, 229, 198, 0.35);
+  border-radius: 2px;
+  font-family: var(--cyber-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+[data-theme='cyberNexus'] .btn--solid:hover,
+[data-theme='cyberNexus'] .btn-primary:hover {
+  transform: none;
+  background: rgba(0, 229, 198, 0.2);
+  border-color: rgba(0, 229, 198, 0.5);
+  box-shadow: 0 0 16px rgba(0, 229, 198, 0.15);
+  color: #00ffcc;
+}
+[data-theme='cyberNexus'] .btn-text {
+  color: #00e5c6;
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .btn-text:hover {
+  background: rgba(0, 229, 198, 0.08);
+}
+[data-theme='cyberNexus'] .signal-strip {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.1);
+  background: rgba(17, 24, 32, 0.6);
+}
+[data-theme='cyberNexus'] .signal-strip::before {
+  background: rgba(0, 229, 198, 0.25);
+}
+[data-theme='cyberNexus'] .signal-strip--accent::before {
+  background: rgba(255, 45, 106, 0.25);
+}
+[data-theme='cyberNexus'] .signal-strip__icon { color: #00e5c6; }
+[data-theme='cyberNexus'] .signal-strip--accent .signal-strip__icon { color: #ff2d6a; }
+[data-theme='cyberNexus'] .metric-ledger { border-top-color: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .metric-ledger__row {
+  border-radius: 2px;
+  border-color: rgba(0, 229, 198, 0.08);
+  background: rgba(17, 24, 32, 0.5);
+}
+[data-theme='cyberNexus'] .metric-ledger__value {
+  color: #00e5c6;
+  text-shadow: 0 0 16px rgba(0, 229, 198, 0.3);
+}
+[data-theme='cyberNexus'] .command-slab { border-top-color: rgba(0, 229, 198, 0.08); }
+[data-theme='cyberNexus'] .command-slab__title {
+  font-family: var(--cyber-font-mono);
+  letter-spacing: -0.01em;
+}
+[data-theme='cyberNexus'] .command-slab__title span { color: #00e5c6; }
+[data-theme='cyberNexus'] .route-stream__item {
+  border-top-color: rgba(0, 229, 198, 0.08);
+  background: rgba(17, 24, 32, 0.5);
+  border-radius: 2px;
+}
+[data-theme='cyberNexus'] .route-stream__title {
+  font-family: var(--cyber-font-mono);
+}
 </style>

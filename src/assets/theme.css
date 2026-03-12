@@ -76,6 +76,45 @@
   --noise-opacity: 0.10;
 }
 
+:root[data-theme='cyberNexus'] {
+  --primary-100: #00e5c6;
+  --primary-200: #0a3d35;
+  --primary-300: #003d33;
+  --accent-100: #ff2d6a;
+  --accent-200: #3d0f1e;
+  --text-100: #e0f0ef;
+  --text-200: #6b8a8e;
+  --bg-100: #0a0e14;
+  --bg-200: #111820;
+  --bg-300: #1a2332;
+  --noise-opacity: 0.04;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --shadow-sm: 0 0 12px rgba(0, 229, 198, 0.06);
+  --shadow-md: 0 0 24px rgba(0, 229, 198, 0.10);
+  --card-bg: rgba(17, 24, 32, 0.85);
+  --card-border: rgba(0, 229, 198, 0.12);
+  --card-hover-border: rgba(0, 229, 198, 0.3);
+  --card-shadow: 0 0 12px rgba(0, 229, 198, 0.06);
+  --card-emphasis-bg: rgba(0, 229, 198, 0.06);
+  --card-emphasis-border: rgba(0, 229, 198, 0.2);
+  --card-data-bg: rgba(10, 14, 20, 0.9);
+  --card-subtle: rgba(26, 35, 50, 0.7);
+  --card-divider: rgba(0, 229, 198, 0.08);
+  --card-icon-bg: rgba(0, 229, 198, 0.08);
+  --card-icon-color: #00e5c6;
+  --card-emphasis-icon-color: #00ffcc;
+  /* cyber-specific tokens */
+  --cyber-glow: 0 0 8px rgba(0, 229, 198, 0.4), 0 0 24px rgba(0, 229, 198, 0.15);
+  --cyber-glow-strong: 0 0 12px rgba(0, 229, 198, 0.6), 0 0 40px rgba(0, 229, 198, 0.2);
+  --cyber-border: 1px solid rgba(0, 229, 198, 0.15);
+  --cyber-border-active: 1px solid rgba(0, 229, 198, 0.4);
+  --cyber-accent-glow: 0 0 8px rgba(255, 45, 106, 0.4);
+  --cyber-grid-color: rgba(0, 229, 198, 0.04);
+  --cyber-scanline-color: rgba(0, 229, 198, 0.03);
+  --cyber-font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+}
+
 :root {
   --el-color-primary: var(--primary-100);
   --el-color-primary-light-3: color-mix(in srgb, var(--primary-100) 70%, #ffffff 30%);

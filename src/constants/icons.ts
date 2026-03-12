@@ -44,6 +44,17 @@ export const ICONS = {
   trophy: 'lucide:trophy',
   user: 'lucide:user',
   users: 'lucide:users',
+  compass: 'lucide:compass',
+  layers: 'lucide:layers',
+  cpu: 'lucide:cpu',
+  database: 'lucide:database',
+  terminal: 'lucide:terminal',
+  zap: 'lucide:zap',
+  globe: 'lucide:globe',
+  crosshair: 'lucide:crosshair',
+  radio: 'lucide:radio',
+  codesandbox: 'lucide:box',
+  folderArchive: 'lucide:folder-archive',
 } as const
 
 export type IconName = typeof ICONS[keyof typeof ICONS]
