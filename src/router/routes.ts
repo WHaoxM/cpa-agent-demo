@@ -144,6 +144,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '职业发展中心', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
       },
       {
+        path: 'student/career-analysis',
+        name: 'student-career-analysis',
+        component: () => import('@/views/student/CareerAnalysis.vue'),
+        meta: { title: '职业分析', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER], immersive: true },
+      },
+      {
         path: 'student/settings',
         name: 'student-settings',
         component: () => import('@/views/student/Settings.vue'),

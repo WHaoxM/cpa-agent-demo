@@ -15,23 +15,23 @@ export function usePageEntrance() {
     if (prefersReduced) return
 
     ctx = gsap.context(() => {
-      /* 区块级交错入场 */
-      const sections = gsap.utils.toArray('.page-section')
+      const sections = Array.from(pageRef.value?.querySelectorAll('.page-section') ?? [])
       if (sections.length) {
         gsap.from(sections as HTMLElement[], {
-          opacity: 0, y: 16,
-          stagger: 0.08, duration: 0.4, ease: 'power2.out',
-          delay: 0.05,
+          opacity: 0, y: 10,
+          stagger: 0.04, duration: 0.24, ease: 'power2.out',
+          delay: 0.02,
+          clearProps: 'transform,opacity',
         })
       }
 
-      /* 卡片级交错入场 */
-      const cards = gsap.utils.toArray('.page-card')
+      const cards = Array.from(pageRef.value?.querySelectorAll('.page-card') ?? [])
       if (cards.length) {
         gsap.from(cards as HTMLElement[], {
-          opacity: 0, y: 10,
-          stagger: 0.05, duration: 0.35, ease: 'power2.out',
-          delay: 0.2,
+          opacity: 0, y: 8,
+          stagger: 0.025, duration: 0.2, ease: 'power2.out',
+          delay: 0.08,
+          clearProps: 'transform,opacity',
         })
       }
     }, pageRef.value)

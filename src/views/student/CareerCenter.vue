@@ -248,6 +248,12 @@ onMounted(() => {
         </div>
         <div class="career-header__subtitle">职业发展中心 · Agent 辅助就业规划</div>
       </div>
+      <div class="career-header__actions" style="margin-left: auto; margin-right: 20px;">
+        <router-link to="/app/student/career-analysis" class="cyber-btn" style="text-decoration: none;">
+          <Icon icon="lucide:map" />
+          <span>职业分析</span>
+        </router-link>
+      </div>
       <div class="career-header__role">
         <span class="career-header__label">TARGET_ROLE:</span>
         <el-select v-model="targetRole" size="small" style="width: 150px">

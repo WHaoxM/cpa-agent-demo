@@ -26,15 +26,22 @@ let ctx: ReturnType<typeof gsap.context> | null = null
 
 onMounted(() => {
   if (!spineRef.value) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   ctx = gsap.context(() => {
-    gsap.from('.spine-tab', {
-      x: -20,
-      opacity: 0,
-      stagger: 0.04,
-      duration: 0.4,
-      ease: 'power3.out',
-      delay: 0.2,
-    })
+    const tabs = spineRef.value?.querySelectorAll('.spine-tab')
+    if (!tabs?.length) return
+    gsap.fromTo(tabs,
+      { x: -20, opacity: 0 },
+      {
+        x: 0,
+        opacity: 1,
+        stagger: 0.02,
+        duration: 0.24,
+        ease: 'power2.out',
+        delay: 0.04,
+        clearProps: 'transform,opacity',
+      }
+    )
   }, spineRef.value)
 })
 
@@ -46,8 +53,9 @@ watch(() => props.collapsed, (val) => {
   if (!spineRef.value) return
   gsap.to(spineRef.value, {
     width: val ? 'var(--book-spine-width)' : 'var(--book-spine-expanded)',
-    duration: 0.35,
-    ease: 'power2.inOut',
+    duration: 0.22,
+    ease: 'power1.out',
+    overwrite: 'auto',
   })
 })
 </script>
@@ -179,14 +187,14 @@ watch(() => props.collapsed, (val) => {
   font-family: var(--font-title);
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-100);
+  color: #2f241c;
   letter-spacing: 0.06em;
 }
 
 .spine-name-sub {
   font-family: var(--font-accent);
   font-size: 11px;
-  color: var(--text-300);
+  color: #7b6856;
   letter-spacing: 0.1em;
   margin-top: 2px;
 }
@@ -212,14 +220,17 @@ watch(() => props.collapsed, (val) => {
   padding: 10px 16px;
   border: none;
   background: transparent;
-  color: var(--text-200);
+  color: #3d3228;
   font-family: var(--font-title);
-  font-size: 13px;
-  letter-spacing: 0.06em;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   cursor: pointer;
   position: relative;
   transition: all 0.25s ease;
   text-align: left;
+  opacity: 1;
+  visibility: visible;
 }
 
 .is-collapsed .spine-tab {
@@ -241,25 +252,40 @@ watch(() => props.collapsed, (val) => {
 
 .spine-tab:hover {
   background: color-mix(in srgb, var(--primary-100) 5%, transparent 95%);
-  color: var(--text-100);
+  color: #3f3126;
 }
 
 .spine-tab.is-active {
   background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-100) 92%);
-  color: var(--primary-100);
-  font-weight: 600;
+  color: #8b2500;
+  font-weight: 700;
 }
 
 .spine-tab.is-active::before {
   width: 3px;
 }
 
+.spine-tab.is-active .spine-tab-icon,
+.spine-tab:hover .spine-tab-icon {
+  opacity: 1;
+  color: inherit;
+}
+
 .spine-tab-icon {
   font-size: 18px;
   flex-shrink: 0;
+  opacity: 1;
+  color: inherit;
+}
+
+.spine-tab :deep(.iconify) {
+  opacity: 1;
+  color: inherit;
 }
 
 .spine-tab-label {
+  text-shadow: 0 0 0.01px currentColor;
+  opacity: 1;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -284,7 +310,7 @@ watch(() => props.collapsed, (val) => {
   padding: 6px;
   border: 1px solid var(--bg-300);
   background: transparent;
-  color: var(--text-300);
+  color: color-mix(in srgb, var(--text-100) 76%, var(--bg-300) 24%);
   font-family: var(--font-title);
   font-size: 12px;
   letter-spacing: 0.1em;

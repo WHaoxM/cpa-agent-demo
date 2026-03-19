@@ -5,11 +5,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElNotification } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { ICONS } from '@/constants/icons'
-import { useUserStore, useThemeStore, type ThemeName } from '@/stores'
+import { useUserStore, useThemeStore } from '@/stores'
 import { UserRole } from '@/types'
 import BookSpine from '@/components/book/BookSpine.vue'
 import BookPage from '@/components/book/BookPage.vue'
-import { gsap, ScrollTrigger } from '@/plugins/gsap'
+import { gsap } from '@/plugins/gsap'
 
 const route = useRoute()
 const router = useRouter()
@@ -31,6 +31,9 @@ watch(
   () => route.fullPath,
   () => {
     drawerOpen.value = false
+    if (isImmersiveRoute.value) {
+      sidebarCollapsed.value = true
+    }
   },
 )
 
@@ -43,10 +46,12 @@ const activeMenu = computed(() => {
   return route.path
 })
 
+const isImmersiveRoute = computed(() => Boolean(route.meta.immersive))
+
 const breadcrumbs = computed(() => {
   const items = route.matched
     .map(r => String(r.meta.title ?? ''))
-    .filter(Boolean)
+  .filter(Boolean)
   if (items.length === 0) return ['课程管理系统']
   if (route.path.startsWith('/app')) {
     return ['应用', ...items]
@@ -62,6 +67,7 @@ const studentMenus = [
   { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
   { index: '/app/student/report', icon: ICONS.trendingUp, title: '学习报告' },
   { index: '/app/student/career', icon: ICONS.compass, title: '职业发展中心' },
+  { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
   { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
 ]
 
@@ -181,17 +187,16 @@ const prefersReduced = ref(false)
 function onBeforeEnter(el: Element) {
   if (prefersReduced.value) return
   const h = el as HTMLElement
-  h.style.transformOrigin = 'left center'
   h.style.willChange = 'transform, opacity'
-  gsap.set(h, { rotateY: 60, opacity: 0, scale: 0.97 })
+  gsap.set(h, { opacity: 0, y: 10 })
 }
 
 function onEnter(el: Element, done: () => void) {
   if (prefersReduced.value) { done(); return }
   const h = el as HTMLElement
   gsap.to(h, {
-    rotateY: 0, opacity: 1, scale: 1,
-    duration: 0.45, ease: 'power2.out',
+    opacity: 1, y: 0,
+    duration: 0.24, ease: 'power2.out',
     onComplete: () => { h.style.willChange = ''; done() },
   })
 }
@@ -199,11 +204,10 @@ function onEnter(el: Element, done: () => void) {
 function onLeave(el: Element, done: () => void) {
   if (prefersReduced.value) { done(); return }
   const h = el as HTMLElement
-  h.style.transformOrigin = 'right center'
   h.style.willChange = 'transform, opacity'
   gsap.to(h, {
-    rotateY: -60, opacity: 0, scale: 0.97,
-    duration: 0.35, ease: 'power2.in',
+    opacity: 0, y: -6,
+    duration: 0.18, ease: 'power1.out',
     onComplete: () => { h.style.willChange = ''; done() },
   })
 }
@@ -218,12 +222,15 @@ onMounted(() => {
   window.addEventListener('resize', calcIsMobile)
   prefersReduced.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+  if (isImmersiveRoute.value) {
+    sidebarCollapsed.value = true
+  }
+
   if (shellRef.value && !prefersReduced.value) {
     gsapCtx = gsap.context(() => {
-      /* 整体入场：书页从轻微缩放淡入 */
       gsap.from('.book-main-area', {
         opacity: 0, y: 10,
-        duration: 0.6, ease: 'power2.out', delay: 0.1,
+        duration: 0.28, ease: 'power2.out', delay: 0.04,
       })
     }, shellRef.value)
   }
@@ -235,13 +242,11 @@ onBeforeUnmount(() => {
 })
 </script>
 
-
-
 <template>
-  <div ref="shellRef" class="book-shell">
+  <div ref="shellRef" class="book-shell" :class="{ 'book-shell--immersive': isImmersiveRoute }">
     <!-- ===== 桌面端：书脊 + 书页 ===== -->
     <BookSpine
-      v-if="!isMobile"
+      v-if="!isMobile && !isImmersiveRoute"
       :menus="spineMenus"
       :active-index="activeMenu"
       :collapsed="sidebarCollapsed"
@@ -250,12 +255,12 @@ onBeforeUnmount(() => {
     />
 
     <!-- ===== 书页主区域 ===== -->
-    <div class="book-main-area" :class="{ 'book-main-area--full': isMobile }">
+    <div class="book-main-area" :class="{ 'book-main-area--full': isMobile || isImmersiveRoute, 'book-main-area--immersive': isImmersiveRoute }">
       <!-- 装订线阴影 -->
-      <div v-if="!isMobile" class="book-binding-line"></div>
+      <div v-if="!isMobile && !isImmersiveRoute" class="book-binding-line"></div>
 
       <!-- 页眉栏 -->
-      <header class="book-header">
+      <header v-if="!isImmersiveRoute" class="book-header">
         <div class="book-header__left">
           <button v-if="isMobile" class="book-header__menu-btn" @click="toggleCollapse">
             <Icon icon="lucide:menu" />
@@ -331,7 +336,7 @@ onBeforeUnmount(() => {
       </header>
 
       <!-- 书页内容区 -->
-      <main class="book-content">
+      <main v-if="!isImmersiveRoute" class="book-content">
         <BookPage :chapter-name="currentChapter" :show-corners="true" :show-footer="true">
           <div class="page-turn-perspective">
             <router-view v-slot="{ Component }">
@@ -348,10 +353,24 @@ onBeforeUnmount(() => {
           </div>
         </BookPage>
       </main>
+
+      <main v-else class="immersive-stage">
+        <router-view v-slot="{ Component }">
+          <Transition
+            :css="false"
+            mode="out-in"
+            @before-enter="onBeforeEnter"
+            @enter="onEnter"
+            @leave="onLeave"
+          >
+            <component :is="Component" />
+          </Transition>
+        </router-view>
+      </main>
     </div>
 
     <!-- ===== 移动端抽屉 ===== -->
-    <el-drawer v-model="drawerOpen" direction="ltr" size="82%" :with-header="false" class="mobile-drawer">
+    <el-drawer v-if="!isImmersiveRoute" v-model="drawerOpen" direction="ltr" size="82%" :with-header="false" class="mobile-drawer">
       <div class="drawer">
         <div class="drawer__brand" @click="router.push('/app/dashboard')" role="button" tabindex="0">
           <div class="drawer__logo">学</div>
@@ -382,8 +401,6 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-
-
 <style scoped>
 /* ═══ 古籍册页布局 ═══ */
 .book-shell {
@@ -392,6 +409,10 @@ onBeforeUnmount(() => {
   background: var(--bg-100);
   overflow: hidden;
   position: relative;
+}
+
+.book-shell--immersive {
+  background: var(--bg-200);
 }
 
 /* 宣纸纹理叠加 */
@@ -419,6 +440,10 @@ onBeforeUnmount(() => {
 
 .book-main-area--full {
   width: 100%;
+}
+
+.book-main-area--immersive {
+  background: var(--bg-200);
 }
 
 /* 装订线 */
@@ -589,10 +614,14 @@ onBeforeUnmount(() => {
 }
 
 .page-turn-perspective {
-  perspective: 1600px;
-  transform-style: preserve-3d;
   width: 100%;
   min-height: 100%;
+}
+
+.immersive-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ═══ 用户弹窗 ═══ */

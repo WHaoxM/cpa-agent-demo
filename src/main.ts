@@ -5,6 +5,24 @@ import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
+// Global ECharts registration for vue-echarts
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import {
+  PieChart, BarChart, LineChart, RadarChart, GraphChart, SankeyChart
+} from 'echarts/charts'
+import {
+  TitleComponent, TooltipComponent, LegendComponent,
+  GridComponent, DataZoomComponent, ToolboxComponent
+} from 'echarts/components'
+
+use([
+  CanvasRenderer,
+  PieChart, BarChart, LineChart, RadarChart, GraphChart, SankeyChart,
+  TitleComponent, TooltipComponent, LegendComponent,
+  GridComponent, DataZoomComponent, ToolboxComponent
+])
+
 import App from './App.vue'
 import router from './router'
 import pinia from './stores/pinia'
