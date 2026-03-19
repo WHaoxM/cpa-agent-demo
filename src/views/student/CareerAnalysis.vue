@@ -12,10 +12,13 @@ import { BarChart, LineChart, MapChart, BoxplotChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import { TooltipComponent, GridComponent, GeoComponent, VisualMapComponent } from 'echarts/components'
 import chinaJson from '@/assets/china.json'
+import worldJson from '@/assets/world.json'
+import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
 
 use([BarChart, LineChart, MapChart, BoxplotChart, CanvasRenderer,
   TooltipComponent, GridComponent, GeoComponent, VisualMapComponent])
 registerMap('china', chinaJson as any)
+registerMap('world', worldJson as any)
 
 /* ═══ 古籍浅色配色 (与 theme.css 统一) ═══ */
 const C = {
@@ -169,9 +172,13 @@ const provinceRanking = computed(() => {
 })
 
 /* ═══ 地图配置 — 羊皮卷风格 ═══ */
-const mapInitOptions = { devicePixelRatio: Math.min(1.5, window.devicePixelRatio || 1) }
+const mapInitOptions = { devicePixelRatio: Math.min(2, window.devicePixelRatio || 1) }
 const mapUpdateOptions = { notMerge: true, lazyUpdate: false }
-const hiddenRegions = [{ name: '南海诸岛', itemStyle: { opacity: 0, borderColor: 'transparent' }, label: { show: false } }]
+const hiddenRegions = [
+  { name: '南海诸岛', itemStyle: { opacity: 0, borderWidth: 0, borderColor: 'transparent' }, label: { show: false } },
+  { name: '香港特别行政区', itemStyle: { opacity: 0, borderWidth: 0, borderColor: 'transparent' }, label: { show: false } },
+  { name: '澳门特别行政区', itemStyle: { opacity: 0, borderWidth: 0, borderColor: 'transparent' }, label: { show: false } }
+]
 
 const activeLevel = ref<number | null>(null)
 function highlightMapLevel(level: number) {
@@ -234,9 +241,10 @@ const trendOption = computed(() => {
   }
 })
 
-// Update mapOption to reflect highlighting
+// Update mapOption to reflect highlighting — 内凹嵌入效果
 const mapOption = computed<any>(() => {
-  const regions = activeLevel.value === null
+  /* activeLevel 筛选 regions — 同色系低调处理 */
+  const chinaRegions = activeLevel.value === null
     ? hiddenRegions
     : [
       ...hiddenRegions,
@@ -247,21 +255,18 @@ const mapOption = computed<any>(() => {
           ? {
             name: p.name,
             itemStyle: {
-              opacity: 1,
-              borderColor: C.zhusha,
-              borderWidth: 1.8,
-              shadowBlur: 12,
-              shadowColor: 'rgba(139,37,0,0.22)',
+              areaColor: 'rgba(166,124,82,0.45)',
+              borderColor: 'rgba(120,90,50,0.6)',
+              borderWidth: 1.5,
             },
-            label: { show: true, color: C.zhusha, fontWeight: 'bold' },
+            label: { show: true, color: '#5A3E1B', fontWeight: 'bold', fontSize: 12 },
           }
           : {
             name: p.name,
             itemStyle: {
-              opacity: 0.35,
-              areaColor: 'rgba(237,229,214,0.55)',
-              borderColor: 'rgba(194,181,158,0.32)',
-              borderWidth: 0.6,
+              areaColor: 'rgba(210,180,140,0.1)',
+              borderColor: 'rgba(180,160,130,0.2)',
+              borderWidth: 0.4,
             },
             label: { show: false },
           }
@@ -270,64 +275,135 @@ const mapOption = computed<any>(() => {
 
   const data = provinceData.value.map(p => ({ ...p }))
 
+  /* 世界底图中隐藏 China（由上层中国地图覆盖） */
+  const worldLabelStyle = { show: true, color: 'rgba(120,100,70,0.55)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' as const }
+  const worldHiddenRegions = [
+    { name: 'China', itemStyle: { areaColor: 'transparent', borderWidth: 0, borderColor: 'transparent' }, label: { show: false } },
+    { name: 'Russia', label: worldLabelStyle },
+    { name: 'Mongolia', label: worldLabelStyle },
+    { name: 'Japan', label: worldLabelStyle },
+    { name: 'South Korea', label: worldLabelStyle },
+    { name: 'North Korea', label: worldLabelStyle },
+    { name: 'Vietnam', label: worldLabelStyle },
+    { name: 'Laos', label: worldLabelStyle },
+    { name: 'Myanmar', label: worldLabelStyle },
+    { name: 'Thailand', label: worldLabelStyle },
+    { name: 'Cambodia', label: worldLabelStyle },
+    { name: 'Philippines', label: worldLabelStyle },
+    { name: 'India', label: worldLabelStyle },
+    { name: 'Nepal', label: worldLabelStyle },
+    { name: 'Bangladesh', label: worldLabelStyle },
+    { name: 'Pakistan', label: worldLabelStyle },
+    { name: 'Afghanistan', label: worldLabelStyle },
+    { name: 'Kazakhstan', label: worldLabelStyle },
+    { name: 'Kyrgyzstan', label: worldLabelStyle },
+    { name: 'Tajikistan', label: worldLabelStyle },
+    { name: 'Indonesia', label: worldLabelStyle },
+    { name: 'Malaysia', label: worldLabelStyle },
+  ]
+
   return {
     backgroundColor: 'transparent',
     animation: false,
     tooltip: {
       trigger: 'item', confine: true, transitionDuration: 0,
-      backgroundColor: 'rgba(247,242,232,0.96)',
-      borderColor: C.zhusha,
+      backgroundColor: 'rgba(62,48,32,0.92)',
+      borderColor: '#8B6914',
       borderWidth: 1,
-      padding: [10, 14],
-      textStyle: { color: C.textPrimary, fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 13 },
+      padding: [12, 16],
+      textStyle: { color: '#F0E6D2', fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 14 },
+      extraCssText: 'border-radius:6px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);',
       formatter: (params: any) => {
         if (!params.name) return ''
-        return `<div style="font-weight:700;margin-bottom:4px;color:${C.zhusha}">${params.name}</div>岗位需求指数: <b style="color:${C.zhushaLight}">${params.value ?? '-'}</b>`
+        return `<div style="font-weight:700;margin-bottom:6px;color:#8B6914;font-size:15px;border-bottom:1px solid rgba(139,105,20,0.3);padding-bottom:4px">${params.name}</div><span style="color:#8B7A5E">岗位需求指数:</span> <b style="color:#6B4E14;font-size:16px">${params.value ?? '-'}</b>`
       }
     },
     visualMap: {
-      left: 24, bottom: 24, min: 0, max: 100,
+      left: 24, bottom: 60, min: 0, max: 100,
       text: ['高需求', '低需求'], calculable: true, show: true,
-      inRange: { color: ['#EDE5D6', '#D4C4A8', '#C2A875', '#A0472D', '#8B2500'] },
-      textStyle: { color: C.textSecondary, fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 13, fontWeight: 'bold' },
-      itemWidth: 16, itemHeight: 120,
-      backgroundColor: 'rgba(247,242,232,0.8)',
-      padding: 12,
-      borderColor: 'rgba(139,37,0,0.15)',
+      inRange: { color: ['#ede5d6', '#ddd0b8', '#cbb89a', '#b49a72'] },
+      textStyle: { color: '#3E3020', fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 13, fontWeight: 'bold' },
+      itemWidth: 18, itemHeight: 130,
+      backgroundColor: 'rgba(240,230,210,0.85)',
+      padding: [14, 16],
+      borderColor: 'rgba(139,105,20,0.3)',
       borderWidth: 1,
       borderRadius: 8,
     },
     geo: [
+      // geo[0]: 周边国家内凹暗边 — 凹陷暗影（左上偏移）
       {
-        map: 'china', zlevel: 0, roam: false, silent: true,
-        layoutCenter: ['50%', '50%'], layoutSize: '90%',
+        map: 'world', zlevel: 0, roam: false, silent: true,
+        center: [104.5, 36], zoom: 4.2,
+        label: { show: false },
         itemStyle: {
-          areaColor: '#E8DFD0',
-          borderColor: 'transparent', borderWidth: 0,
-          shadowColor: 'rgba(26,20,16,0.15)', shadowBlur: 12, shadowOffsetX: 3, shadowOffsetY: 4,
+          areaColor: 'transparent',
+          borderColor: 'rgba(80,65,45,0.18)', borderWidth: 1,
+          shadowColor: 'rgba(80,65,45,0.15)', shadowBlur: 3,
+          shadowOffsetX: -1, shadowOffsetY: -1,
+        },
+        emphasis: { disabled: true },
+        regions: worldHiddenRegions,
+      },
+      // geo[1]: 周边国家高光层 — 淡填充 + 高光（右下偏移）+ 国名标签
+      {
+        map: 'world', zlevel: 0, roam: false, silent: true,
+        center: [104.5, 36], zoom: 4.2,
+        label: { show: false, color: 'rgba(120,100,70,0.5)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' },
+        itemStyle: {
+          areaColor: 'rgba(212,201,181,0.18)',
+          borderColor: 'rgba(255,248,235,0.2)', borderWidth: 0.6,
+          shadowColor: 'rgba(255,248,235,0.18)', shadowBlur: 3,
+          shadowOffsetX: 1, shadowOffsetY: 1,
+        },
+        emphasis: { disabled: true },
+        regions: worldHiddenRegions,
+      },
+      // geo[2]: 中国内凹暗边 — 模拟凹进去的阴影（暗光从左上）
+      {
+        map: 'china', zlevel: 1, roam: false, silent: true,
+        layoutCenter: ['50%', '50%'], layoutSize: '95%',
+        itemStyle: {
+          areaColor: 'transparent',
+          borderColor: 'rgba(80,65,45,0.2)', borderWidth: 1.5,
+          shadowColor: 'rgba(80,65,45,0.25)', shadowBlur: 6,
+          shadowOffsetX: -1.5, shadowOffsetY: -1.5,
         },
         regions: hiddenRegions,
       },
+      // geo[3]: 中国高光边 — 主交互层（亮光从右下）
       {
         map: 'china', zlevel: 2, roam: false,
-        layoutCenter: ['50%', '50%'], layoutSize: '90%',
+        layoutCenter: ['50%', '50%'], layoutSize: '95%',
         itemStyle: {
-          areaColor: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#F0E6D2' }, { offset: 1, color: '#E5D9C3' }] },
-          borderColor: C.mapBorder, borderWidth: 0.6,
+          areaColor: 'rgba(225,210,185,0.35)',
+          borderColor: 'rgba(255,250,240,0.35)', borderWidth: 1,
+          shadowColor: 'rgba(255,250,240,0.3)', shadowBlur: 5,
+          shadowOffsetX: 1.5, shadowOffsetY: 1.5,
         },
         emphasis: {
-          itemStyle: { areaColor: '#E8CEBF', borderColor: C.zhusha, borderWidth: 1.2, shadowBlur: 8, shadowColor: 'rgba(139,37,0,0.2)' },
-          label: { show: true, color: C.zhusha, fontSize: 12, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif' }
+          itemStyle: {
+            areaColor: 'rgba(210,185,150,0.55)',
+            borderColor: 'rgba(139,105,20,0.45)', borderWidth: 1.5,
+            shadowBlur: 10, shadowColor: 'rgba(139,105,20,0.15)',
+            shadowOffsetX: 0, shadowOffsetY: 0,
+          },
+          label: { show: true, color: '#3E3020', fontSize: 13, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
+            textShadowColor: 'rgba(240,230,210,0.8)', textShadowBlur: 3 }
         },
         select: {
-          itemStyle: { areaColor: '#D4B896', borderColor: C.zhusha, borderWidth: 1.6 },
-          label: { show: true, color: C.textPrimary, fontWeight: 'bold', fontSize: 13 }
+          itemStyle: {
+            areaColor: 'rgba(191,161,120,0.55)',
+            borderColor: 'rgba(120,90,50,0.45)', borderWidth: 1.8,
+            shadowBlur: 8, shadowColor: 'rgba(120,90,50,0.12)',
+          },
+          label: { show: true, color: '#3E3020', fontWeight: 'bold', fontSize: 14 }
         },
-        regions: regions,
+        regions: chinaRegions,
       },
     ],
     series: [{
-      name: '需求量', type: 'map', geoIndex: 1,
+      name: '需求量', type: 'map', geoIndex: 3,
       data: data, selectedMode: 'single', animation: true, animationDurationUpdate: 300
     }],
   }
@@ -553,12 +629,15 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
         </div>
       </aside>
 
-      <!-- 中央地图 — #1 羊皮卷效果 -->
+      <!-- 中央地图 — #1 羊皮卷底图 + 污渍叠加 + ECharts 地图 -->
       <main class="da-map">
         <div class="da-scroll-wrap" ref="scrollRef">
           <div class="da-parchment">
             <div class="da-parchment__edge da-parchment__edge--left"></div>
             <div class="da-parchment__body">
+              <!-- 底层：羊皮纸基底 -->
+              <img :src="parchmentBaseUrl" class="da-parchment__base" alt="" draggable="false" />
+              <!-- ECharts 地图层（半透明填充，让底图透出） -->
               <VChart
                 class="da-map__chart"
                 :option="mapOption"
@@ -567,6 +646,8 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
                 @click="handleMapClick"
                 autoresize
               />
+              <!-- 四角暗角晕影 -->
+              <div class="da-parchment__vignette"></div>
               <!-- #2 3D层叠需求图例 -->
               <div class="da-legend-3d">
                 <div class="legend-header">
@@ -577,19 +658,19 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
                 </div>
                 <div class="legend-layers">
                   <div class="layer-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
-                    <div class="layer-shape" style="--layer-color: #8B2500; --layer-z: 4;"></div>
+                    <div class="layer-shape" style="--layer-color: #a67c52; --layer-z: 4;"></div>
                     <span class="layer-text">极高需求 (&gt;60)</span>
                   </div>
                   <div class="layer-item" :class="{ active: activeLevel === 3 }" @click="highlightMapLevel(3)">
-                    <div class="layer-shape" style="--layer-color: #A0472D; --layer-z: 3;"></div>
+                    <div class="layer-shape" style="--layer-color: #bfa178; --layer-z: 3;"></div>
                     <span class="layer-text">高需求 (41-60)</span>
                   </div>
                   <div class="layer-item" :class="{ active: activeLevel === 2 }" @click="highlightMapLevel(2)">
-                    <div class="layer-shape" style="--layer-color: #C2A875; --layer-z: 2;"></div>
+                    <div class="layer-shape" style="--layer-color: #d2b48c; --layer-z: 2;"></div>
                     <span class="layer-text">中需求 (21-40)</span>
                   </div>
                   <div class="layer-item" :class="{ active: activeLevel === 1 }" @click="highlightMapLevel(1)">
-                    <div class="layer-shape" style="--layer-color: #EDE5D6; --layer-z: 1;"></div>
+                    <div class="layer-shape" style="--layer-color: #e8d8b5; --layer-z: 1;"></div>
                     <span class="layer-text">低需求 (≤20)</span>
                   </div>
                 </div>
@@ -877,55 +958,67 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 .da-map {
   flex: 1; min-width: 0; position: relative;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-100);
+  background: var(--bg-300);
   z-index: 1;
 }
 .da-scroll-wrap {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  padding: 16px;
+  padding: 8px;
 }
 .da-parchment {
   display: flex; width: 100%; height: 100%;
-  filter: drop-shadow(0 4px 20px rgba(26,20,16,0.12));
+  filter: drop-shadow(0 4px 20px rgba(62,48,32,0.25));
 }
 .da-parchment__edge {
   width: 20px; flex-shrink: 0; position: relative;
 }
 .da-parchment__edge--left {
-  background: linear-gradient(90deg, #C2B59E 0%, #D4C4A8 40%, #E8DFD0 100%);
+  background: linear-gradient(90deg, #9C8B78 0%, #B8A990 40%, #C8BBAA 100%);
   border-radius: 6px 0 0 6px;
-  box-shadow: inset -3px 0 6px rgba(26,20,16,0.1);
+  box-shadow: inset -3px 0 8px rgba(62,48,32,0.15);
 }
 .da-parchment__edge--right {
-  background: linear-gradient(270deg, #C2B59E 0%, #D4C4A8 40%, #E8DFD0 100%);
+  background: linear-gradient(270deg, #9C8B78 0%, #B8A990 40%, #C8BBAA 100%);
   border-radius: 0 6px 6px 0;
-  box-shadow: inset 3px 0 6px rgba(26,20,16,0.1);
+  box-shadow: inset 3px 0 8px rgba(62,48,32,0.15);
 }
 .da-parchment__body {
-  flex: 1; position: relative;
-  background:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.1'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.08'/%3E%3C/svg%3E"),
-    linear-gradient(135deg, #F0E6D2 0%, #E8DFD0 30%, #F5EDE0 60%, #E8DFD0 100%);
-  border-top: 1px solid rgba(194,181,158,0.5);
-  border-bottom: 1px solid rgba(194,181,158,0.5);
+  flex: 1; position: relative; overflow: hidden;
+  border-top: 1px solid rgba(139,105,20,0.25);
+  border-bottom: 1px solid rgba(139,105,20,0.25);
+}
+.da-parchment__body::after {
+  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  opacity: 0.04;
+  filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E#n");
+  background: rgba(120,100,70,0.5);
+}
+.da-parchment__base {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0; pointer-events: none;
+  filter: saturate(0.5) brightness(1.12) contrast(0.95);
+}
+.da-parchment__vignette {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(62,48,32,0.15) 100%);
 }
 
 /* 3D 层叠图例 */
 .da-legend-3d {
-  position: absolute; left: 24px; top: 50%; transform: translateY(-50%); z-index: 5;
+  position: absolute; left: 24px; top: 50%; transform: translateY(-50%); z-index: 6;
   display: flex; flex-direction: column; gap: 20px;
-  pointer-events: none; /* 让图例本身不挡地图交互 */
+  pointer-events: none;
 }
 .legend-header {
   display: flex; align-items: center; gap: 10px;
-  color: var(--text-100); font-weight: 700; font-size: 15px;
-  background: rgba(247,242,232,0.8); padding: 6px 14px; border-radius: 24px;
-  backdrop-filter: blur(4px); border: 1px solid rgba(139,37,0,0.15);
+  color: #3E3020; font-weight: 700; font-size: 15px;
+  background: rgba(240,230,210,0.85); padding: 6px 14px; border-radius: 24px;
+  backdrop-filter: blur(4px); border: 1px solid rgba(139,105,20,0.25);
   pointer-events: auto;
 }
 .legend-icon {
   width: 28px; height: 28px; display: grid; place-items: center;
-  border-radius: 50%; background: var(--primary-100); color: #fff;
+  border-radius: 50%; background: #6B5A42; color: #F0E6D2;
 }
 .legend-layers {
   display: flex; flex-direction: column; gap: 12px;
@@ -971,11 +1064,11 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   border-color: rgba(255,255,255,0.8);
 }
 .layer-text {
-  font-size: 14px; color: var(--text-200); font-weight: 500;
-  background: rgba(247,242,232,0.7); padding: 4px 10px; border-radius: 4px;
+  font-size: 14px; color: #3E3020; font-weight: 500;
+  background: rgba(240,230,210,0.8); padding: 4px 10px; border-radius: 4px;
   backdrop-filter: blur(2px); transition: color 0.2s;
 }
-.layer-item:hover .layer-text { color: var(--primary-100); }
+.layer-item:hover .layer-text { color: #8B6914; }
 
 .layer-item.active { transform: translateX(12px); }
 .layer-item.active .layer-shape {
@@ -986,13 +1079,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   border-color: rgba(255,255,255,0.9);
 }
 .layer-item.active .layer-text { color: var(--primary-100); font-weight: 700; background: rgba(247,242,232,0.95); }
-.da-map__chart { width: 100%; height: 100%; position: relative; z-index: 0; }
+.da-map__chart { width: 100%; height: 100%; position: relative; z-index: 1; mix-blend-mode: multiply; }
 .da-map__hint {
   position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; z-index: 2;
-  font-size: 13px; color: var(--text-300); padding: 6px 14px;
-  background: rgba(247,242,232,0.9); border: 1px solid var(--bg-300);
+  display: flex; align-items: center; gap: 8px; z-index: 6;
+  font-size: 13px; color: #3E3020; padding: 6px 14px;
+  background: rgba(240,230,210,0.88); border: 1px solid rgba(139,105,20,0.25);
   border-radius: var(--radius-sm);
+  backdrop-filter: blur(4px);
 }
 
 /* ═══ 右面板 ═══ */
