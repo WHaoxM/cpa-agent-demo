@@ -1,3 +1,6 @@
+// 布局模式（职业能力图谱页面）
+export type LayoutMode = 'single' | 'split' | 'workspace'
+
 // 用户角色枚举
 export enum UserRole {
   STUDENT = 'student',

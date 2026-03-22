@@ -38,6 +38,13 @@ const C = {
   mapBorder: 'rgba(139,37,0,0.18)',
 }
 
+/* ═══ 省份简称映射 ═══ */
+function shortName(name: string): string {
+  return name
+    .replace(/壮族|回族|维吾尔/g, '')
+    .replace(/(自治区|特别行政区|省|市)$/g, '')
+}
+
 /* ═══ 省份模拟数据（含薪资中位数） ═══ */
 type ProvinceItem = { name: string; value: number; salary: number }
 function getProvinceData(_role: string): ProvinceItem[] {
@@ -91,7 +98,7 @@ function getAiComments(_province: string, _role: string) {
 /* ═══ KPI tooltip 详情数据 ═══ */
 const kpiSalaryDetails = {
   method: '基于全国34省份主流招聘平台公开薪资数据，取中位数加权计算',
-  updateDate: '2024-12-15',
+  updateDate: '2026-03-15',
   samples: [
     { company: '字节跳动', salary: '18-25K', city: '北京' },
     { company: '腾讯', salary: '16-22K', city: '深圳' },
@@ -101,7 +108,7 @@ const kpiSalaryDetails = {
 }
 const kpiDemandDetails = {
   method: '汇总主流招聘平台（Boss直聘、拉勾、猎聘）在线岗位数',
-  updateDate: '2024-12-15',
+  updateDate: '2026-03-15',
   platforms: [
     { name: 'Boss直聘', count: 5230 },
     { name: '拉勾网', count: 3850 },
@@ -124,9 +131,17 @@ let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
 const { targetRole, insights } = useCareerInsights()
 
-const timelineYears = ['2020', '2021', '2022', '2023', '2024']
+const timelineYears = ['2020', '2021', '2022', '2023', '2024', '2025', '2026']
 const currentYearIndex = ref(timelineYears.length - 1)
 const currentYear = computed(() => timelineYears[currentYearIndex.value])
+const totalScrolls = 3
+const currentScroll = computed(() => {
+  const len = timelineYears.length
+  if (currentYearIndex.value < Math.ceil(len / 3)) return 1
+  if (currentYearIndex.value < Math.ceil(len * 2 / 3)) return 2
+  return 3
+})
+const scrollLabel = computed(() => `卷${currentScroll.value}/${totalScrolls}`)
 
 /* ═══ #9 排行榜双模式 ═══ */
 const rankMode = ref<'demand' | 'salary'>('demand')
@@ -259,7 +274,8 @@ const mapOption = computed<any>(() => {
               borderColor: 'rgba(120,90,50,0.6)',
               borderWidth: 1.5,
             },
-            label: { show: true, color: '#5A3E1B', fontWeight: 'bold', fontSize: 12 },
+            label: { show: true, color: '#5A3E1B', fontWeight: 'bold', fontSize: 14,
+              formatter: (p: any) => shortName(p.name || '') },
           }
           : {
             name: p.name,
@@ -319,13 +335,13 @@ const mapOption = computed<any>(() => {
       }
     },
     visualMap: {
-      left: 24, bottom: 60, min: 0, max: 100,
+      left: 16, bottom: 48, min: 0, max: 100,
       text: ['高需求', '低需求'], calculable: true, show: true,
-      inRange: { color: ['#ede5d6', '#ddd0b8', '#cbb89a', '#b49a72'] },
-      textStyle: { color: '#3E3020', fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 13, fontWeight: 'bold' },
-      itemWidth: 18, itemHeight: 130,
+      inRange: { color: ['#e0d4be', '#d4b896', '#c49a6c', '#b07840', '#8B5E14', '#6B3A0A'] },
+      textStyle: { color: '#3E3020', fontFamily: 'var(--font-title), KaiTi, serif', fontSize: 11, fontWeight: 'bold' },
+      itemWidth: 12, itemHeight: 80,
       backgroundColor: 'rgba(240,230,210,0.85)',
-      padding: [14, 16],
+      padding: [8, 10],
       borderColor: 'rgba(139,105,20,0.3)',
       borderWidth: 1,
       borderRadius: 8,
@@ -333,8 +349,9 @@ const mapOption = computed<any>(() => {
     geo: [
       // geo[0]: 周边国家内凹暗边 — 凹陷暗影（左上偏移）
       {
-        map: 'world', zlevel: 0, roam: false, silent: true,
-        center: [104.5, 36], zoom: 4.2,
+        map: 'world', zlevel: 0, roam: 'move', silent: true,
+        center: [104, 35], zoom: 3.2,
+        scaleLimit: { min: 2.2, max: 6 },
         label: { show: false },
         itemStyle: {
           areaColor: 'transparent',
@@ -347,8 +364,9 @@ const mapOption = computed<any>(() => {
       },
       // geo[1]: 周边国家高光层 — 淡填充 + 高光（右下偏移）+ 国名标签
       {
-        map: 'world', zlevel: 0, roam: false, silent: true,
-        center: [104.5, 36], zoom: 4.2,
+        map: 'world', zlevel: 0, roam: 'move', silent: true,
+        center: [104, 35], zoom: 3.2,
+        scaleLimit: { min: 2.2, max: 6 },
         label: { show: false, color: 'rgba(120,100,70,0.5)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' },
         itemStyle: {
           areaColor: 'rgba(212,201,181,0.18)',
@@ -362,7 +380,7 @@ const mapOption = computed<any>(() => {
       // geo[2]: 中国内凹暗边 — 模拟凹进去的阴影（暗光从左上）
       {
         map: 'china', zlevel: 1, roam: false, silent: true,
-        layoutCenter: ['50%', '50%'], layoutSize: '95%',
+        layoutCenter: ['50%', '54%'], layoutSize: '88%',
         itemStyle: {
           areaColor: 'transparent',
           borderColor: 'rgba(80,65,45,0.2)', borderWidth: 1.5,
@@ -374,30 +392,37 @@ const mapOption = computed<any>(() => {
       // geo[3]: 中国高光边 — 主交互层（亮光从右下）
       {
         map: 'china', zlevel: 2, roam: false,
-        layoutCenter: ['50%', '50%'], layoutSize: '95%',
+        layoutCenter: ['50%', '54%'], layoutSize: '88%',
         itemStyle: {
-          areaColor: 'rgba(225,210,185,0.35)',
-          borderColor: 'rgba(255,250,240,0.35)', borderWidth: 1,
+          areaColor: 'rgba(210,185,145,0.6)',
+          borderColor: 'rgba(139,105,20,0.5)', borderWidth: 1.5,
           shadowColor: 'rgba(255,250,240,0.3)', shadowBlur: 5,
           shadowOffsetX: 1.5, shadowOffsetY: 1.5,
         },
+        label: {
+          show: true, color: 'rgba(62,48,32,0.75)', fontSize: 14,
+          fontFamily: 'var(--font-title), KaiTi, serif', fontWeight: 500,
+          formatter: (p: any) => shortName(p.name || ''),
+        },
         emphasis: {
           itemStyle: {
-            areaColor: 'rgba(210,185,150,0.55)',
-            borderColor: 'rgba(139,105,20,0.45)', borderWidth: 1.5,
-            shadowBlur: 10, shadowColor: 'rgba(139,105,20,0.15)',
+            areaColor: 'rgba(176,120,64,0.75)',
+            borderColor: 'rgba(139,94,20,0.85)', borderWidth: 3,
+            shadowBlur: 20, shadowColor: 'rgba(139,94,20,0.45)',
             shadowOffsetX: 0, shadowOffsetY: 0,
           },
-          label: { show: true, color: '#3E3020', fontSize: 13, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
-            textShadowColor: 'rgba(240,230,210,0.8)', textShadowBlur: 3 }
+          label: { show: true, color: '#2A1A08', fontSize: 18, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
+            textShadowColor: 'rgba(240,230,210,0.95)', textShadowBlur: 6,
+            formatter: (p: any) => shortName(p.name || '') }
         },
         select: {
           itemStyle: {
-            areaColor: 'rgba(191,161,120,0.55)',
-            borderColor: 'rgba(120,90,50,0.45)', borderWidth: 1.8,
-            shadowBlur: 8, shadowColor: 'rgba(120,90,50,0.12)',
+            areaColor: 'rgba(155,100,50,0.8)',
+            borderColor: 'rgba(107,58,10,0.9)', borderWidth: 3,
+            shadowBlur: 18, shadowColor: 'rgba(107,58,10,0.4)',
           },
-          label: { show: true, color: '#3E3020', fontWeight: 'bold', fontSize: 14 }
+          label: { show: true, color: '#2A1A08', fontWeight: 'bold', fontSize: 18,
+            formatter: (p: any) => shortName(p.name || '') }
         },
         regions: chinaRegions,
       },
@@ -449,7 +474,7 @@ function prevAiPage() { if (aiCommentPage.value > 0) aiCommentPage.value-- }
 function nextAiPage() { if (aiCommentPage.value < aiComments.value.length - 1) aiCommentPage.value++ }
 
 function goToCareerCenter() {
-  router.push({ name: 'student-career', query: { role: roleSearch.value } })
+  router.push({ name: 'career-ability', query: { role: roleSearch.value } })
 }
 
 const goBack = () => router.push({ name: 'student-career' })
@@ -528,17 +553,10 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           <span class="da-brand__title">职业分析 · 岗位舆图</span>
         </div>
       </div>
-      <!-- #5 搜索栏居中 -->
-      <div class="da-header__center">
-        <div class="da-search">
-          <Icon icon="lucide:search" :width="14" class="da-search__icon" />
-          <input v-model="roleSearch" class="da-search__input" placeholder="输入岗位，如: 前端开发" @keyup.enter="doSearch" />
-          <button class="da-search__btn" @click="doSearch">探寻</button>
-        </div>
-      </div>
+      <div class="da-header__center"></div>
       <!-- #6 右上角头像+姓名+身份 -->
       <div class="da-header__right">
-        <span class="da-year-label">{{ currentYear }}</span>
+        <span class="da-year-label">{{ scrollLabel }}</span>
         <div class="da-user-info">
           <div class="da-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
           <div class="da-user-text">
@@ -567,7 +585,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
                 <p>• 算法去除了极值（前5%与后5%），取中位数以反映真实水平。</p>
                 <p>• 样本包含：腾讯、阿里、字节等大厂及数千家中小型企业。</p>
               </div>
-              <div class="tooltip-footer">数据截止：2024-03</div>
+              <div class="tooltip-footer">数据截止：2026-03</div>
             </div>
           </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
@@ -579,7 +597,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
                 <p>• 综合计算了在线岗位的发布频率、招聘周期及企业活跃度。</p>
                 <p>• 涵盖全网 <strong>25个</strong> 主流招聘渠道去重后的岗位需求。</p>
               </div>
-              <div class="tooltip-footer">数据截止：2024-03</div>
+              <div class="tooltip-footer">数据截止：2026-03</div>
             </div>
           </div>
         </div>
@@ -648,30 +666,36 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
               />
               <!-- 四角暗角晕影 -->
               <div class="da-parchment__vignette"></div>
-              <!-- #2 3D层叠需求图例 -->
-              <div class="da-legend-3d">
-                <div class="legend-header">
-                  <div class="legend-icon">
-                    <Icon icon="lucide:layers" :width="16" />
-                  </div>
-                  <span>需求等级</span>
+              <!-- 地图内搜索栏 -->
+              <div class="da-map-search-wrap">
+                <div class="da-map-search">
+                  <Icon icon="lucide:compass" :width="16" class="da-map-search__icon" />
+                  <input v-model="roleSearch" class="da-map-search__input" placeholder="输入你感兴趣的岗位，如: 前端开发、数据分析" @keyup.enter="doSearch" />
+                  <button class="da-map-search__btn" @click="doSearch">
+                    <Icon icon="lucide:search" :width="14" />
+                    <span>探寻</span>
+                  </button>
                 </div>
-                <div class="legend-layers">
-                  <div class="layer-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
-                    <div class="layer-shape" style="--layer-color: #a67c52; --layer-z: 4;"></div>
-                    <span class="layer-text">极高需求 (&gt;60)</span>
+                <p class="da-map-search__guide">↑ 输入职业后回车，地图将展示全国各省的薪资与需求分布</p>
+              </div>
+              <!-- #2 图钉式需求图例 -->
+              <div class="da-pin-legend">
+                <div class="pin-legend__list">
+                  <div class="pin-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
+                    <div class="pin" style="--pin-color: #8B5E14;"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                    <span class="pin-label">极高 (&gt;60)</span>
                   </div>
-                  <div class="layer-item" :class="{ active: activeLevel === 3 }" @click="highlightMapLevel(3)">
-                    <div class="layer-shape" style="--layer-color: #bfa178; --layer-z: 3;"></div>
-                    <span class="layer-text">高需求 (41-60)</span>
+                  <div class="pin-item" :class="{ active: activeLevel === 3 }" @click="highlightMapLevel(3)">
+                    <div class="pin" style="--pin-color: #a67c52;"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                    <span class="pin-label">高 (41-60)</span>
                   </div>
-                  <div class="layer-item" :class="{ active: activeLevel === 2 }" @click="highlightMapLevel(2)">
-                    <div class="layer-shape" style="--layer-color: #d2b48c; --layer-z: 2;"></div>
-                    <span class="layer-text">中需求 (21-40)</span>
+                  <div class="pin-item" :class="{ active: activeLevel === 2 }" @click="highlightMapLevel(2)">
+                    <div class="pin" style="--pin-color: #c4a878;"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                    <span class="pin-label">中 (21-40)</span>
                   </div>
-                  <div class="layer-item" :class="{ active: activeLevel === 1 }" @click="highlightMapLevel(1)">
-                    <div class="layer-shape" style="--layer-color: #e8d8b5; --layer-z: 1;"></div>
-                    <span class="layer-text">低需求 (≤20)</span>
+                  <div class="pin-item" :class="{ active: activeLevel === 1 }" @click="highlightMapLevel(1)">
+                    <div class="pin" style="--pin-color: #ddd0b8;"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                    <span class="pin-label">低 (≤20)</span>
                   </div>
                 </div>
               </div>
@@ -680,8 +704,8 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           </div>
         </div>
         <div class="da-map__hint">
-          <Icon icon="lucide:mouse-pointer-click" :width="12" />
-          <span>点击省份查看详情 · Shift+点击对比</span>
+          <span class="da-map__hint-dot"></span>
+          <span>当前查看：<b>{{ roleSearch }}</b> · 点击省份查看薪资与需求详情 · Shift+点击对比</span>
         </div>
       </main>
 
@@ -772,7 +796,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   flex-shrink: 0;
 }
 .da-header__left { display: flex; align-items: center; gap: 14px; }
-.da-header__center { flex: 1; display: flex; justify-content: center; max-width: 480px; margin: 0 auto; }
+.da-header__center { flex: 1; }
 .da-header__right { display: flex; align-items: center; gap: 16px; }
 
 .da-back {
@@ -794,25 +818,52 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   white-space: nowrap;
 }
 
-.da-search {
-  display: flex; align-items: center; gap: 0;
-  background: var(--bg-100); border: 1px solid var(--bg-300);
-  padding: 0 4px 0 12px; width: 100%; border-radius: var(--radius-sm);
+/* 地图内浮动搜索栏 */
+.da-map-search-wrap {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: min(440px, 62%);
 }
-.da-search__icon { color: var(--text-300, #9C8B78); flex-shrink: 0; }
-.da-search__input {
-  flex: 1; background: transparent; border: none; padding: 8px 10px;
-  font-family: inherit; font-size: 15px; color: var(--text-100); outline: none;
-  min-width: 0;
+.da-map-search {
+  display: flex; align-items: center; gap: 0; width: 100%;
+  background: rgba(240,230,210,0.85); backdrop-filter: blur(10px) saturate(1.2);
+  border: 1px solid rgba(139,105,20,0.25);
+  border-radius: 28px; padding: 4px 6px 4px 16px;
+  box-shadow: 0 2px 12px rgba(62,48,32,0.12), inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: all 0.3s ease;
 }
-.da-search__input::placeholder { color: var(--text-300); }
-.da-search__btn {
-  background: var(--primary-100); border: none; color: #fff;
-  padding: 8px 16px; font-family: inherit; font-size: 14px; font-weight: 700;
-  cursor: pointer; letter-spacing: 0.1em; transition: background 0.2s;
-  border-radius: var(--radius-sm);
+.da-map-search:focus-within {
+  border-color: rgba(139,105,20,0.5);
+  box-shadow: 0 4px 20px rgba(62,48,32,0.18), inset 0 1px 0 rgba(255,255,255,0.4);
+  background: rgba(240,230,210,0.94);
 }
-.da-search__btn:hover { background: var(--primary-300, #5C1A00); }
+.da-map-search__guide {
+  margin: 0; font-size: 12px; color: rgba(62,48,32,0.55);
+  font-family: var(--font-title), KaiTi, serif; font-style: italic;
+  letter-spacing: 0.04em; text-align: center;
+  background: rgba(240,230,210,0.7); padding: 3px 14px; border-radius: 12px;
+  backdrop-filter: blur(4px); animation: guideFlicker 3s ease-in-out infinite;
+}
+@keyframes guideFlicker {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.da-map-search__icon { color: rgba(139,105,20,0.5); flex-shrink: 0; transition: color 0.2s; }
+.da-map-search:focus-within .da-map-search__icon { color: rgba(139,105,20,0.8); }
+.da-map-search__input {
+  flex: 1; background: transparent; border: none; padding: 8px 12px;
+  font-family: inherit; font-size: 14px; color: #3E3020; outline: none;
+  min-width: 0; letter-spacing: 0.03em;
+}
+.da-map-search__input::placeholder { color: rgba(107,90,66,0.5); font-style: italic; }
+.da-map-search__btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(107,90,66,0.15); border: none; color: #5A4A36;
+  padding: 7px 18px; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.08em; transition: all 0.2s;
+  border-radius: 22px;
+}
+.da-map-search__btn:hover { background: rgba(139,105,20,0.25); color: #3E3020; }
 
 .da-year-label {
   font-size: 18px; font-weight: 700; color: var(--primary-100);
@@ -1003,90 +1054,81 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   background: radial-gradient(ellipse at center, transparent 45%, rgba(62,48,32,0.15) 100%);
 }
 
-/* 3D 层叠图例 */
-.da-legend-3d {
-  position: absolute; left: 24px; top: 50%; transform: translateY(-50%); z-index: 6;
-  display: flex; flex-direction: column; gap: 20px;
+/* 图钉式图例 */
+.da-pin-legend {
+  position: absolute; left: 14px; top: 38%; transform: translateY(-50%); z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
   pointer-events: none;
 }
-.legend-header {
-  display: flex; align-items: center; gap: 10px;
-  color: #3E3020; font-weight: 700; font-size: 15px;
-  background: rgba(240,230,210,0.85); padding: 6px 14px; border-radius: 24px;
-  backdrop-filter: blur(4px); border: 1px solid rgba(139,105,20,0.25);
+.pin-legend__title {
+  font-size: 11px; font-weight: 700; color: #3E3020; letter-spacing: 0.1em;
+  background: rgba(240,230,210,0.88); padding: 3px 10px; border-radius: 10px;
+  backdrop-filter: blur(4px); border: 1px solid rgba(139,105,20,0.2);
+  text-align: center; pointer-events: auto; white-space: nowrap;
+}
+.pin-legend__list {
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
   pointer-events: auto;
 }
-.legend-icon {
-  width: 28px; height: 28px; display: grid; place-items: center;
-  border-radius: 50%; background: #6B5A42; color: #F0E6D2;
+.pin-item {
+  display: flex; align-items: center; gap: 6px;
+  cursor: pointer; position: relative; padding: 3px 4px;
+  border-radius: 6px; transition: background 0.2s;
 }
-.legend-layers {
-  display: flex; flex-direction: column; gap: 12px;
-  perspective: 1000px; padding-left: 12px;
-  pointer-events: auto;
-}
-.layer-item {
-  display: flex; align-items: center; gap: 14px;
-  cursor: pointer; position: relative; height: 36px;
-  transition: transform 0.2s;
-}
-.layer-item:hover { transform: translateX(6px); }
-.layer-shape {
-  width: 52px; height: 52px; position: relative;
-  transform-style: preserve-3d;
-  transform: rotateX(65deg) rotateZ(45deg);
-  background: var(--layer-color);
-  border: 1px solid rgba(255,255,255,0.4);
-  box-shadow: 
-    inset 0 0 10px rgba(0,0,0,0.1),
-    -2px 2px 4px rgba(0,0,0,0.2);
-  transition: all 0.3s;
-  z-index: var(--layer-z);
-}
-/* 叠加厚度效果 */
-.layer-shape::after {
-  content: ''; position: absolute; left: -1px; top: 100%;
-  width: 100%; height: 5px; background: inherit; filter: brightness(0.7);
-  transform-origin: top; transform: rotateX(-90deg);
-  border-left: 1px solid rgba(255,255,255,0.2);
-}
-.layer-shape::before {
-  content: ''; position: absolute; left: 100%; top: -1px;
-  width: 5px; height: 100%; background: inherit; filter: brightness(0.8);
-  transform-origin: left; transform: rotateY(90deg);
-  border-top: 1px solid rgba(255,255,255,0.2);
-}
-.layer-item:hover .layer-shape {
-  transform: rotateX(65deg) rotateZ(45deg) translateZ(10px);
-  box-shadow: 
-    inset 0 0 12px rgba(255,255,255,0.3),
-    -4px 4px 12px rgba(0,0,0,0.3);
-  border-color: rgba(255,255,255,0.8);
-}
-.layer-text {
-  font-size: 14px; color: #3E3020; font-weight: 500;
-  background: rgba(240,230,210,0.8); padding: 4px 10px; border-radius: 4px;
-  backdrop-filter: blur(2px); transition: color 0.2s;
-}
-.layer-item:hover .layer-text { color: #8B6914; }
+.pin-item:hover { background: rgba(240,230,210,0.6); }
+.pin-item.active { background: rgba(240,230,210,0.85); }
 
-.layer-item.active { transform: translateX(12px); }
-.layer-item.active .layer-shape {
-  transform: rotateX(65deg) rotateZ(45deg) translateZ(16px);
-  box-shadow: 
-    inset 0 0 18px rgba(255,255,255,0.4),
-    -6px 6px 18px rgba(0,0,0,0.4);
+/* 图钉 */
+.pin {
+  display: flex; flex-direction: column; align-items: center; flex-shrink: 0;
+  width: 16px;
+}
+.pin__head {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--pin-color);
+  border: 2px solid rgba(255,255,255,0.6);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25), inset 0 -2px 3px rgba(0,0,0,0.15);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.pin__needle {
+  width: 2px; height: 8px; margin-top: -1px;
+  background: linear-gradient(180deg, rgba(80,60,40,0.6), rgba(80,60,40,0.15));
+  border-radius: 0 0 1px 1px;
+}
+.pin-item:hover .pin__head {
+  transform: scale(1.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35), inset 0 -2px 3px rgba(0,0,0,0.15);
+}
+.pin-item.active .pin__head {
+  transform: scale(1.3);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), inset 0 -2px 3px rgba(0,0,0,0.15);
   border-color: rgba(255,255,255,0.9);
 }
-.layer-item.active .layer-text { color: var(--primary-100); font-weight: 700; background: rgba(247,242,232,0.95); }
+
+.pin-label {
+  font-size: 10px; color: rgba(62,48,32,0.6); white-space: nowrap;
+  opacity: 0; transform: translateX(-3px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+.pin-item:hover .pin-label { opacity: 1; transform: translateX(0); color: #5A3E1B; }
+.pin-item.active .pin-label { opacity: 1; transform: translateX(0); color: var(--primary-100, #8B2500); font-weight: 600; }
 .da-map__chart { width: 100%; height: 100%; position: relative; z-index: 1; mix-blend-mode: multiply; }
 .da-map__hint {
   position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px; z-index: 6;
-  font-size: 13px; color: #3E3020; padding: 6px 14px;
+  font-size: 12px; color: #3E3020; padding: 6px 14px;
   background: rgba(240,230,210,0.88); border: 1px solid rgba(139,105,20,0.25);
-  border-radius: var(--radius-sm);
-  backdrop-filter: blur(4px);
+  border-radius: 20px; backdrop-filter: blur(4px); white-space: nowrap;
+}
+.da-map__hint b { color: var(--primary-100, #8B2500); }
+.da-map__hint-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: #8B5E14; animation: hintPulse 2s ease-in-out infinite;
+}
+@keyframes hintPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
 }
 
 /* ═══ 右面板 ═══ */
@@ -1172,8 +1214,12 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
 @media (max-width: 767px) {
   .da-header { padding: 8px 12px; }
-  .da-header__center { display: none; }
   .da-brand__title { font-size: 11px; letter-spacing: 0.06em; }
+  .da-map-search-wrap { width: min(320px, 85%); top: 10px; }
+  .da-map-search { padding: 3px 4px 3px 12px; }
+  .da-map-search__input { font-size: 13px; padding: 6px 8px; }
+  .da-map-search__btn { padding: 6px 12px; font-size: 12px; }
+  .da-map-search__guide { display: none; }
 
   .da-body { flex-direction: column; }
   .da-map { flex: 1; }

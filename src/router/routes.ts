@@ -150,6 +150,32 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '职业分析', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER], immersive: true },
       },
       {
+        path: 'student/career-ability',
+        name: 'career-ability',
+        component: () => import('@/views/student/CareerAbilityShell.vue'),
+        meta: { title: '职业能力图谱', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER], immersive: true },
+      },
+      {
+        path: 'student/career-ability/graph',
+        name: 'career-ability-graph',
+        redirect: to => ({ name: 'career-ability', query: to.query }),
+      },
+      {
+        path: 'student/career-ability/dual',
+        name: 'career-ability-dual',
+        redirect: to => ({ name: 'career-ability', query: to.query }),
+      },
+      {
+        path: 'student/career-ability/workspace',
+        name: 'career-ability-workspace',
+        redirect: to => ({ name: 'career-ability', query: to.query }),
+      },
+      {
+        path: 'student/career-ability-graph',
+        name: 'student-career-ability-graph',
+        redirect: to => ({ name: 'career-ability', query: to.query }),
+      },
+      {
         path: 'student/settings',
         name: 'student-settings',
         component: () => import('@/views/student/Settings.vue'),
