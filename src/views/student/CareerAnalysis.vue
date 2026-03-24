@@ -358,56 +358,25 @@ const mapOption = computed<any>(() => {
       borderRadius: 8,
     },
     geo: [
-      // geo[0]: 周边国家内凹暗边 — 凹陷暗影（左上偏移）
+      // geo[0]: 世界底图 — 静默，无 shadowBlur，仅填色+边框
       {
-        ...commonGeo,  // ✅ 复用公共定位，原 roam:'move' 已改为 false
+        ...commonGeo,
         map: 'world', zlevel: 0, silent: true,
         label: { show: false },
         itemStyle: {
-          areaColor: 'transparent',
-          borderColor: 'rgba(80,65,45,0.18)', borderWidth: 1,
-          shadowColor: 'rgba(80,65,45,0.15)', shadowBlur: 3,
-          shadowOffsetX: -1, shadowOffsetY: -1,
-        },
-        emphasis: { disabled: true },
-        regions: worldHiddenRegions,
-      },
-      // geo[1]: 周边国家高光层 — 淡填充 + 高光（右下偏移）+ 国名标签
-      {
-        ...commonGeo,  // ✅ 复用公共定位，原 roam:'move' 已改为 false
-        map: 'world', zlevel: 0, silent: true,
-        label: { show: false, color: 'rgba(120,100,70,0.5)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' },
-        itemStyle: {
           areaColor: 'rgba(212,201,181,0.18)',
-          borderColor: 'rgba(255,248,235,0.2)', borderWidth: 0.6,
-          shadowColor: 'rgba(255,248,235,0.18)', shadowBlur: 3,
-          shadowOffsetX: 1, shadowOffsetY: 1,
+          borderColor: 'rgba(120,100,70,0.3)', borderWidth: 0.6,
         },
         emphasis: { disabled: true },
         regions: worldHiddenRegions,
       },
-      // geo[2]: 中国内凹暗边 — 模拟凹进去的阴影（暗光从左上）
+      // geo[1]: 中国主交互层 — 无 shadowBlur，hover/select 用 areaColor+border 区分
       {
         ...commonGeo,
-        map: 'china', zlevel: 1, silent: true,
-        itemStyle: {
-          areaColor: 'transparent',
-          borderColor: 'rgba(80,65,45,0.2)', borderWidth: 1.5,
-          shadowColor: 'rgba(80,65,45,0.25)', shadowBlur: 6,
-          shadowOffsetX: -1.5, shadowOffsetY: -1.5,
-        },
-        emphasis: { disabled: true },
-        regions: hiddenRegions,
-      },
-      // geo[3]: 中国高光边 — 主交互层（亮光从右下）
-      {
-        ...commonGeo,
-        map: 'china', zlevel: 2,
+        map: 'china', zlevel: 1,
         itemStyle: {
           areaColor: 'rgba(210,185,145,0.6)',
-          borderColor: 'rgba(139,105,20,0.5)', borderWidth: 1.5,
-          shadowColor: 'rgba(255,250,240,0.3)', shadowBlur: 5,
-          shadowOffsetX: 1.5, shadowOffsetY: 1.5,
+          borderColor: 'rgba(139,105,20,0.55)', borderWidth: 1.2,
         },
         label: {
           show: true, color: 'rgba(62,48,32,0.75)', fontSize: 14,
@@ -416,28 +385,26 @@ const mapOption = computed<any>(() => {
         },
         emphasis: {
           itemStyle: {
-            areaColor: 'rgba(176,120,64,0.75)',
-            borderColor: 'rgba(139,94,20,0.85)', borderWidth: 2,
-            shadowBlur: 6, shadowColor: 'rgba(139,94,20,0.35)',
-            shadowOffsetX: 0, shadowOffsetY: 0,
+            areaColor: 'rgba(176,120,64,0.8)',
+            borderColor: 'rgba(107,58,10,0.9)', borderWidth: 2,
           },
-          label: { show: true, color: '#2A1A08', fontSize: 16, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
-            formatter: (p: any) => shortName(p.name || '') }
+          label: { show: true, color: '#2A1A08', fontSize: 16, fontWeight: 'bold',
+            fontFamily: 'var(--font-title), KaiTi, serif',
+            formatter: (p: any) => shortName(p.name || '') },
         },
         select: {
           itemStyle: {
-            areaColor: 'rgba(155,100,50,0.8)',
-            borderColor: 'rgba(107,58,10,0.9)', borderWidth: 2,
-            shadowBlur: 6, shadowColor: 'rgba(107,58,10,0.35)',
+            areaColor: 'rgba(155,100,50,0.85)',
+            borderColor: 'rgba(90,45,5,0.95)', borderWidth: 2,
           },
           label: { show: true, color: '#2A1A08', fontWeight: 'bold', fontSize: 16,
-            formatter: (p: any) => shortName(p.name || '') }
+            formatter: (p: any) => shortName(p.name || '') },
         },
         regions: chinaRegions,
       },
     ],
     series: [{
-      name: '需求量', type: 'map', geoIndex: 3,
+      name: '需求量', type: 'map', geoIndex: 1,
       data: data, selectedMode: 'single', animation: true, animationDurationUpdate: 300
     }],
   }
