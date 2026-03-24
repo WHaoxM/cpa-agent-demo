@@ -1,8 +1,8 @@
 <!-- 页面：双栏分析（右侧面板）；路由：student/career-ability/dual；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { ElMessage } from 'element-plus'
 import { getRoleIntro } from '@/composables/useAbilityGraph'
 import { useGraphGeneration, type LogEntry } from '@/composables/useGraphGeneration'
 
@@ -33,8 +33,9 @@ function prevPage() { if (gen.currentPage.value > 0) gen.currentPage.value-- }
 function nextPage() { if (gen.currentPage.value < gen.stepPages.value.length - 1) gen.currentPage.value++ }
 
 /* ═══ 完成按钮 ═══ */
+const router = useRouter()
 function onEnterCourseSystem() {
-  ElMessage.success('课程体系入口已就绪，后续版本将跳转至课程体系页面')
+  router.push({ name: 'course-system', query: { role: roleName.value } })
 }
 
 /* ═══ 生命周期 ═══ */
@@ -107,6 +108,21 @@ function logIcon(level: LogEntry['level']) {
             <div class="dual-gen-progress">
               <div class="dual-gen-progress__bar" :style="{ width: gen.progress.value + '%' }"></div>
             </div>
+            <!-- 统计数字 -->
+            <div class="dual-gen-stats">
+              <div class="dual-gen-stat">
+                <span class="dual-gen-stat__value">{{ visibleNodes.length }}</span>
+                <span class="dual-gen-stat__label">实体节点</span>
+              </div>
+              <div class="dual-gen-stat">
+                <span class="dual-gen-stat__value">{{ visibleEdges.length }}</span>
+                <span class="dual-gen-stat__label">关系边</span>
+              </div>
+              <div class="dual-gen-stat">
+                <span class="dual-gen-stat__value">{{ new Set([...visibleNodes.map((n: any) => n.group)]).size }}</span>
+                <span class="dual-gen-stat__label">SCHEMA类型</span>
+              </div>
+            </div>
             <!-- 当前页内容 -->
             <div class="dual-gen-page" v-if="gen.stepPages.value.length > 0">
               <div class="dual-gen-page__title">
@@ -142,13 +158,14 @@ function logIcon(level: LogEntry['level']) {
         <section class="dual-card dual-card--action" v-if="gen.isDone.value">
           <h3 class="dual-card__title"><span class="dual-card__num">03</span> 状态</h3>
           <div class="dual-card__body">
-            <p class="dual-done-text">图谱构建完成，正在进行学生能力画像。</p>
+            <p class="dual-done-text">图谱构建完成，课程体系搭建完成。</p>
             <button class="dual-action-btn" @click="onEnterCourseSystem">
               <Icon icon="lucide:arrow-right-circle" :width="18" />
               查看课程体系
             </button>
           </div>
         </section>
+
       </div>
 
       <!-- ═══ 右下固定：仪表盘日志 ═══ -->
@@ -208,6 +225,7 @@ function logIcon(level: LogEntry['level']) {
   border: 1px solid var(--bg-300, #D4C9B5);
   border-radius: var(--radius-md, 3px);
   overflow: hidden;
+  flex-shrink: 0;
 }
 .dual-card__title {
   display: flex; align-items: center; gap: 8px;
@@ -228,11 +246,7 @@ function logIcon(level: LogEntry['level']) {
 }
 .dual-card__body {
   padding: 12px 14px;
-  max-height: 45vh;
-  overflow-y: auto;
 }
-.dual-card__body::-webkit-scrollbar { width: 3px; }
-.dual-card__body::-webkit-scrollbar-thumb { background: var(--bg-300); border-radius: 2px; }
 
 /* 岗位介绍 */
 .dual-intro-summary { font-size: 13px; color: var(--text-200); margin: 0 0 10px; line-height: 1.6; }
@@ -263,7 +277,9 @@ function logIcon(level: LogEntry['level']) {
 }
 
 /* 生成过程卡片 */
-.dual-card__body--gen { padding: 12px 14px 8px; }
+.dual-card__body--gen {
+  padding: 12px 14px 8px;
+}
 .dual-gen-status {
   display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
 }
@@ -304,6 +320,17 @@ function logIcon(level: LogEntry['level']) {
 
 .dual-gen-empty { font-size: 12px; color: var(--text-300); padding: 8px 0; }
 
+.dual-gen-stats {
+  display: flex; gap: 16px; margin-bottom: 10px;
+  padding: 10px 0; border-top: 1px solid var(--bg-300); border-bottom: 1px solid var(--bg-300);
+}
+.dual-gen-stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.dual-gen-stat__value {
+  font-size: 22px; font-weight: 800; color: var(--text-100);
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.dual-gen-stat__label { font-size: 11px; color: var(--text-300, #9C8B78); margin-top: 2px; letter-spacing: 0.04em; }
+
 .dual-gen-pager {
   display: flex; align-items: center; justify-content: center; gap: 12px;
   margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--bg-300);
@@ -329,6 +356,7 @@ function logIcon(level: LogEntry['level']) {
   cursor: pointer; transition: all 0.2s;
 }
 .dual-action-btn:hover { background: #A0472D; }
+
 
 /* ═══ 日志仪表盘（固定底部） ═══ */
 .dual-dashboard {

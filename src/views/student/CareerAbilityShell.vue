@@ -286,9 +286,21 @@ useResizeObserver(graphContainerEl, () => {
   requestAnimationFrame(() => chart?.resize())
 }, { debounceMs: 80 })
 
-/* ═══ 布局切换时立即推进一帧（方案 B） ═══ */
+/* ═══ 布局切换时持续 resize，使图谱丝滑跟随容器宽度过渡 ═══ */
+let layoutTransitionRaf: number | null = null
 watch(layoutMode, () => {
-  nextTick(() => chart?.resize())
+  if (layoutTransitionRaf != null) cancelAnimationFrame(layoutTransitionRaf)
+  const start = performance.now()
+  const DURATION = 480 // 略长于 CSS transition 0.45s
+  const step = (now: number) => {
+    chart?.resize()
+    if (now - start < DURATION) {
+      layoutTransitionRaf = requestAnimationFrame(step)
+    } else {
+      layoutTransitionRaf = null
+    }
+  }
+  layoutTransitionRaf = requestAnimationFrame(step)
 })
 
 /* ═══ 生命周期 ═══ */
@@ -296,7 +308,9 @@ onMounted(async () => {
   await loadData()
 })
 onBeforeUnmount(() => {
-  stopAnimation(); chart?.dispose(); chart = null
+  stopAnimation()
+  if (layoutTransitionRaf != null) { cancelAnimationFrame(layoutTransitionRaf); layoutTransitionRaf = null }
+  chart?.dispose(); chart = null
 })
 watch(roleName, () => loadData())
 watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: buildLinks() }] } as any) })
@@ -508,6 +522,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 .shell-body--split .shell-graph { width: 50%; }
 .shell-body--split .shell-panel {
   width: 50%;
+  height: 100%;
   opacity: 1;
   overflow: hidden;
   border-left: 1px solid var(--bg-300, #D4C9B5);
@@ -531,6 +546,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 .shell-body--workspace .shell-panel { width: 0; opacity: 0; }
 .shell-body--workspace .shell-workspace {
   width: 100%;
+  height: 100%;
   opacity: 1;
   overflow: hidden;
 }

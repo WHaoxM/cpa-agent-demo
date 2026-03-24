@@ -187,6 +187,7 @@ const provinceRanking = computed(() => {
 })
 
 /* ═══ 地图配置 — 羊皮卷风格 ═══ */
+const vchartRef = ref<any>(null)
 const mapInitOptions = { devicePixelRatio: Math.min(2, window.devicePixelRatio || 1) }
 const mapUpdateOptions = { notMerge: true, lazyUpdate: false }
 const hiddenRegions = [
@@ -318,11 +319,21 @@ const mapOption = computed<any>(() => {
     { name: 'Malaysia', label: worldLabelStyle },
   ]
 
+  // ✅ 公共定位配置：所有 geo 统一使用相同基线，避免错位
+  const commonGeo = {
+    boundingCoords: [[-180, 90], [180, -90]], // ✅ 强制4层geo使用全球范围作为zoom=1基线
+    center: (vchartRef.value?.getOption?.()?.geo?.[0]?.center as number[]) ?? [104, 35],
+    zoom: (vchartRef.value?.getOption?.()?.geo?.[0]?.zoom as number) ?? 4.5,
+    roam: false,
+    scaleLimit: { min: 1.0, max: 10 },
+  }
+
   return {
     backgroundColor: 'transparent',
     animation: false,
+    hoverLayerThreshold: Infinity,
     tooltip: {
-      trigger: 'item', confine: true, transitionDuration: 0,
+      trigger: 'item', confine: true, transitionDuration: 0, showDelay: 60,
       backgroundColor: 'rgba(62,48,32,0.92)',
       borderColor: '#8B6914',
       borderWidth: 1,
@@ -349,9 +360,8 @@ const mapOption = computed<any>(() => {
     geo: [
       // geo[0]: 周边国家内凹暗边 — 凹陷暗影（左上偏移）
       {
-        map: 'world', zlevel: 0, roam: 'move', silent: true,
-        center: [104, 35], zoom: 3.2,
-        scaleLimit: { min: 2.2, max: 6 },
+        ...commonGeo,  // ✅ 复用公共定位，原 roam:'move' 已改为 false
+        map: 'world', zlevel: 0, silent: true,
         label: { show: false },
         itemStyle: {
           areaColor: 'transparent',
@@ -364,9 +374,8 @@ const mapOption = computed<any>(() => {
       },
       // geo[1]: 周边国家高光层 — 淡填充 + 高光（右下偏移）+ 国名标签
       {
-        map: 'world', zlevel: 0, roam: 'move', silent: true,
-        center: [104, 35], zoom: 3.2,
-        scaleLimit: { min: 2.2, max: 6 },
+        ...commonGeo,  // ✅ 复用公共定位，原 roam:'move' 已改为 false
+        map: 'world', zlevel: 0, silent: true,
         label: { show: false, color: 'rgba(120,100,70,0.5)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' },
         itemStyle: {
           areaColor: 'rgba(212,201,181,0.18)',
@@ -379,20 +388,21 @@ const mapOption = computed<any>(() => {
       },
       // geo[2]: 中国内凹暗边 — 模拟凹进去的阴影（暗光从左上）
       {
-        map: 'china', zlevel: 1, roam: false, silent: true,
-        layoutCenter: ['50%', '54%'], layoutSize: '88%',
+        ...commonGeo,
+        map: 'china', zlevel: 1, silent: true,
         itemStyle: {
           areaColor: 'transparent',
           borderColor: 'rgba(80,65,45,0.2)', borderWidth: 1.5,
           shadowColor: 'rgba(80,65,45,0.25)', shadowBlur: 6,
           shadowOffsetX: -1.5, shadowOffsetY: -1.5,
         },
+        emphasis: { disabled: true },
         regions: hiddenRegions,
       },
       // geo[3]: 中国高光边 — 主交互层（亮光从右下）
       {
-        map: 'china', zlevel: 2, roam: false,
-        layoutCenter: ['50%', '54%'], layoutSize: '88%',
+        ...commonGeo,
+        map: 'china', zlevel: 2,
         itemStyle: {
           areaColor: 'rgba(210,185,145,0.6)',
           borderColor: 'rgba(139,105,20,0.5)', borderWidth: 1.5,
@@ -407,21 +417,20 @@ const mapOption = computed<any>(() => {
         emphasis: {
           itemStyle: {
             areaColor: 'rgba(176,120,64,0.75)',
-            borderColor: 'rgba(139,94,20,0.85)', borderWidth: 3,
-            shadowBlur: 20, shadowColor: 'rgba(139,94,20,0.45)',
+            borderColor: 'rgba(139,94,20,0.85)', borderWidth: 2,
+            shadowBlur: 6, shadowColor: 'rgba(139,94,20,0.35)',
             shadowOffsetX: 0, shadowOffsetY: 0,
           },
-          label: { show: true, color: '#2A1A08', fontSize: 18, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
-            textShadowColor: 'rgba(240,230,210,0.95)', textShadowBlur: 6,
+          label: { show: true, color: '#2A1A08', fontSize: 16, fontWeight: 'bold', fontFamily: 'var(--font-title), KaiTi, serif',
             formatter: (p: any) => shortName(p.name || '') }
         },
         select: {
           itemStyle: {
             areaColor: 'rgba(155,100,50,0.8)',
-            borderColor: 'rgba(107,58,10,0.9)', borderWidth: 3,
-            shadowBlur: 18, shadowColor: 'rgba(107,58,10,0.4)',
+            borderColor: 'rgba(107,58,10,0.9)', borderWidth: 2,
+            shadowBlur: 6, shadowColor: 'rgba(107,58,10,0.35)',
           },
-          label: { show: true, color: '#2A1A08', fontWeight: 'bold', fontSize: 18,
+          label: { show: true, color: '#2A1A08', fontWeight: 'bold', fontSize: 16,
             formatter: (p: any) => shortName(p.name || '') }
         },
         regions: chinaRegions,
@@ -657,6 +666,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
               <img :src="parchmentBaseUrl" class="da-parchment__base" alt="" draggable="false" />
               <!-- ECharts 地图层（半透明填充，让底图透出） -->
               <VChart
+                ref="vchartRef"
                 class="da-map__chart"
                 :option="mapOption"
                 :init-options="mapInitOptions"
