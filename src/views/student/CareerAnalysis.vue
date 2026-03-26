@@ -188,6 +188,7 @@ const provinceRanking = computed(() => {
 
 /* ═══ 地图配置 — 羊皮卷风格 ═══ */
 const vchartRef = ref<any>(null)
+const searchFocused = ref(false)
 const mapInitOptions = { devicePixelRatio: Math.min(2, window.devicePixelRatio || 1) }
 const mapUpdateOptions = { notMerge: true, lazyUpdate: false }
 const hiddenRegions = [
@@ -529,7 +530,23 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           <span class="da-brand__title">职业分析 · 岗位舆图</span>
         </div>
       </div>
-      <div class="da-header__center"></div>
+      <div class="da-header__center">
+        <div class="da-map-search-wrap">
+          <div class="da-map-search">
+            <Icon icon="lucide:compass" :width="16" class="da-map-search__icon" />
+            <input v-model="roleSearch" class="da-map-search__input" placeholder="输入你感兴趣的岗位，如: 前端开发、数据分析"
+              @keyup.enter="doSearch"
+              @focus="searchFocused = true"
+              @blur="searchFocused = false"
+            />
+            <button class="da-map-search__btn" @click="doSearch">
+              <Icon icon="lucide:search" :width="14" />
+              <span>探寻</span>
+            </button>
+          </div>
+          <p v-show="searchFocused" class="da-map-search__guide">↑ 输入职业后回车，地图将展示全国各省的薪资与需求分布</p>
+        </div>
+      </div>
       <!-- #6 右上角头像+姓名+身份 -->
       <div class="da-header__right">
         <span class="da-year-label">{{ scrollLabel }}</span>
@@ -643,18 +660,6 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
               />
               <!-- 四角暗角晕影 -->
               <div class="da-parchment__vignette"></div>
-              <!-- 地图内搜索栏 -->
-              <div class="da-map-search-wrap">
-                <div class="da-map-search">
-                  <Icon icon="lucide:compass" :width="16" class="da-map-search__icon" />
-                  <input v-model="roleSearch" class="da-map-search__input" placeholder="输入你感兴趣的岗位，如: 前端开发、数据分析" @keyup.enter="doSearch" />
-                  <button class="da-map-search__btn" @click="doSearch">
-                    <Icon icon="lucide:search" :width="14" />
-                    <span>探寻</span>
-                  </button>
-                </div>
-                <p class="da-map-search__guide">↑ 输入职业后回车，地图将展示全国各省的薪资与需求分布</p>
-              </div>
               <!-- #2 图钉式需求图例 -->
               <div class="da-pin-legend">
                 <div class="pin-legend__list">
@@ -773,7 +778,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   flex-shrink: 0;
 }
 .da-header__left { display: flex; align-items: center; gap: 14px; }
-.da-header__center { flex: 1; }
+.da-header__center { flex: 1; display: flex; align-items: center; justify-content: center; }
 .da-header__right { display: flex; align-items: center; gap: 16px; }
 
 .da-back {
@@ -795,11 +800,12 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   white-space: nowrap;
 }
 
-/* 地图内浮动搜索栏 */
+/* 搜索栏（绝对居中于 header） */
 .da-map-search-wrap {
-  position: absolute; top: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  width: min(440px, 62%);
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+  width: min(440px, 50%);
+  z-index: 1;
 }
 .da-map-search {
   display: flex; align-items: center; gap: 0; width: 100%;
@@ -815,15 +821,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   background: rgba(240,230,210,0.94);
 }
 .da-map-search__guide {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
   margin: 0; font-size: 12px; color: rgba(62,48,32,0.55);
   font-family: var(--font-title), KaiTi, serif; font-style: italic;
   letter-spacing: 0.04em; text-align: center;
-  background: rgba(240,230,210,0.7); padding: 3px 14px; border-radius: 12px;
-  backdrop-filter: blur(4px); animation: guideFlicker 3s ease-in-out infinite;
-}
-@keyframes guideFlicker {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  background: rgba(240,230,210,0.88); padding: 3px 14px; border-radius: 12px;
+  backdrop-filter: blur(4px); white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(62,48,32,0.1);
+  z-index: 20;
 }
 .da-map-search__icon { color: rgba(139,105,20,0.5); flex-shrink: 0; transition: color 0.2s; }
 .da-map-search:focus-within .da-map-search__icon { color: rgba(139,105,20,0.8); }
