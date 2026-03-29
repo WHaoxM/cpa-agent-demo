@@ -68,6 +68,7 @@ const studentMenus = [
   { index: '/app/student/report', icon: ICONS.trendingUp, title: '学习报告' },
   { index: '/app/student/career', icon: ICONS.compass, title: '职业发展中心' },
   { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
+  { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
   { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
 ]
 

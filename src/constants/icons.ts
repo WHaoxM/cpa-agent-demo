@@ -55,6 +55,7 @@ export const ICONS = {
   radio: 'lucide:radio',
   codesandbox: 'lucide:box',
   folderArchive: 'lucide:folder-archive',
+  route: 'lucide:route',
 } as const
 
 export type IconName = typeof ICONS[keyof typeof ICONS]

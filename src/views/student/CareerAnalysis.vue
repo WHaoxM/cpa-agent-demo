@@ -7,15 +7,15 @@ import { useUserStore } from '@/stores'
 import { gsap } from '@/plugins/gsap'
 import { useCareerInsights } from '@/composables/useCareerInsights'
 import VChart from 'vue-echarts'
-import { use, registerMap } from 'echarts/core'
-import { BarChart, LineChart, MapChart, BoxplotChart } from 'echarts/charts'
+import { use, registerMap, graphic } from 'echarts/core'
+import { BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import { TooltipComponent, GridComponent, GeoComponent, VisualMapComponent } from 'echarts/components'
 import chinaJson from '@/assets/china.json'
 import worldJson from '@/assets/world.json'
 import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
 
-use([BarChart, LineChart, MapChart, BoxplotChart, CanvasRenderer,
+use([BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart, CanvasRenderer,
   TooltipComponent, GridComponent, GeoComponent, VisualMapComponent])
 registerMap('china', chinaJson as any)
 registerMap('world', worldJson as any)
@@ -45,44 +45,69 @@ function shortName(name: string): string {
     .replace(/(自治区|特别行政区|省|市)$/g, '')
 }
 
-/* ═══ 省份模拟数据（含薪资中位数） ═══ */
-type ProvinceItem = { name: string; value: number; salary: number }
-function getProvinceData(_role: string): ProvinceItem[] {
-  return [
-    { name: '北京市', value: 95, salary: 18.2 }, { name: '天津市', value: 62, salary: 11.5 },
-    { name: '河北省', value: 45, salary: 9.8 }, { name: '山西省', value: 32, salary: 8.5 },
-    { name: '内蒙古自治区', value: 28, salary: 8.0 }, { name: '辽宁省', value: 48, salary: 10.2 },
-    { name: '吉林省', value: 30, salary: 8.3 }, { name: '黑龙江省', value: 33, salary: 8.6 },
-    { name: '上海市', value: 92, salary: 19.5 }, { name: '江苏省', value: 78, salary: 14.8 },
-    { name: '浙江省', value: 82, salary: 16.2 }, { name: '安徽省', value: 42, salary: 9.5 },
-    { name: '福建省', value: 55, salary: 12.0 }, { name: '江西省', value: 35, salary: 8.8 },
-    { name: '山东省', value: 58, salary: 11.0 }, { name: '河南省', value: 50, salary: 10.0 },
-    { name: '湖北省', value: 60, salary: 12.5 }, { name: '湖南省', value: 48, salary: 10.3 },
-    { name: '广东省', value: 98, salary: 17.8 }, { name: '广西壮族自治区', value: 35, salary: 8.8 },
-    { name: '海南省', value: 25, salary: 9.2 }, { name: '重庆市', value: 52, salary: 11.8 },
-    { name: '四川省', value: 65, salary: 13.5 }, { name: '贵州省', value: 38, salary: 8.5 },
-    { name: '云南省', value: 30, salary: 8.2 }, { name: '西藏自治区', value: 8, salary: 7.5 },
-    { name: '陕西省', value: 50, salary: 11.2 }, { name: '甘肃省', value: 22, salary: 7.8 },
-    { name: '青海省', value: 12, salary: 7.2 }, { name: '宁夏回族自治区', value: 18, salary: 7.5 },
-    { name: '新疆维吾尔自治区', value: 20, salary: 7.8 }, { name: '台湾省', value: 40, salary: 13.0 },
-    { name: '香港特别行政区', value: 70, salary: 22.5 }, { name: '澳门特别行政区', value: 28, salary: 15.0 },
-  ]
+/* ═══ 确定性随机工具 ═══ */
+function strHash(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return Math.abs(h) || 1
+}
+function seededRng(seed: number): () => number {
+  let s = seed
+  return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff }
 }
 
-function getTrendData(_province: string, _role: string) {
+/* ═══ 省份模拟数据（按岗位名确定性生成） ═══ */
+const ALL_PROVINCES = [
+  '北京市','天津市','河北省','山西省','内蒙古自治区','辽宁省',
+  '吉林省','黑龙江省','上海市','江苏省','浙江省','安徽省',
+  '福建省','江西省','山东省','河南省','湖北省','湖南省',
+  '广东省','广西壮族自治区','海南省','重庆市','四川省','贵州省',
+  '云南省','西藏自治区','陕西省','甘肃省','青海省','宁夏回族自治区',
+  '新疆维吾尔自治区','台湾省','香港特别行政区','澳门特别行政区',
+]
+// 主要科技城市的基准需求系数
+const HUB_FACTOR: Record<string, number> = {
+  '北京市': 1.0, '上海市': 0.95, '广东省': 0.98, '浙江省': 0.85,
+  '江苏省': 0.80, '四川省': 0.68, '湖北省': 0.62, '重庆市': 0.55,
+  '福建省': 0.56, '山东省': 0.58, '天津市': 0.50, '辽宁省': 0.46,
+  '陕西省': 0.50, '香港特别行政区': 0.72, '台湾省': 0.42,
+}
+
+type ProvinceItem = { name: string; value: number; salary: number }
+function getProvinceData(role: string): ProvinceItem[] {
+  const rng = seededRng(strHash(role))
+  return ALL_PROVINCES.map(name => {
+    const hub = HUB_FACTOR[name] ?? (0.12 + rng() * 0.22)
+    const value = Math.min(100, Math.max(5, Math.round((hub * 75 + rng() * 30) * (0.8 + rng() * 0.4))))
+    const salary = Math.min(28, Math.max(5, +((hub * 14 + rng() * 8) * (0.7 + rng() * 0.6)).toFixed(1)))
+    return { name, value, salary }
+  })
+}
+
+function getTrendData(province: string, role: string) {
+  const rng = seededRng(strHash(province + '|' + role))
   const quarters = ['Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4']
   const boxData = quarters.map((_, i) => {
-    const base = 8 + Math.random() * 5 + i * 0.5
-    const min = +(base - Math.random() * 2).toFixed(1)
-    const q1 = +(base + Math.random() * 1.5).toFixed(1)
-    const median = +(q1 + Math.random() * 2 + 1).toFixed(1)
-    const q3 = +(median + Math.random() * 3 + 1).toFixed(1)
-    const max = +(q3 + Math.random() * 4 + 2).toFixed(1)
+    const base = 8 + rng() * 5 + i * 0.5
+    const min = +(base - rng() * 2).toFixed(1)
+    const q1 = +(base + rng() * 1.5).toFixed(1)
+    const median = +(q1 + rng() * 2 + 1).toFixed(1)
+    const q3 = +(median + rng() * 3 + 1).toFixed(1)
+    const max = +(q3 + rng() * 4 + 2).toFixed(1)
     return [min, q1, median, q3, max]
   })
   const salaryData = boxData.map(v => v[2])
-  const demandData = quarters.map(() => Math.round(80 + Math.random() * 150))
+  const demandData = quarters.map(() => Math.round(80 + rng() * 150))
   return { quarters, boxData, salaryData, demandData }
+}
+
+// 为每个岗位生成确定性薪资数据
+function getJobSalaryData(jobName: string) {
+  const rng = seededRng(strHash('salary_' + jobName))
+  const junior = Math.round(6 + rng() * 10)
+  const mid = junior + Math.round(5 + rng() * 10)
+  const senior = mid + Math.round(8 + rng() * 15)
+  return { name: jobName, junior, mid, senior }
 }
 
 /* ═══ AI 评价模拟数据 ═══ */
@@ -163,11 +188,15 @@ const provinceData = computed(() => {
 
 /* ═══ KPI 数据 ═══ */
 const nationalKpi = computed(() => {
-  const factor = 1 - (timelineYears.length - 1 - currentYearIndex.value) * 0.1
+  const data = provinceData.value
+  const avgSalary = data.length ? +(data.reduce((s, d) => s + d.salary, 0) / data.length).toFixed(1) : 0
+  const demandTotal = data.reduce((s, d) => s + d.value, 0) * 100
+  const rng = seededRng(strHash('growth_' + roleSearch.value))
+  const growthPct = +(8 + rng() * 12).toFixed(1)
   return {
-    avgSalary: +(14.5 * factor).toFixed(1),
-    demandTotal: Math.floor(12580 * factor),
-    growthRate: currentYearIndex.value === 0 ? '-' : '+12.5%',
+    avgSalary,
+    demandTotal,
+    growthRate: currentYearIndex.value === 0 ? '-' : `+${growthPct}%`,
   }
 })
 
@@ -440,6 +469,20 @@ function doSearch() {
   aiCommentPage.value = 0
 }
 
+function handleSearchSubmit() {
+  const q = roleSearch.value.trim()
+  if (!q) return
+  // 尝试精确 / 模糊匹配气泡内的岗位
+  const exact = _flatJobs.find(j => j.jobName === q)
+  const fuzzy = !exact ? _flatJobs.find(j => j.jobName.includes(q) || q.includes(j.jobName)) : null
+  const matched = exact || fuzzy
+  if (matched) {
+    selectedJob.value = { id: matched.domainId, name: matched.domainName, domainColor: matched.domainColor, jobName: matched.jobName }
+    roleSearch.value = matched.jobName
+  }
+  doSearch()
+}
+
 function switchYear(idx: number) {
   currentYearIndex.value = idx
   if (selectedProvince.value) trendRaw.value = getTrendData(selectedProvince.value, roleSearch.value)
@@ -509,6 +552,364 @@ watch(selectedProvince, (val) => {
   }
 })
 
+/* ═══ 气泡图数据 ═══ */
+
+// ── 类型定义 ─────────────────────────────────────────────────
+interface BubbleDomain {
+  id: string
+  name: string
+  color: string
+  jobs: string[]        // 该领域包含的岗位名称列表
+  // 预留 API 扩展字段（接入时在此处解构）：
+  // demandIndex?: number   // 岗位需求指数
+  // avgSalary?: number     // 平均薪资中位数（K）
+  // trendYoy?: number      // 同比增速（%）
+}
+
+// ── 模拟数据 ─────────────────────────────────────────────────
+// TODO: 接入接口时替换此处，示例：
+// const { data: domainList } = await useFetch<BubbleDomain[]>('/api/v1/career/domains')
+const BUBBLE_DOMAINS: BubbleDomain[] = [
+  {
+    id: 'internet', name: '互联网/软件', color: '#8B2500',
+    jobs: ['前端工程师', '后端工程师', '全栈工程师', '移动端开发', '测试工程师', 'DevOps工程师', '架构师', '产品经理'],
+  },
+  {
+    id: 'ai', name: 'AI / 大数据', color: '#1B4E8B',
+    jobs: ['机器学习工程师', '数据分析师', '算法工程师', 'NLP工程师', '数据工程师', '大模型工程师', '计算机视觉'],
+  },
+  {
+    id: 'cloud', name: '云计算/运维', color: '#1A5C5C',
+    jobs: ['云架构师', '网络工程师', '安全工程师', '数据库管理员', '容器化工程师', '运维工程师'],
+  },
+  {
+    id: 'enterprise', name: '企业服务', color: '#3A6B3A',
+    jobs: ['Java后端', 'ERP实施', '解决方案架构师', 'SaaS开发', '信息安全顾问', 'BI开发'],
+  },
+  {
+    id: 'fintech', name: '金融科技', color: '#8B6914',
+    jobs: ['量化工程师', '风控研发', '支付系统开发', '区块链开发', '金融数据分析'],
+  },
+  {
+    id: 'game', name: '游戏/内容', color: '#6B3A6E',
+    jobs: ['游戏客户端', '游戏服务端', '音视频开发', '虚拟现实', '游戏策划'],
+  },
+  {
+    id: 'hardware', name: '硬件/制造', color: '#7A4A2A',
+    jobs: ['嵌入式工程师', '芯片设计', '工业软件', '机器人工程师'],
+  },
+]
+
+/* ═══ 圆打包工具函数 ═══ */
+const SMALL_R = 14    // 小岗位气泡半径 px
+const DOMAIN_PAD = 10 // 大气泡与内部小气泡之间的留白
+
+// 力模拟：将 n 个半径为 r 的小圆打包在一起，返回各自坐标及外接圆半径
+function packInside(count: number, r: number): { pos: { x: number; y: number }[]; outerR: number } {
+  if (count === 0) return { pos: [], outerR: r + DOMAIN_PAD }
+  if (count === 1) return { pos: [{ x: 0, y: 0 }], outerR: r + DOMAIN_PAD }
+  const pos = Array.from({ length: count }, (_, i) => ({
+    x: Math.cos(2 * Math.PI * i / count) * r * 1.2,
+    y: Math.sin(2 * Math.PI * i / count) * r * 1.2,
+  }))
+  const gap = 2 // px gap between small bubbles
+  for (let iter = 0; iter < 300; iter++) {
+    for (let i = 0; i < count; i++) {
+      for (let j = i + 1; j < count; j++) {
+        const pi = pos[i]!, pj = pos[j]!
+        const dx = pj.x - pi.x
+        const dy = pj.y - pi.y
+        let d = Math.sqrt(dx * dx + dy * dy)
+        if (d < 0.1) d = 0.1
+        const minD = r * 2 + gap
+        if (d < minD) {
+          const f = (minD - d) / d * 0.5
+          pi.x -= dx * f; pi.y -= dy * f
+          pj.x += dx * f; pj.y += dy * f
+        }
+      }
+    }
+    for (let i = 0; i < count; i++) { pos[i]!.x *= 0.992; pos[i]!.y *= 0.992 }
+  }
+  let maxDist = 0
+  for (const p of pos) { const d = Math.sqrt(p.x * p.x + p.y * p.y) + r; if (d > maxDist) maxDist = d }
+  return { pos, outerR: maxDist + DOMAIN_PAD }
+}
+
+// 力模拟：将若干不同半径的大圆排布为边缘相靠但不重叠
+function packDomains(radii: number[]): { x: number; y: number }[] {
+  const n = radii.length
+  if (n === 0) return []
+  if (n === 1) return [{ x: 0, y: 0 }]
+  const pos = radii.map((_, i) => ({
+    x: Math.cos(2 * Math.PI * i / n) * 100,
+    y: Math.sin(2 * Math.PI * i / n) * 100,
+  }))
+  const domainGap = 4 // px gap between domain edges
+  for (let iter = 0; iter < 600; iter++) {
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const pi = pos[i]!, pj = pos[j]!
+        const dx = pj.x - pi.x
+        const dy = pj.y - pi.y
+        let d = Math.sqrt(dx * dx + dy * dy)
+        if (d < 0.1) d = 0.1
+        const minD = radii[i]! + radii[j]! + domainGap
+        if (d < minD) {
+          const f = (minD - d) / d * 0.5
+          pi.x -= dx * f; pi.y -= dy * f
+          pj.x += dx * f; pj.y += dy * f
+        }
+      }
+    }
+    for (let i = 0; i < n; i++) { pos[i]!.x *= 0.997; pos[i]!.y *= 0.997 }
+  }
+  return pos
+}
+
+const selectedJob = ref<{ id: string; name: string; domainColor: string; jobName?: string } | null>(null)
+
+/* ═══ 气泡图 ECharts custom series ═══ */
+const bubbleUpdateOptions = { notMerge: false, replaceMerge: [] as string[] }
+
+// 预计算布局（仅依赖 BUBBLE_DOMAINS，不变化则不重算）
+const _innerLayouts = BUBBLE_DOMAINS.map(d => packInside(d.jobs.length, SMALL_R))
+const _domainRadii = _innerLayouts.map(l => l.outerR)
+const _domainPositions = packDomains(_domainRadii)
+
+// 展平所有岗位为独立数据项，供 series[1] 逐个点击
+interface FlatJob { domainIdx: number; jobIdx: number; domainId: string; domainName: string; domainColor: string; jobName: string; absX: number; absY: number }
+const _flatJobs: FlatJob[] = []
+BUBBLE_DOMAINS.forEach((domain, di) => {
+  const inner = _innerLayouts[di]!
+  const dPos = _domainPositions[di]!
+  domain.jobs.forEach((jobName, ji) => {
+    const p = inner.pos[ji]!
+    _flatJobs.push({ domainIdx: di, jobIdx: ji, domainId: domain.id, domainName: domain.name, domainColor: domain.color, jobName, absX: dPos.x + p.x, absY: dPos.y + p.y })
+  })
+})
+
+const bubbleChartOption = computed(() => {
+  const sel = selectedJob.value
+  const selJobName = sel?.jobName ?? ''
+  const selDomainId = sel?.id ?? ''
+
+  return {
+    backgroundColor: 'transparent',
+    animation: true,
+    tooltip: {
+      show: true,
+      trigger: 'item',
+      backgroundColor: 'rgba(240,230,210,0.96)',
+      borderColor: 'rgba(139,105,20,0.28)',
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: '#3E3020', fontSize: 12 },
+      extraCssText: 'box-shadow:0 4px 16px rgba(62,48,32,0.18);border-radius:8px;',
+    },
+    series: [
+      // ── Series 0: 大气泡背景（领域边界 + 领域名标签）──
+      {
+        type: 'custom' as const,
+        coordinateSystem: 'none' as const,
+        silent: true,
+        z: 0,
+        data: BUBBLE_DOMAINS.map((_, i) => ({ value: [i] })),
+        renderItem: (_params: any, api: any) => {
+          const idx = _params.dataIndex as number
+          const domain = BUBBLE_DOMAINS[idx]!
+          const R = _domainRadii[idx]!
+          const dPos = _domainPositions[idx]!
+          const isSelected = selDomainId === domain.id
+          const w: number = api.getWidth()
+          const h: number = api.getHeight()
+          const cx = w / 2 + dPos.x
+          const cy = h / 2 + dPos.y
+          return {
+            type: 'group', x: cx, y: cy,
+            children: [
+              {
+                type: 'circle',
+                shape: { cx: 0, cy: 0, r: R },
+                style: {
+                  fill: new graphic.RadialGradient(0.4, 0.35, 0.9, [
+                    { offset: 0,   color: `${domain.color}10` },
+                    { offset: 0.7, color: `${domain.color}18` },
+                    { offset: 1,   color: `${domain.color}28` },
+                  ]),
+                  stroke: isSelected ? 'rgba(255,255,255,0.75)' : `${domain.color}44`,
+                  lineWidth: isSelected ? 2.5 : 1,
+                },
+              },
+              {
+                type: 'text',
+                style: {
+                  text: domain.name, x: 0, y: -R - 6,
+                  textAlign: 'center', textVerticalAlign: 'bottom',
+                  fontSize: 12, fontWeight: 'bold' as const,
+                  fill: domain.color, fontFamily: 'KaiTi, serif',
+                  textShadowColor: 'rgba(255,255,255,0.7)', textShadowBlur: 3,
+                },
+              },
+            ],
+          }
+        },
+      },
+      // ── Series 1: 小气泡（可点击岗位）──
+      {
+        type: 'custom' as const,
+        coordinateSystem: 'none' as const,
+        z: 1,
+        data: _flatJobs.map((j, i) => ({ value: [i] })),
+        tooltip: {
+          formatter: (params: any) => {
+            const job = _flatJobs[params.dataIndex as number]
+            if (!job) return ''
+            const sal = getJobSalaryData(job.jobName)
+            return `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:${job.domainColor};font-family:KaiTi,serif">${job.jobName}</div>`
+              + `<span style="opacity:.7">${job.domainName}</span><br/>`
+              + `<span>初级 ${sal.junior}K · 中级 ${sal.mid}K · 高级 ${sal.senior}K</span>`
+          },
+        },
+        renderItem: (_params: any, api: any) => {
+          const idx = _params.dataIndex as number
+          const job = _flatJobs[idx]!
+          const w: number = api.getWidth()
+          const h: number = api.getHeight()
+          const cx = w / 2 + job.absX
+          const cy = h / 2 + job.absY
+          const isJobSelected = selJobName === job.jobName && selDomainId === job.domainId
+          const isDomainSelected = selDomainId === job.domainId && !selJobName
+          const highlighted = isJobSelected || isDomainSelected
+          return {
+            type: 'group', x: cx, y: cy,
+            children: [
+              {
+                type: 'circle',
+                shape: { cx: 0, cy: 0, r: isJobSelected ? SMALL_R + 2 : SMALL_R },
+                style: {
+                  fill: new graphic.RadialGradient(0.35, 0.3, 0.75, [
+                    { offset: 0,   color: `${job.domainColor}${highlighted ? 'DD' : 'BB'}` },
+                    { offset: 0.6, color: `${job.domainColor}${highlighted ? 'EE' : 'DD'}` },
+                    { offset: 1,   color: `${job.domainColor}FF` },
+                  ]),
+                  stroke: isJobSelected ? 'rgba(255,255,255,0.9)' : 'transparent',
+                  lineWidth: isJobSelected ? 2 : 0,
+                  shadowBlur: isJobSelected ? 12 : 5,
+                  shadowColor: `${job.domainColor}${isJobSelected ? '90' : '50'}`,
+                },
+              },
+              {
+                type: 'text',
+                style: {
+                  text: job.jobName, x: 0, y: 0,
+                  textAlign: 'center', textVerticalAlign: 'middle',
+                  fontSize: isJobSelected ? 9 : 8,
+                  fontWeight: isJobSelected ? 'bold' as const : 'normal' as const,
+                  fill: 'rgba(255,255,255,0.92)',
+                  fontFamily: 'KaiTi, serif',
+                  truncate: { outerWidth: SMALL_R * 2 - 2, ellipsis: '..' },
+                },
+              },
+            ],
+          }
+        },
+      },
+    ],
+  }
+})
+
+function handleBubbleClick(params: any) {
+  // series 1 = 小气泡岗位层
+  if (params.seriesIndex === 1) {
+    const idx = params.dataIndex as number
+    const job = _flatJobs[idx]
+    if (!job) return
+    selectedJob.value = { id: job.domainId, name: job.domainName, domainColor: job.domainColor, jobName: job.jobName }
+    roleSearch.value = job.jobName
+    doSearch()
+  }
+}
+
+/* ═══ 薪资对比柱状图（按选中领域动态生成） ═══ */
+const salaryJobs = computed(() => {
+  const sel = selectedJob.value
+  if (!sel) {
+    // 默认：互联网/软件领域
+    return BUBBLE_DOMAINS[0]!.jobs.map(j => getJobSalaryData(j))
+  }
+  const domain = BUBBLE_DOMAINS.find(d => d.id === sel.id)
+  if (!domain) return []
+  return domain.jobs.map(j => getJobSalaryData(j))
+})
+
+const salaryChartOption = computed(() => {
+  const selName = selectedJob.value?.jobName ?? ''
+  return {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(247,242,232,0.96)', borderColor: C.panelBorder,
+      textStyle: { color: C.textPrimary, fontSize: 11 },
+      formatter: (params: any[]) => {
+        const base = params.reduce((s: number, p: any) => s + p.value, 0)
+        const rows = params.map((p: any) => `<span style="color:${p.color};margin-right:4px">■</span>${p.seriesName}: <b>${p.value}K</b>`).join('<br/>')
+        return `<b>${params[0]?.name}</b><br/>${rows}<br/>累计: <b>${base}K</b>`
+      },
+    },
+    legend: {
+      data: ['初级', '中级', '高级'],
+      right: 8, top: 4,
+      textStyle: { color: C.textSecondary, fontSize: 10 },
+      itemWidth: 10, itemHeight: 8,
+    },
+    grid: { left: 78, right: 14, top: 28, bottom: 20 },
+    xAxis: {
+      type: 'value', name: 'K/月',
+      nameTextStyle: { color: C.textMuted, fontSize: 9 },
+      axisLabel: { color: C.textSecondary, fontSize: 9 },
+      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(139,37,0,0.06)' } },
+    },
+    yAxis: {
+      type: 'category',
+      data: salaryJobs.value.map(j => j.name),
+      axisLabel: { color: C.textSecondary, fontSize: 10 },
+    },
+    series: [
+      {
+        name: '初级', type: 'bar', stack: 'salary', barMaxWidth: 14,
+        data: salaryJobs.value.map(j => ({
+          value: j.junior,
+          itemStyle: {
+            color: j.name === selName ? 'rgba(139,105,20,0.55)' : 'rgba(212,201,181,0.85)',
+            borderRadius: [0, 0, 0, 0],
+          },
+        })),
+      },
+      {
+        name: '中级', type: 'bar', stack: 'salary', barMaxWidth: 14,
+        data: salaryJobs.value.map(j => ({
+          value: j.mid - j.junior,
+          itemStyle: {
+            color: j.name === selName ? 'rgba(176,120,64,0.85)' : 'rgba(176,120,64,0.55)',
+          },
+        })),
+      },
+      {
+        name: '高级', type: 'bar', stack: 'salary', barMaxWidth: 14,
+        data: salaryJobs.value.map(j => ({
+          value: j.senior - j.mid,
+          itemStyle: {
+            color: j.name === selName ? C.zhusha : 'rgba(139,37,0,0.5)',
+            borderRadius: [0, 2, 2, 0],
+            opacity: j.name === selName ? 1 : 0.7,
+          },
+        })),
+      },
+    ],
+  }
+})
+
 onMounted(async () => {
   await nextTick()
   setupEntranceAnimation()
@@ -531,20 +932,19 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
         </div>
       </div>
       <div class="da-header__center">
-        <div class="da-map-search-wrap">
-          <div class="da-map-search">
-            <Icon icon="lucide:compass" :width="16" class="da-map-search__icon" />
-            <input v-model="roleSearch" class="da-map-search__input" placeholder="输入你感兴趣的岗位，如: 前端开发、数据分析"
-              @keyup.enter="doSearch"
-              @focus="searchFocused = true"
-              @blur="searchFocused = false"
-            />
-            <button class="da-map-search__btn" @click="doSearch">
-              <Icon icon="lucide:search" :width="14" />
-              <span>探寻</span>
-            </button>
-          </div>
-          <p v-show="searchFocused" class="da-map-search__guide">↑ 输入职业后回车，地图将展示全国各省的薪资与需求分布</p>
+        <div class="da-header-search">
+          <Icon icon="lucide:search" :width="14" class="da-header-search__icon" />
+          <input
+            class="da-header-search__input"
+            v-model="roleSearch"
+            placeholder="搜索岗位，如 前端工程师、算法…"
+            @keydown.enter="handleSearchSubmit"
+            @focus="searchFocused = true"
+            @blur="searchFocused = false"
+          />
+          <button class="da-header-search__btn" @click="handleSearchSubmit">
+            <Icon icon="lucide:arrow-right" :width="14" />
+          </button>
         </div>
       </div>
       <!-- #6 右上角头像+姓名+身份 -->
@@ -640,54 +1040,77 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
         </div>
       </aside>
 
-      <!-- 中央地图 — #1 羊皮卷底图 + 污渍叠加 + ECharts 地图 -->
+      <!-- 中央区域：气泡图（上50%）+ 地图&薪资图（下50%） -->
       <main class="da-map">
-        <div class="da-scroll-wrap" ref="scrollRef">
-          <div class="da-parchment">
-            <div class="da-parchment__edge da-parchment__edge--left"></div>
-            <div class="da-parchment__body">
-              <!-- 底层：羊皮纸基底 -->
-              <img :src="parchmentBaseUrl" class="da-parchment__base" alt="" draggable="false" />
-              <!-- ECharts 地图层（半透明填充，让底图透出） -->
-              <VChart
-                ref="vchartRef"
-                class="da-map__chart"
-                :option="mapOption"
-                :init-options="mapInitOptions"
-                :update-options="mapUpdateOptions"
-                @click="handleMapClick"
-                autoresize
-              />
-              <!-- 四角暗角晕影 -->
-              <div class="da-parchment__vignette"></div>
-              <!-- #2 图钉式需求图例 -->
-              <div class="da-pin-legend">
-                <div class="pin-legend__list">
-                  <div class="pin-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
-                    <div class="pin" style="--pin-color: #8B5E14;"><div class="pin__head"></div><div class="pin__needle"></div></div>
-                    <span class="pin-label">极高 (&gt;60)</span>
-                  </div>
-                  <div class="pin-item" :class="{ active: activeLevel === 3 }" @click="highlightMapLevel(3)">
-                    <div class="pin" style="--pin-color: #a67c52;"><div class="pin__head"></div><div class="pin__needle"></div></div>
-                    <span class="pin-label">高 (41-60)</span>
-                  </div>
-                  <div class="pin-item" :class="{ active: activeLevel === 2 }" @click="highlightMapLevel(2)">
-                    <div class="pin" style="--pin-color: #c4a878;"><div class="pin__head"></div><div class="pin__needle"></div></div>
-                    <span class="pin-label">中 (21-40)</span>
-                  </div>
-                  <div class="pin-item" :class="{ active: activeLevel === 1 }" @click="highlightMapLevel(1)">
-                    <div class="pin" style="--pin-color: #ddd0b8;"><div class="pin__head"></div><div class="pin__needle"></div></div>
-                    <span class="pin-label">低 (≤20)</span>
-                  </div>
+        <!-- 上半：行业气泡图（ECharts graph + force） -->
+        <div class="da-bubble-wrap">
+          <div class="da-bubble-job-tag" v-if="selectedJob">
+            <Icon icon="lucide:briefcase" :width="12" />
+            <b :style="{ color: selectedJob.domainColor }">{{ selectedJob.jobName || selectedJob.name }}</b>
+            <span class="da-bubble-job-tag__domain">{{ selectedJob.name }}</span>
+          </div>
+          <div class="da-bubble-job-tag da-bubble-job-tag--empty" v-else>
+            <Icon icon="lucide:mouse-pointer-click" :width="12" />
+            <span>点击气泡选择岗位</span>
+          </div>
+          <VChart
+            class="da-bubble-vchart"
+            :option="bubbleChartOption"
+            :update-options="bubbleUpdateOptions"
+            @click="handleBubbleClick"
+            autoresize
+          />
+        </div>
+
+        <!-- 下半：地图 + 薪资柱状图 -->
+        <div class="da-bottom">
+          <!-- 左：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
+          <div class="da-map-inner" ref="scrollRef">
+            <img :src="parchmentBaseUrl" class="da-map-inner__base" alt="" draggable="false" />
+            <VChart
+              ref="vchartRef"
+              class="da-map__chart"
+              :option="mapOption"
+              :init-options="mapInitOptions"
+              :update-options="mapUpdateOptions"
+              @click="handleMapClick"
+              autoresize
+            />
+            <div class="da-map-inner__vignette"></div>
+            <!-- 图钉图例（缩小版） -->
+            <div class="da-pin-legend da-pin-legend--sm">
+              <div class="pin-legend__list">
+                <div class="pin-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
+                  <div class="pin pin--sm" style="--pin-color:#8B5E14"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                  <span class="pin-label">极高(&gt;60)</span>
+                </div>
+                <div class="pin-item" :class="{ active: activeLevel === 3 }" @click="highlightMapLevel(3)">
+                  <div class="pin pin--sm" style="--pin-color:#a67c52"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                  <span class="pin-label">高(41-60)</span>
+                </div>
+                <div class="pin-item" :class="{ active: activeLevel === 2 }" @click="highlightMapLevel(2)">
+                  <div class="pin pin--sm" style="--pin-color:#c4a878"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                  <span class="pin-label">中(21-40)</span>
+                </div>
+                <div class="pin-item" :class="{ active: activeLevel === 1 }" @click="highlightMapLevel(1)">
+                  <div class="pin pin--sm" style="--pin-color:#ddd0b8"><div class="pin__head"></div><div class="pin__needle"></div></div>
+                  <span class="pin-label">低(≤20)</span>
                 </div>
               </div>
             </div>
-            <div class="da-parchment__edge da-parchment__edge--right"></div>
+            <div class="da-map__hint da-map__hint--sm">
+              <span class="da-map__hint-dot"></span>
+              <span><b>{{ roleSearch }}</b> · 点击省份</span>
+            </div>
           </div>
-        </div>
-        <div class="da-map__hint">
-          <span class="da-map__hint-dot"></span>
-          <span>当前查看：<b>{{ roleSearch }}</b> · 点击省份查看薪资与需求详情 · Shift+点击对比</span>
+
+          <!-- 右：薪资对比柱状图 -->
+          <div class="da-salary-chart">
+            <div class="da-section__title da-section__title--sm">
+              <Icon icon="lucide:bar-chart-2" :width="12" />薪资区间对比（K/月）
+            </div>
+            <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
+          </div>
         </div>
       </main>
 
@@ -800,7 +1223,57 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   white-space: nowrap;
 }
 
-/* 搜索栏（绝对居中于 header） */
+/* 头部搜索栏 */
+.da-header-search {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(240,230,210,0.7); backdrop-filter: blur(8px);
+  border: 1px solid rgba(139,105,20,0.2);
+  border-radius: 22px; padding: 2px 4px 2px 12px;
+  min-width: 220px; max-width: 360px; width: 100%;
+  transition: all 0.25s ease;
+}
+.da-header-search:focus-within {
+  border-color: rgba(139,105,20,0.45);
+  background: rgba(240,230,210,0.92);
+  box-shadow: 0 2px 12px rgba(62,48,32,0.12);
+}
+.da-header-search__icon { color: rgba(139,105,20,0.45); flex-shrink: 0; }
+.da-header-search:focus-within .da-header-search__icon { color: rgba(139,105,20,0.75); }
+.da-header-search__input {
+  flex: 1; background: transparent; border: none; padding: 6px 10px;
+  font-family: inherit; font-size: 13px; color: #3E3020; outline: none;
+  min-width: 0; letter-spacing: 0.03em;
+}
+.da-header-search__input::placeholder { color: rgba(107,90,66,0.45); font-style: italic; }
+.da-header-search__btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(107,90,66,0.12); border: none; color: #5A4A36;
+  width: 30px; height: 30px; cursor: pointer; border-radius: 50%;
+  transition: all 0.2s;
+}
+.da-header-search__btn:hover { background: rgba(139,105,20,0.25); color: #3E3020; }
+
+/* 气泡图内岗位标签（左上角） */
+.da-bubble-job-tag {
+  position: absolute; top: 8px; left: 10px; z-index: 5;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(240,230,210,0.88); backdrop-filter: blur(6px);
+  border: 1px solid rgba(139,105,20,0.18);
+  border-radius: 16px; padding: 4px 12px 4px 10px;
+  font-size: 12px; font-family: var(--font-title), KaiTi, serif;
+  color: var(--text-200); letter-spacing: 0.04em;
+  box-shadow: 0 1px 6px rgba(62,48,32,0.1);
+  pointer-events: none;
+}
+.da-bubble-job-tag b { font-size: 13px; font-weight: 700; }
+.da-bubble-job-tag__domain { font-size: 11px; color: var(--text-300); margin-left: 1px; }
+.da-bubble-job-tag__domain::before { content: '('; }
+.da-bubble-job-tag__domain::after { content: ')'; }
+.da-bubble-job-tag--empty {
+  color: var(--text-300); font-style: italic; font-size: 11px;
+  opacity: 0.75;
+}
+
 .da-map-search-wrap {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center;
@@ -987,53 +1460,89 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 }
 .year-slider__labels span.active { color: var(--primary-100); font-weight: 700; }
 
-/* ═══ 中央地图 — 羊皮卷 ═══ */
+/* ═══ 中央区域（气泡图 + 地图 + 薪资图） ═══ */
 .da-map {
   flex: 1; min-width: 0; position: relative;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column;
   background: var(--bg-300);
-  z-index: 1;
+  z-index: 1; overflow: hidden;
 }
-.da-scroll-wrap {
-  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  padding: 8px;
+
+/* 上半：气泡图区域 */
+.da-bubble-wrap {
+  position: relative;
+  flex: 0 0 50%; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-100);
+  border-bottom: 1px solid var(--bg-300);
+  padding: 4px 8px 0;
+  overflow: hidden;
 }
-.da-parchment {
-  display: flex; width: 100%; height: 100%;
-  filter: drop-shadow(0 4px 20px rgba(62,48,32,0.25));
+.da-bubble-vchart {
+  width: 100%; height: 100%;
+  display: block;
 }
-.da-parchment__edge {
-  width: 20px; flex-shrink: 0; position: relative;
+
+/* 下半：地图 + 薪资图 */
+.da-bottom {
+  flex: 0 0 50%; min-height: 0;
+  display: flex; overflow: hidden;
 }
-.da-parchment__edge--left {
+
+/* 下半左：卷轴风格地图容器 */
+.da-map-inner {
+  flex: 1; min-width: 0; position: relative;
+  border-right: 1px solid var(--bg-300);
+  overflow: hidden;
+}
+/* 左右卷轴边（用伪元素模拟，不影响 ECharts DOM） */
+.da-map-inner::before,
+.da-map-inner::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 14px; z-index: 5; pointer-events: none;
+}
+.da-map-inner::before {
+  left: 0;
   background: linear-gradient(90deg, #9C8B78 0%, #B8A990 40%, #C8BBAA 100%);
-  border-radius: 6px 0 0 6px;
+  border-radius: 4px 0 0 4px;
   box-shadow: inset -3px 0 8px rgba(62,48,32,0.15);
 }
-.da-parchment__edge--right {
+.da-map-inner::after {
+  right: 0;
   background: linear-gradient(270deg, #9C8B78 0%, #B8A990 40%, #C8BBAA 100%);
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 4px 4px 0;
   box-shadow: inset 3px 0 8px rgba(62,48,32,0.15);
 }
-.da-parchment__body {
-  flex: 1; position: relative; overflow: hidden;
-  border-top: 1px solid rgba(139,105,20,0.25);
-  border-bottom: 1px solid rgba(139,105,20,0.25);
-}
-.da-parchment__body::after {
-  content: ''; position: absolute; inset: 0; z-index: 5; pointer-events: none;
-  opacity: 0.04;
-  filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E#n");
-  background: rgba(120,100,70,0.5);
-}
-.da-parchment__base {
+/* 羊皮纸底图 */
+.da-map-inner__base {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; z-index: 0; pointer-events: none;
   filter: saturate(0.5) brightness(1.12) contrast(0.95);
 }
-.da-parchment__vignette {
+/* 四角暗角 */
+.da-map-inner__vignette {
   position: absolute; inset: 0; z-index: 4; pointer-events: none;
   background: radial-gradient(ellipse at center, transparent 45%, rgba(62,48,32,0.15) 100%);
+}
+.da-map-inner .da-map__chart {
+  position: absolute; inset: 0; z-index: 1; mix-blend-mode: multiply;
+}
+
+/* 下半右：薪资柱状图 */
+.da-salary-chart {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg-100);
+  padding: 8px 10px 6px;
+  overflow: hidden;
+}
+.da-salary-vchart {
+  flex: 1; min-height: 0; width: 100%;
+}
+.da-section__title--sm {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--primary-100);
+  letter-spacing: 0.06em; margin-bottom: 6px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--bg-300); flex-shrink: 0;
 }
 
 /* 图钉式图例 */
@@ -1041,6 +1550,9 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   position: absolute; left: 14px; top: 38%; transform: translateY(-50%); z-index: 6;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   pointer-events: none;
+}
+.da-pin-legend--sm {
+  left: 8px; top: 42%; gap: 3px;
 }
 .pin-legend__title {
   font-size: 11px; font-weight: 700; color: #3E3020; letter-spacing: 0.1em;
@@ -1097,16 +1609,27 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 .pin-item.active .pin-label { opacity: 1; transform: translateX(0); color: var(--primary-100, #8B2500); font-weight: 600; }
 .da-map__chart { width: 100%; height: 100%; position: relative; z-index: 1; mix-blend-mode: multiply; }
 .da-map__hint {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px; z-index: 6;
   font-size: 12px; color: #3E3020; padding: 6px 14px;
   background: rgba(240,230,210,0.88); border: 1px solid rgba(139,105,20,0.25);
   border-radius: 20px; backdrop-filter: blur(4px); white-space: nowrap;
 }
+.da-map__hint--sm {
+  font-size: 10px; padding: 4px 10px; bottom: 6px;
+}
 .da-map__hint b { color: var(--primary-100, #8B2500); }
 .da-map__hint-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
   background: #8B5E14; animation: hintPulse 2s ease-in-out infinite;
+}
+
+/* 缩小版图钉 */
+.pin--sm .pin__head {
+  width: 10px; height: 10px;
+}
+.pin--sm .pin__needle {
+  height: 6px;
 }
 @keyframes hintPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
