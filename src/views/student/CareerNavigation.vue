@@ -1,12 +1,17 @@
-<!-- 页面：职途导航；路由：student/career-navigation；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：职途导航 · 简历导入；路由：student/career-navigation；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
-import { useCareerInsights, roleOptions } from '@/composables/useCareerInsights'
+import { useUserStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
+import { getCareerInsightsMock, roleOptions } from '@/composables/useCareerInsights'
 import type { CareerRole } from '@/composables/useCareerInsights'
 
-const { targetRole } = useCareerInsights()
+const router = useRouter()
+const userStore = useUserStore()
+const resumeStore = useResumeStore()
 
 /* ═══ 主题色（与 CareerAnalysis 统一） ═══ */
 const C = {
@@ -14,1154 +19,1010 @@ const C = {
   panel: '#EDE5D6',
   panelBorder: '#D4C9B5',
   zhusha: '#8B2500',
-  zhushaLight: '#A0472D',
   gold: '#8B6914',
-  accent: '#2B4C6F',
-  green: '#5B7744',
   textPrimary: '#1A1410',
   textSecondary: '#6B5D4F',
   textMuted: '#9C8B78',
 }
 void C
 
-/* ═══ 职业路径数据 ═══ */
-type Stage = {
-  id: string
-  level: number
-  name: string
-  alias: string
-  years: string
-  salary: string
-  salaryNum: [number, number]
-  icon: string
-  skills: string[]
-  milestones: string[]
-  status: 'completed' | 'current' | 'locked'
-}
+type ParsePhase = 'idle' | 'parsing' | 'done'
 
-type RoadmapData = {
-  role: CareerRole
-  color: string
-  icon: string
-  stages: Stage[]
-}
+const pageRef = ref<HTMLElement | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const isDragOver = ref(false)
+const pasteText = ref('')
+const uploadedFileName = ref('')
+const parsePhase = ref<ParsePhase>('idle')
+const parseProgress = ref(0)
+const parseMsg = ref('')
+const selectedDirection = ref<CareerRole | ''>('')
 
-const roadmapMap: Record<CareerRole, RoadmapData> = {
-  前端开发: {
-    role: '前端开发',
-    color: '#2B4C6F',
-    icon: 'lucide:monitor',
-    stages: [
-      {
-        id: 'fe-1', level: 1, name: '初级前端工程师', alias: '初级', years: '0–1 年',
-        salary: '8 – 15K', salaryNum: [8, 15], icon: 'lucide:seedling',
-        skills: ['HTML / CSS', 'JavaScript 基础', 'Vue 3 基础', 'Git 基础'],
-        milestones: ['独立完成简单页面还原', '能读懂他人代码并提 PR', '理解组件化思想'],
-        status: 'completed',
-      },
-      {
-        id: 'fe-2', level: 2, name: '中级前端工程师', alias: '中级', years: '1–3 年',
-        salary: '15 – 25K', salaryNum: [15, 25], icon: 'lucide:code-2',
-        skills: ['TypeScript', 'Vue 3 Composition API', '状态管理 Pinia', '工程化 Vite'],
-        milestones: ['独立负责模块开发', '性能优化实践', '参与技术方案评审'],
-        status: 'current',
-      },
-      {
-        id: 'fe-3', level: 3, name: '高级前端工程师', alias: '高级', years: '3–6 年',
-        salary: '25 – 40K', salaryNum: [25, 40], icon: 'lucide:layers',
-        skills: ['架构设计', 'SSR / 微前端', '性能监控', '跨端开发'],
-        milestones: ['主导复杂项目架构', '搭建团队工程体系', '制定技术规范'],
-        status: 'locked',
-      },
-      {
-        id: 'fe-4', level: 4, name: '技术专家', alias: '专家', years: '6–10 年',
-        salary: '40 – 60K', salaryNum: [40, 60], icon: 'lucide:star',
-        skills: ['技术决策', '前端基础设施', '团队技术培养', '业务架构'],
-        milestones: ['影响跨团队技术方向', '构建前端基础设施', '主导大型项目落地'],
-        status: 'locked',
-      },
-      {
-        id: 'fe-5', level: 5, name: '架构师 / 技术负责人', alias: '架构师', years: '10 年+',
-        salary: '60K+', salaryNum: [60, 100], icon: 'lucide:crown',
-        skills: ['全链路架构', '组织技术战略', '技术选型决策', '跨部门协作'],
-        milestones: ['制定公司级技术战略', '输出行业影响力', '打造技术品牌'],
-        status: 'locked',
-      },
-    ],
-  },
-  后端开发: {
-    role: '后端开发',
-    color: '#5B7744',
-    icon: 'lucide:server',
-    stages: [
-      {
-        id: 'be-1', level: 1, name: '初级后端工程师', alias: '初级', years: '0–1 年',
-        salary: '8 – 14K', salaryNum: [8, 14], icon: 'lucide:seedling',
-        skills: ['Java / Spring Boot 基础', 'MySQL 基础', 'Git 操作', 'HTTP 协议'],
-        milestones: ['能完成 CRUD 接口开发', '理解 MVC 分层架构', '参与联调测试'],
-        status: 'completed',
-      },
-      {
-        id: 'be-2', level: 2, name: '中级后端工程师', alias: '中级', years: '1–3 年',
-        salary: '14 – 25K', salaryNum: [14, 25], icon: 'lucide:database',
-        skills: ['Redis 缓存', 'MySQL 索引优化', 'JWT 鉴权', 'MQ 消息队列'],
-        milestones: ['独立完成业务模块', '接口性能调优', '参与数据库设计'],
-        status: 'current',
-      },
-      {
-        id: 'be-3', level: 3, name: '高级后端工程师', alias: '高级', years: '3–6 年',
-        salary: '25 – 45K', salaryNum: [25, 45], icon: 'lucide:cpu',
-        skills: ['分布式架构', '微服务设计', 'RPC / gRPC', '性能压测与调优'],
-        milestones: ['主导服务架构设计', '高并发场景落地', '推进技术方案落地'],
-        status: 'locked',
-      },
-      {
-        id: 'be-4', level: 4, name: '后端技术专家', alias: '专家', years: '6–10 年',
-        salary: '45 – 65K', salaryNum: [45, 65], icon: 'lucide:star',
-        skills: ['系统稳定性', '灾备设计', '技术沉淀与输出', '团队培养'],
-        milestones: ['构建核心基础服务', '推进技术中台', '影响业务技术方向'],
-        status: 'locked',
-      },
-      {
-        id: 'be-5', level: 5, name: '架构师 / CTO', alias: '架构师', years: '10 年+',
-        salary: '65K+', salaryNum: [65, 120], icon: 'lucide:crown',
-        skills: ['企业级架构', '技术战略规划', '研发效能体系', '组织管理'],
-        milestones: ['制定公司研发战略', '引领技术演进', '打造研发组织文化'],
-        status: 'locked',
-      },
-    ],
-  },
-  测试开发: {
-    role: '测试开发',
-    color: '#7B5EA7',
-    icon: 'lucide:flask-conical',
-    stages: [
-      {
-        id: 'qe-1', level: 1, name: '初级测试工程师', alias: '初级', years: '0–1 年',
-        salary: '7 – 12K', salaryNum: [7, 12], icon: 'lucide:seedling',
-        skills: ['手动测试', 'Bug 报告', 'Postman 接口测试', 'Git 基础'],
-        milestones: ['能编写测试用例', '完成功能冒烟测试', '参与回归测试'],
-        status: 'completed',
-      },
-      {
-        id: 'qe-2', level: 2, name: '中级测试开发工程师', alias: '中级', years: '1–3 年',
-        salary: '12 – 20K', salaryNum: [12, 20], icon: 'lucide:terminal',
-        skills: ['Playwright / Selenium', 'Python 脚本', '接口自动化', 'CI 集成'],
-        milestones: ['搭建自动化测试框架', '接口测试覆盖 80%+', '与 CI/CD 集成'],
-        status: 'current',
-      },
-      {
-        id: 'qe-3', level: 3, name: '高级测试开发工程师', alias: '高级', years: '3–6 年',
-        salary: '20 – 35K', salaryNum: [20, 35], icon: 'lucide:shield-check',
-        skills: ['性能测试 / 压测', '安全测试', '质量体系建设', '测试平台开发'],
-        milestones: ['建立质量保障体系', '主导测试平台建设', '推进分层测试策略'],
-        status: 'locked',
-      },
-      {
-        id: 'qe-4', level: 4, name: '测试架构师', alias: '架构师', years: '6 年+',
-        salary: '35 – 55K', salaryNum: [35, 55], icon: 'lucide:crown',
-        skills: ['测试基础设施', '智能化测试', 'DevOps', '工程效能'],
-        milestones: ['驱动全公司质量文化', '智能化测试探索', '引领测试行业标准'],
-        status: 'locked',
-      },
-      {
-        id: 'qe-5', level: 5, name: '工程效能负责人', alias: '负责人', years: '8 年+',
-        salary: '55K+', salaryNum: [55, 90], icon: 'lucide:trophy',
-        skills: ['研发效能度量', '平台化建设', '组织能力建设', '战略决策'],
-        milestones: ['制定效能提升战略', '建立工程师文化', '输出行业最佳实践'],
-        status: 'locked',
-      },
-    ],
-  },
-  数据分析: {
-    role: '数据分析',
-    color: '#8B6914',
-    icon: 'lucide:bar-chart-2',
-    stages: [
-      {
-        id: 'da-1', level: 1, name: '初级数据分析师', alias: '初级', years: '0–1 年',
-        salary: '8 – 13K', salaryNum: [8, 13], icon: 'lucide:seedling',
-        skills: ['Excel / SQL 基础', '数据清洗', 'Python 基础', '基础统计学'],
-        milestones: ['能完成数据报表制作', '基础 SQL 查询', '参与日常数据取数'],
-        status: 'completed',
-      },
-      {
-        id: 'da-2', level: 2, name: '中级数据分析师', alias: '中级', years: '1–3 年',
-        salary: '13 – 22K', salaryNum: [13, 22], icon: 'lucide:trending-up',
-        skills: ['Python Pandas', 'BI 工具', 'A/B 测试', '指标体系建立'],
-        milestones: ['独立完成专题分析', '建立数据看板', '支撑业务决策'],
-        status: 'current',
-      },
-      {
-        id: 'da-3', level: 3, name: '高级数据分析师', alias: '高级', years: '3–6 年',
-        salary: '22 – 38K', salaryNum: [22, 38], icon: 'lucide:brain-circuit',
-        skills: ['机器学习应用', '大数据处理', '埋点体系设计', '增长分析方法论'],
-        milestones: ['主导增长分析项目', '建立指标体系', '影响产品策略'],
-        status: 'locked',
-      },
-      {
-        id: 'da-4', level: 4, name: '数据科学家', alias: '科学家', years: '5 年+',
-        salary: '38 – 60K', salaryNum: [38, 60], icon: 'lucide:star',
-        skills: ['深度学习', '因果推断', '实验设计', '算法模型'],
-        milestones: ['主导算法模型落地', '推进数据驱动文化', '输出方法论沉淀'],
-        status: 'locked',
-      },
-      {
-        id: 'da-5', level: 5, name: '数据负责人 / CDO', alias: '负责人', years: '8 年+',
-        salary: '60K+', salaryNum: [60, 100], icon: 'lucide:crown',
-        skills: ['数据战略规划', '数据中台', '组织数据文化', '商业决策支撑'],
-        milestones: ['制定公司数据战略', '构建数据中台', '引领数字化转型'],
-        status: 'locked',
-      },
-    ],
-  },
-  机器学习工程师: {
-    role: '机器学习工程师',
-    color: '#8B2500',
-    icon: 'lucide:brain',
-    stages: [
-      {
-        id: 'ml-1', level: 1, name: '初级机器学习工程师', alias: '初级', years: '0–1 年',
-        salary: '10 – 18K', salaryNum: [10, 18], icon: 'lucide:seedling',
-        skills: ['Python', '机器学习基础', 'Scikit-learn', '数据预处理'],
-        milestones: ['能复现经典算法', '参与数据标注流程', '完成模型训练任务'],
-        status: 'completed',
-      },
-      {
-        id: 'ml-2', level: 2, name: '中级机器学习工程师', alias: '中级', years: '1–3 年',
-        salary: '18 – 30K', salaryNum: [18, 30], icon: 'lucide:cpu',
-        skills: ['深度学习 PyTorch', '特征工程', '模型评估调优', '数据管道'],
-        milestones: ['独立完成模型迭代', '模型在线推理部署', '参与算法方案设计'],
-        status: 'current',
-      },
-      {
-        id: 'ml-3', level: 3, name: '高级机器学习工程师', alias: '高级', years: '3–6 年',
-        salary: '30 – 50K', salaryNum: [30, 50], icon: 'lucide:zap',
-        skills: ['大模型 / LLM', 'MLOps 工程化', '分布式训练', '系统优化'],
-        milestones: ['主导模型系统设计', 'MLOps 平台建设', '算法创新产出'],
-        status: 'locked',
-      },
-      {
-        id: 'ml-4', level: 4, name: 'AI 科学家 / 算法专家', alias: '专家', years: '5 年+',
-        salary: '50 – 80K', salaryNum: [50, 80], icon: 'lucide:star',
-        skills: ['前沿算法研究', 'Prompt Engineering', '模型蒸馏压缩', '业务落地'],
-        milestones: ['发表/参与顶会论文', '引领算法方向', '建立算法影响力'],
-        status: 'locked',
-      },
-      {
-        id: 'ml-5', level: 5, name: 'AI 技术负责人 / 首席科学家', alias: '首席', years: '8 年+',
-        salary: '80K+', salaryNum: [80, 150], icon: 'lucide:crown',
-        skills: ['AI 战略规划', '技术方向引领', '商业化落地', '团队建设'],
-        milestones: ['制定公司 AI 战略', '推进 AI 产品化', '引领行业技术趋势'],
-        status: 'locked',
-      },
-    ],
-  },
-}
+const ACCEPTED_EXTS = ['.doc', '.docx', '.ppt', '.pptx', '.pdf', '.txt']
+const ACCEPTED_MIME = [
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/pdf',
+  'text/plain',
+].join(',')
 
-const currentRoadmap = computed(() => roadmapMap[targetRole.value])
+let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
-const selectedStageId = ref<string | null>(null)
-const selectedStage = computed<Stage | null>(() => {
-  if (!selectedStageId.value) return currentRoadmap.value.stages.find(s => s.status === 'current') ?? null
-  return currentRoadmap.value.stages.find(s => s.id === selectedStageId.value) ?? null
-})
-
-function selectStage(id: string) {
-  selectedStageId.value = id
-}
-
-function onRoleChange(role: CareerRole) {
-  targetRole.value = role
-  selectedStageId.value = null
-}
-
-/* ═══ 进度计算 ═══ */
-const progressPercent = computed(() => {
-  const stages = currentRoadmap.value.stages
-  const currentIdx = stages.findIndex(s => s.status === 'current')
-  if (currentIdx < 0) return 0
-  return Math.round(((currentIdx + 0.5) / stages.length) * 100)
-})
-
-/* ═══ 薪资图宽度计算 ═══ */
-function salaryBarWidth(stage: Stage): number {
-  const maxSalary = 150
-  return Math.min(100, (stage.salaryNum[1] / maxSalary) * 100)
-}
-
-/* ═══ GSAP 动画 ═══ */
-const containerRef = ref<HTMLElement | null>(null)
-let ctx: ReturnType<typeof gsap.context> | null = null
-
-onMounted(() => {
-  if (!containerRef.value) return
+function setupEntrance() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  ctx = gsap.context(() => {
-    gsap.fromTo('.cn-hero', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
-    gsap.fromTo('.cn-stage-card', { opacity: 0, x: -20 }, { opacity: 1, x: 0, stagger: 0.06, duration: 0.3, ease: 'power2.out', delay: 0.1 })
-    gsap.fromTo('.cn-detail-panel', { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power2.out', delay: 0.25 })
-  }, containerRef.value)
+  gsapCtx = gsap.context(() => {
+    gsap.fromTo('.rp-header', { opacity: 0, y: -18 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' })
+    gsap.fromTo('.rp-editorial', { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out', delay: 0.1 })
+    gsap.fromTo('.rp-left', { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.45, ease: 'power2.out', delay: 0.05 })
+    gsap.fromTo('.rp-right', { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power2.out', delay: 0.15 })
+  }, pageRef.value!)
+}
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function onFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (file) handleFile(file)
+}
+
+function onDrop(e: DragEvent) {
+  isDragOver.value = false
+  const file = e.dataTransfer?.files?.[0]
+  if (file) handleFile(file)
+}
+
+function handleFile(file: File) {
+  uploadedFileName.value = file.name
+  pasteText.value = ''
+}
+
+function detectRoleFromText(text: string): CareerRole {
+  const t = text.toLowerCase()
+  if (/机器学习|深度学习|pytorch|tensorflow|ml|ai|算法/.test(t)) return '机器学习工程师'
+  if (/python|数据分析|sql|bi|pandas|数据仓库|etl/.test(t)) return '数据分析'
+  if (/测试|playwright|selenium|jest|自动化测试|qa/.test(t)) return '测试开发'
+  if (/java|spring|mysql|redis|后端|backend|mybatis|golang|go/.test(t)) return '后端开发'
+  if (selectedDirection.value) return selectedDirection.value
+  return '前端开发'
+}
+
+const PARSE_MSGS = [
+  '正在读取文档结构…',
+  '提取技能关键词…',
+  '分析工作经历…',
+  '匹配职业方向…',
+  '生成能力画像数据…',
+  '解析完成',
+]
+
+async function startParse() {
+  const input = pasteText.value.trim() || uploadedFileName.value
+  if (!input) return
+
+  parsePhase.value = 'parsing'
+  parseProgress.value = 0
+  resumeStore.reset()
+
+  const step = 100 / PARSE_MSGS.length
+  for (let i = 0; i < PARSE_MSGS.length; i++) {
+    parseMsg.value = PARSE_MSGS[i]!
+    await new Promise<void>(r => {
+      gsap.to(parseProgress, {
+        value: (i + 1) * step,
+        duration: 0.35 + Math.random() * 0.3,
+        ease: 'power1.inOut',
+        onComplete: r,
+      })
+    })
+    await new Promise(r => setTimeout(r, 280 + Math.random() * 220))
+  }
+
+  const text = pasteText.value || uploadedFileName.value
+  const role = detectRoleFromText(text)
+  const insights = getCareerInsightsMock(role)
+
+  resumeStore.setResult({
+    rawText: pasteText.value,
+    fileName: uploadedFileName.value,
+    insights,
+    skills: insights.skillGraph.nodes.slice(0, 12).map(n => ({
+      name: n.name,
+      weight: n.heat / 100,
+      category: n.category,
+    })),
+  })
+
+  await nextTick()
+  parsePhase.value = 'done'
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  gsap.fromTo('.rp-result-area', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
+  gsap.fromTo('.rp-skill-chip', { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.04, duration: 0.25, ease: 'back.out(1.4)', delay: 0.1 })
+  gsap.fromTo('.rp-career-card', { opacity: 0, y: 12 }, { opacity: 1, y: 0, stagger: 0.07, duration: 0.3, ease: 'power2.out', delay: 0.2 })
+}
+
+function goToProfile() {
+  const role = resumeStore.insights?.predictedRole ?? resumeStore.matchedCareers[0]?.role ?? '前端开发'
+  router.push({ name: 'career-ability', query: { role } })
+}
+
+function goBack() {
+  router.push({ name: 'student-career' })
+}
+
+function resetPage() {
+  parsePhase.value = 'idle'
+  pasteText.value = ''
+  uploadedFileName.value = ''
+  parseProgress.value = 0
+  if (fileInputRef.value) fileInputRef.value.value = ''
+}
+
+/* ═══ 占位：roadmapMap 保留供 Step 3（career-path）使用 ═══
+type Stage = { id: string; level: number; name: string; alias: string; years: string; salary: string; salaryNum: [number,number]; icon: string; skills: string[]; milestones: string[]; status: 'completed'|'current'|'locked' }
+═══════════════════════════════════════════════════════════ */
+
+onMounted(async () => {
+  await nextTick()
+  setupEntrance()
 })
 
 onBeforeUnmount(() => {
-  ctx?.revert()
+  gsapCtx?.revert()
 })
 
-/* ═══ 状态样式映射 ═══ */
-const statusLabel: Record<Stage['status'], string> = {
-  completed: '已完成',
-  current: '当前阶段',
-  locked: '待解锁',
-}
+/* ═══ 注释保留（Step 3 用）: roadmapMap 原有数据已移除，如需恢复请查看 Git 历史 ═══ */
+
 </script>
 
 <template>
-  <div ref="containerRef" class="cn-root">
-    <!-- 顶部标题栏 -->
-    <div class="cn-hero">
-      <div class="cn-hero-left">
-        <div class="cn-hero-seal">
-          <Icon icon="lucide:route" class="cn-hero-icon" />
-        </div>
-        <div class="cn-hero-text">
-          <h1 class="cn-hero-title">职途导航</h1>
-          <p class="cn-hero-sub">规划职业成长路径 · 明确当前阶段目标</p>
-        </div>
+  <div class="rp-page" ref="pageRef">
+
+    <!-- HEADER -->
+    <header class="rp-header">
+      <div class="rp-header__left">
+        <button class="rp-back" @click="goBack"><Icon icon="lucide:arrow-left" :width="14"/><span>返回</span></button>
+        <span class="rp-brand-name">职途导航</span>
       </div>
-      <div class="cn-progress-bar-wrap">
-        <span class="cn-progress-label">整体进度</span>
-        <div class="cn-progress-track">
-          <div class="cn-progress-fill" :style="{ width: progressPercent + '%' }" />
-        </div>
-        <span class="cn-progress-pct">{{ progressPercent }}%</span>
+      <div class="rp-header__center"><div class="rp-header-tag">简历导入</div></div>
+      <div class="rp-header__right">
+        <div class="rp-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
+        <span class="rp-username">{{ userStore.currentUser?.name || '同学' }}</span>
       </div>
-    </div>
+    </header>
 
-    <!-- 角色切换 -->
-    <div class="cn-role-tabs">
-      <button
-        v-for="role in roleOptions"
-        :key="role"
-        class="cn-role-tab"
-        :class="{ 'is-active': targetRole === role }"
-        @click="onRoleChange(role)"
-      >
-        <Icon :icon="roadmapMap[role].icon" class="cn-role-tab-icon" />
-        <span>{{ role }}</span>
-      </button>
-    </div>
+    <!-- WORKSPACE -->
+    <div class="rp-workspace">
 
-    <!-- 主体 -->
-    <div class="cn-body">
-      <!-- 左：阶段路径 -->
-      <div class="cn-stages">
-        <div class="cn-stages-header">
-          <span class="cn-stages-title">成长路径</span>
-          <span class="cn-stages-role-badge">{{ targetRole }}</span>
+      <!-- LEFT: Editorial + Upload -->
+      <div class="rp-left">
+
+        <!-- Editorial headline -->
+        <div class="rp-editorial">
+          <span class="rp-greeting">
+            {{ (() => { const h = new Date().getHours(); return h < 12 ? '早上好' : h < 18 ? '下午好' : '晚上好' })() }}，{{ userStore.currentUser?.name || '同学' }}
+          </span>
+          <h1 class="rp-display-title">
+            <span class="rp-dt-a">找到你</span>
+            <span class="rp-dt-b">在职场宇宙中</span>
+            <span class="rp-dt-c">的坐标</span>
+          </h1>
+          <p class="rp-data-proof">
+            <span>近万条真实岗位</span><em class="rp-sep">·</em>
+            <span>全行业覆盖</span><em class="rp-sep">·</em>
+            <span>全国各省市</span>
+          </p>
         </div>
 
-        <div class="cn-stage-list">
+        <!-- Step indicator (compact inline) -->
+        <div class="rp-steps-inline">
+          <div class="rp-si-step rp-si-step--active">
+            <span class="rp-si-dot"></span>
+            <span class="rp-si-num">01</span>
+            <span class="rp-si-name">简历导入</span>
+          </div>
+          <span class="rp-si-line"></span>
+          <div class="rp-si-step">
+            <span class="rp-si-dot"></span>
+            <span class="rp-si-num">02</span>
+            <span class="rp-si-name">能力画像</span>
+          </div>
+          <span class="rp-si-line"></span>
+          <div class="rp-si-step">
+            <span class="rp-si-dot"></span>
+            <span class="rp-si-num">03</span>
+            <span class="rp-si-name">职业路径</span>
+          </div>
+        </div>
+
+        <!-- IDLE 态 -->
+        <div v-if="parsePhase === 'idle'" class="rp-idle-form">
           <div
-            v-for="(stage, idx) in currentRoadmap.stages"
-            :key="stage.id"
-            class="cn-stage-card"
-            :class="[`is-${stage.status}`, { 'is-selected': selectedStage?.id === stage.id }]"
-            @click="selectStage(stage.id)"
+            class="rp-drop-zone"
+            :class="{ 'rp-drop-zone--over': isDragOver }"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="onDrop"
+            @click="triggerFileInput"
           >
-            <!-- 连接线 -->
-            <div v-if="idx < currentRoadmap.stages.length - 1" class="cn-connector" :class="`is-${stage.status}`" />
-
-            <!-- 节点圆点 -->
-            <div class="cn-node-dot" :class="`is-${stage.status}`">
-              <Icon v-if="stage.status === 'completed'" icon="lucide:check" class="cn-node-icon" />
-              <Icon v-else-if="stage.status === 'current'" icon="lucide:circle-dot" class="cn-node-icon" />
-              <span v-else class="cn-node-num">{{ stage.level }}</span>
+            <input ref="fileInputRef" type="file" :accept="ACCEPTED_MIME" class="rp-file-input" @change="onFileChange" />
+            <div class="rp-drop-corner rp-drop-corner--tl"></div>
+            <div class="rp-drop-corner rp-drop-corner--tr"></div>
+            <div class="rp-drop-corner rp-drop-corner--bl"></div>
+            <div class="rp-drop-corner rp-drop-corner--br"></div>
+            <div class="rp-drop-body">
+              <div class="rp-drop-icon-wrap">
+                <Icon icon="lucide:file-up" :width="20" class="rp-drop-icon" />
+              </div>
+              <p class="rp-drop-title">{{ uploadedFileName || '拖入简历文件' }}</p>
+              <p class="rp-drop-formats">doc &nbsp;·&nbsp; pdf &nbsp;·&nbsp; ppt &nbsp;·&nbsp; txt</p>
             </div>
+          </div>
 
-            <!-- 卡片内容 -->
-            <div class="cn-stage-content">
-              <div class="cn-stage-head">
-                <span class="cn-stage-name">{{ stage.name }}</span>
-                <span class="cn-stage-status-tag" :class="`is-${stage.status}`">{{ statusLabel[stage.status] }}</span>
-              </div>
-              <div class="cn-stage-meta">
-                <span class="cn-meta-item">
-                  <Icon icon="lucide:clock" class="cn-meta-icon" />{{ stage.years }}
-                </span>
-                <span class="cn-meta-sep">·</span>
-                <span class="cn-meta-item cn-meta-salary">
-                  <Icon icon="lucide:banknote" class="cn-meta-icon" />{{ stage.salary }} / 月
-                </span>
-              </div>
+          <div class="rp-or-row">
+            <span class="rp-or-line"></span>
+            <span class="rp-or-text">或粘贴文字</span>
+            <span class="rp-or-line"></span>
+          </div>
 
-              <!-- 技能标签（仅展开态） -->
-              <div class="cn-stage-skills">
-                <span v-for="sk in stage.skills.slice(0, 3)" :key="sk" class="cn-skill-tag">{{ sk }}</span>
-                <span v-if="stage.skills.length > 3" class="cn-skill-tag cn-skill-more">+{{ stage.skills.length - 3 }}</span>
-              </div>
+          <textarea
+            class="rp-textarea"
+            v-model="pasteText"
+            placeholder="粘贴简历内容：工作经历、掌握技能、项目描述…"
+            rows="3"
+          />
 
-              <!-- 薪资条 -->
-              <div class="cn-salary-bar-wrap">
-                <div class="cn-salary-bar-track">
-                  <div
-                    class="cn-salary-bar-fill"
-                    :class="`is-${stage.status}`"
-                    :style="{ width: salaryBarWidth(stage) + '%' }"
-                  />
+          <!-- 方向预选 tiles -->
+          <div class="rp-dir-section">
+            <p class="rp-dir-label">偏好方向 <span class="rp-dir-hint">（可选，辅助分析）</span></p>
+            <div class="rp-dir-tiles">
+              <button
+                v-for="(r, i) in roleOptions"
+                :key="r"
+                class="rp-dir-tile"
+                :class="{ 'rp-dir-tile--active': selectedDirection === r }"
+                @click="selectedDirection = selectedDirection === r ? '' : r"
+              >
+                <Icon :icon="(['lucide:monitor','lucide:server','lucide:bug','lucide:bar-chart-2','lucide:cpu'])[i] || 'lucide:briefcase'" :width="14" class="rp-dir-tile__icon" />
+                <span class="rp-dir-tile__name">{{ r }}</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="rp-parse-btn" :disabled="!pasteText.trim() && !uploadedFileName" @click="startParse">
+            <span>开始匹配</span>
+            <Icon icon="lucide:arrow-right" :width="15" class="rp-parse-btn__arrow" />
+          </button>
+        </div>
+
+        <!-- PARSING 态 -->
+        <div v-else-if="parsePhase === 'parsing'" class="rp-loading-wrap">
+            <div class="rp-loading-seal">
+              <Icon icon="lucide:loader-circle" :width="34" class="rp-loading-spin" />
+            </div>
+            <p class="rp-loading-msg">{{ parseMsg }}</p>
+            <div class="rp-progress-track">
+              <div class="rp-progress-fill" :style="{ width: parseProgress + '%' }"></div>
+            </div>
+            <p class="rp-progress-pct">{{ Math.round(parseProgress) }}%</p>
+        </div>
+
+        <!-- DONE 态 -->
+        <div v-else class="rp-done-wrap">
+          <div class="rp-done-status">
+            <Icon icon="lucide:circle-check-big" :width="16" class="rp-done-icon" />
+            <span>解析完成，查看右侧结果</span>
+            <button class="rp-result-reset" @click="resetPage">
+              <Icon icon="lucide:rotate-ccw" :width="12" />重新上传
+            </button>
+          </div>
+          <div class="rp-privacy">
+            <Icon icon="lucide:shield-check" :width="12" class="rp-privacy__icon" />
+            <p class="rp-privacy__text">内容仅本地处理，不上传至任何服务器</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Orbital visualization -->
+      <div class="rp-right">
+
+        <!-- Orbital scene -->
+        <div class="rp-orbital-scene">
+          <div class="rp-orbital-field">
+
+          <!-- SVG animated rings + spokes -->
+          <svg class="rp-orbital-svg" viewBox="0 0 520 520" fill="none" aria-hidden="true">
+            <defs>
+              <radialGradient id="rpCG" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#8B2500" stop-opacity="0.45"/>
+                <stop offset="55%" stop-color="#8B2500" stop-opacity="0.08"/>
+                <stop offset="100%" stop-color="#8B2500" stop-opacity="0"/>
+              </radialGradient>
+              <radialGradient id="rpMG" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#8B6914" stop-opacity="0.12"/>
+                <stop offset="100%" stop-color="#8B6914" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="260" cy="260" r="115" fill="url(#rpCG)"/>
+            <circle cx="260" cy="260" r="200" fill="url(#rpMG)"/>
+            <!-- orbital rings -->
+            <circle class="rp-ring rp-ring--1" cx="260" cy="260" r="100" stroke="#8B2500" stroke-opacity="0.5" stroke-width="1.2" stroke-dasharray="8 12"/>
+            <circle class="rp-ring rp-ring--2" cx="260" cy="260" r="165" stroke="#8B6914" stroke-opacity="0.32" stroke-width="1" stroke-dasharray="5 16"/>
+            <circle class="rp-ring rp-ring--3" cx="260" cy="260" r="222" stroke="#C4B9A6" stroke-opacity="0.38" stroke-width="1.2" stroke-dasharray="4 14"/>
+            <!-- spokes to inner nodes -->
+            <line x1="260" y1="260" x2="260" y2="160" stroke="#8B2500" stroke-opacity="0.18" stroke-width="0.7" stroke-dasharray="2 4"/>
+            <line x1="260" y1="260" x2="347" y2="310" stroke="#8B2500" stroke-opacity="0.18" stroke-width="0.7" stroke-dasharray="2 4"/>
+            <line x1="260" y1="260" x2="173" y2="310" stroke="#8B2500" stroke-opacity="0.18" stroke-width="0.7" stroke-dasharray="2 4"/>
+            <!-- spokes to mid nodes -->
+            <line x1="260" y1="260" x2="403" y2="178" stroke="#8B6914" stroke-opacity="0.12" stroke-width="0.6" stroke-dasharray="2 4"/>
+            <line x1="260" y1="260" x2="260" y2="425" stroke="#8B6914" stroke-opacity="0.12" stroke-width="0.6" stroke-dasharray="2 4"/>
+            <line x1="260" y1="260" x2="117" y2="178" stroke="#8B6914" stroke-opacity="0.12" stroke-width="0.6" stroke-dasharray="2 4"/>
+            <!-- spokes to outer nodes -->
+            <line x1="260" y1="260" x2="416" y2="104" stroke="#C4B9A6" stroke-opacity="0.08" stroke-width="0.5" stroke-dasharray="2 5"/>
+            <line x1="260" y1="260" x2="104" y2="416" stroke="#C4B9A6" stroke-opacity="0.08" stroke-width="0.5" stroke-dasharray="2 5"/>
+          </svg>
+
+          <!-- Center: user avatar -->
+          <div class="rp-orbital-center">
+            <div class="rp-orbital-avatar">{{ userStore.currentUser?.name?.charAt(0) || '你' }}</div>
+            <span class="rp-oc-label">{{ (userStore.currentUser?.name || '你') + '的位置' }}</span>
+          </div>
+
+          <!-- Inner ring nodes (r=100, 3 nodes at 120° apart starting from top) -->
+          <!-- 互联网: (260,160) → 50%, 30.8% -->
+          <div class="rp-onode" style="left:50%;top:30.8%">
+            <div class="rp-obubble" style="--nc:#8B2500;--nbg:rgba(139,37,0,0.22)"><Icon icon="lucide:globe" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--above"><span class="rp-oname">互联网</span><span class="rp-ocount">2,847</span></div>
+          </div>
+          <!-- 金融: (347,310) → 66.7%, 59.6% -->
+          <div class="rp-onode" style="left:66.7%;top:59.6%">
+            <div class="rp-obubble" style="--nc:#8B6914;--nbg:rgba(139,105,20,0.22)"><Icon icon="lucide:trending-up" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--right"><span class="rp-oname">金融</span><span class="rp-ocount">1,623</span></div>
+          </div>
+          <!-- 医疗: (173,310) → 33.3%, 59.6% -->
+          <div class="rp-onode" style="left:33.3%;top:59.6%">
+            <div class="rp-obubble" style="--nc:#4A8B6A;--nbg:rgba(74,139,106,0.22)"><Icon icon="lucide:heart-pulse" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--left"><span class="rp-oname">医疗</span><span class="rp-ocount">892</span></div>
+          </div>
+
+          <!-- Mid ring nodes (r=165, 3 nodes at 120° apart starting from upper-right) -->
+          <!-- 制造: (403,178) → 77.5%, 34.2% -->
+          <div class="rp-onode" style="left:77.5%;top:34.2%">
+            <div class="rp-obubble" style="--nc:#9A7B4E;--nbg:rgba(154,123,78,0.22)"><Icon icon="lucide:factory" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--right"><span class="rp-oname">制造</span><span class="rp-ocount">1,204</span></div>
+          </div>
+          <!-- 教育: (260,425) → 50%, 81.7% -->
+          <div class="rp-onode" style="left:50%;top:81.7%">
+            <div class="rp-obubble" style="--nc:#4A6B8A;--nbg:rgba(74,107,138,0.22)"><Icon icon="lucide:graduation-cap" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--below"><span class="rp-oname">教育</span><span class="rp-ocount">734</span></div>
+          </div>
+          <!-- 零售: (117,178) → 22.5%, 34.2% -->
+          <div class="rp-onode" style="left:22.5%;top:34.2%">
+            <div class="rp-obubble" style="--nc:#8A5B4E;--nbg:rgba(138,91,78,0.22)"><Icon icon="lucide:shopping-bag" :width="13"/></div>
+            <div class="rp-olabel rp-olabel--left"><span class="rp-oname">零售</span><span class="rp-ocount">612</span></div>
+          </div>
+
+          <!-- Outer ring nodes (r=220, diagonal ±45°) -->
+          <!-- 物流: angle=-45° → (416,104) → 80%, 20% -->
+          <div class="rp-onode rp-onode--sm" style="left:80%;top:20%">
+            <div class="rp-obubble" style="--nc:#6A7A5B;--nbg:rgba(106,122,91,0.18)"><Icon icon="lucide:truck" :width="12"/></div>
+            <div class="rp-olabel rp-olabel--right"><span class="rp-oname">物流</span><span class="rp-ocount">481</span></div>
+          </div>
+          <!-- 建筑: angle=135° → (104,416) → 20%, 80% -->
+          <div class="rp-onode rp-onode--sm" style="left:20%;top:80%">
+            <div class="rp-obubble" style="--nc:#8A7A5B;--nbg:rgba(138,122,91,0.18)"><Icon icon="lucide:building-2" :width="12"/></div>
+            <div class="rp-olabel rp-olabel--left"><span class="rp-oname">建筑</span><span class="rp-ocount">376</span></div>
+          </div>
+
+          </div><!-- /.rp-orbital-field -->
+        </div>
+
+        <!-- Footer data strip -->
+        <div class="rp-right-footer">
+          <div class="rp-rf-item"><span class="rp-rf-val">9,849</span><span class="rp-rf-lbl">在线岗位</span></div>
+          <span class="rp-rf-sep">|</span>
+          <div class="rp-rf-item"><span class="rp-rf-val">8+</span><span class="rp-rf-lbl">覆盖行业</span></div>
+          <span class="rp-rf-sep">|</span>
+          <div class="rp-rf-item"><span class="rp-rf-val">34</span><span class="rp-rf-lbl">省市</span></div>
+          <span class="rp-rf-sep">|</span>
+          <div class="rp-rf-item">
+            <span class="rp-rf-val">{{ new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) }}</span>
+            <span class="rp-rf-lbl">更新</span>
+          </div>
+        </div>
+
+        <!-- Done: results overlay (slides in over orbital) -->
+        <Transition name="rp-fade">
+          <div v-if="parsePhase === 'done'" class="rp-right-results">
+            <div class="rp-result-card">
+              <div class="rp-result-card__head">
+                <Icon icon="lucide:circle-check-big" :width="13" class="rp-result-ok"/>
+                <span class="rp-result-card__title">识别技能 · {{ resumeStore.parsedSkills.length }} 项</span>
+              </div>
+              <div class="rp-skill-chips">
+                <span v-for="sk in resumeStore.parsedSkills" :key="sk.name" class="rp-skill-chip"
+                  :class="`rp-skill-chip--${sk.category === '前端' ? 'fe' : sk.category === '后端' ? 'be' : sk.category === '测试' ? 'qa' : sk.category === '数据' ? 'da' : sk.category === '机器学习' ? 'ml' : 'gen'}`"
+                >{{ sk.name }}</span>
+              </div>
+            </div>
+            <div class="rp-result-card">
+              <div class="rp-result-card__head">
+                <Icon icon="lucide:circle-check-big" :width="13" class="rp-result-ok"/>
+                <span class="rp-result-card__title">职业匹配度</span>
+              </div>
+              <div class="rp-career-cards">
+                <div v-for="(c, i) in resumeStore.matchedCareers.slice(0, 5)" :key="c.role" class="rp-career-card">
+                  <span class="rp-career-rank">{{ i + 1 }}</span>
+                  <span class="rp-career-role">{{ c.role }}</span>
+                  <div class="rp-career-bar-wrap"><div class="rp-career-bar" :style="{ width: Math.round(c.score * 100) + '%' }"></div></div>
+                  <span class="rp-career-score">{{ Math.round(c.score * 100) }}%</span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右：阶段详情 -->
-      <div class="cn-detail-panel" v-if="selectedStage">
-        <div class="cn-detail-header">
-          <div class="cn-detail-icon-wrap" :class="`is-${selectedStage.status}`">
-            <Icon :icon="selectedStage.icon" class="cn-detail-icon" />
-          </div>
-          <div>
-            <div class="cn-detail-title">{{ selectedStage.name }}</div>
-            <div class="cn-detail-alias">{{ selectedStage.alias }} · {{ selectedStage.years }}</div>
-          </div>
-        </div>
-
-        <!-- 薪资区间 -->
-        <div class="cn-detail-section">
-          <div class="cn-detail-section-label">薪资区间</div>
-          <div class="cn-detail-salary">
-            <span class="cn-detail-salary-num">{{ selectedStage.salary }}</span>
-            <span class="cn-detail-salary-unit">/ 月 · 全国中位数参考</span>
-          </div>
-          <div class="cn-detail-salary-bar-track">
-            <div
-              class="cn-detail-salary-bar-fill"
-              :class="`is-${selectedStage.status}`"
-              :style="{ width: salaryBarWidth(selectedStage) + '%' }"
-            />
-          </div>
-        </div>
-
-        <!-- 核心技能 -->
-        <div class="cn-detail-section">
-          <div class="cn-detail-section-label">核心技能要求</div>
-          <div class="cn-detail-skills-list">
-            <div v-for="(sk, i) in selectedStage.skills" :key="sk" class="cn-detail-skill-item">
-              <span class="cn-detail-skill-num">{{ String(i + 1).padStart(2, '0') }}</span>
-              <Icon icon="lucide:circle-dot" class="cn-detail-skill-dot" :class="`is-${selectedStage.status}`" />
-              <span class="cn-detail-skill-name">{{ sk }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 里程碑目标 -->
-        <div class="cn-detail-section">
-          <div class="cn-detail-section-label">阶段里程碑</div>
-          <div class="cn-detail-milestones">
-            <div v-for="(m, i) in selectedStage.milestones" :key="i" class="cn-detail-milestone">
-              <Icon
-                :icon="selectedStage.status === 'completed' ? 'lucide:check-circle-2' : 'lucide:circle'"
-                class="cn-milestone-icon"
-                :class="`is-${selectedStage.status}`"
-              />
-              <span>{{ m }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 行动建议 -->
-        <div class="cn-detail-section" v-if="selectedStage.status !== 'completed'">
-          <div class="cn-detail-section-label">行动建议</div>
-          <div class="cn-action-box" :class="`is-${selectedStage.status}`">
-            <template v-if="selectedStage.status === 'current'">
-              <p class="cn-action-text">你正处于此阶段，建议聚焦核心技能夯实，参与真实项目积累经验。</p>
-              <div class="cn-action-btns">
-                <button class="cn-action-btn cn-action-btn--primary" @click="$router.push('/app/student/skills')">
-                  <Icon icon="lucide:layers" />查看技能管理
-                </button>
-                <button class="cn-action-btn" @click="$router.push('/app/student/ai-assistant')">
-                  <Icon icon="lucide:bot" />AI 规划建议
-                </button>
-              </div>
-            </template>
-            <template v-else>
-              <p class="cn-action-text">先完成当前阶段目标，积累相关工作经验后再挑战此阶段。</p>
-              <button class="cn-action-btn" @click="$router.push('/app/student/career-analysis')">
-                <Icon icon="lucide:target" />查看职业分析
+            <div class="rp-cta-block">
+              <button class="rp-next-btn" @click="goToProfile">
+                <span>查看完整能力画像</span><Icon icon="lucide:arrow-right" :width="15"/>
               </button>
-            </template>
+              <p class="rp-next-hint">Step 02 · 技能图谱 &amp; 优劣势分析</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </Transition>
 
-      <!-- 未选中时的占位 -->
-      <div class="cn-detail-panel cn-detail-empty" v-else>
-        <Icon icon="lucide:route" class="cn-empty-icon" />
-        <p class="cn-empty-text">点击左侧阶段卡片查看详细规划</p>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.cn-root {
-  min-height: 100%;
-  background: #F7F2E8;
-  padding: 24px;
+/* ── CSS vars ── */
+:root {
+  --rp-bg: #F7F2E8;
+  --rp-panel: #EDE5D6;
+  --rp-border: #D4C9B5;
+  --rp-muted: #C4B9A6;
+  --rp-red: #8B2500;
+  --rp-gold: #8B6914;
+  --rp-text: #1A1410;
+  --rp-sub: #6B5D4F;
+  --rp-hint: #9C8B78;
+  --rp-dark: #1A1008;
+  --rp-dark2: #120D06;
+}
+
+/* ── Page container ── */
+.rp-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  background: var(--rp-bg);
   display: flex;
   flex-direction: column;
-  gap: 20px;
   font-family: var(--font-title, 'LXGW WenKai', serif);
+  overflow: hidden;
+}
+.rp-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(26,20,16,0.06) 1px, transparent 0);
+  background-size: 4px 4px;
 }
 
-/* ── 顶部标题 ── */
-.cn-hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 20px 24px;
-  background: #EDE5D6;
-  border: 1px solid #D4C9B5;
-  border-radius: 2px;
-}
-
-.cn-hero-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.cn-hero-seal {
-  width: 48px;
-  height: 48px;
-  border: 2px solid #8B2500;
+/* ═══ HEADER ═══ */
+.rp-header {
+  position: relative;
+  z-index: 10;
   display: grid;
-  place-items: center;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 28px;
+  height: 48px;
+  min-height: 48px;
+  background: #EDE5D6;
+  border-bottom: 1px solid #D4C9B5;
   flex-shrink: 0;
 }
+.rp-header__left { display: flex; align-items: center; gap: 14px; }
+.rp-header__center { display: flex; justify-content: center; }
+.rp-header__right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 
-.cn-hero-icon {
-  font-size: 22px;
-  color: #8B2500;
+.rp-back {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border: 1px solid #D4C9B5;
+  background: transparent; color: #6B5D4F;
+  font-size: 12px; font-family: inherit; cursor: pointer;
+  transition: all 0.2s ease; letter-spacing: 0.04em;
+}
+.rp-back:hover { border-color: #8B2500; color: #8B2500; }
+
+.rp-brand-name { font-size: 13px; font-weight: 700; color: #1A1410; letter-spacing: 0.14em; }
+
+.rp-header-tag {
+  font-size: 10px; letter-spacing: 0.18em;
+  color: #9C8B78; border: 1px solid #D4C9B5;
+  padding: 3px 12px; text-transform: uppercase;
 }
 
-.cn-hero-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1A1410;
-  letter-spacing: 0.06em;
-  margin: 0 0 2px;
+.rp-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: color-mix(in srgb, #8B2500 12%, #EDE5D6 88%);
+  border: 1.5px solid color-mix(in srgb, #8B2500 25%, #D4C9B5 75%);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; color: #8B2500; flex-shrink: 0;
 }
+.rp-username { font-size: 12px; color: #6B5D4F; letter-spacing: 0.04em; }
 
-.cn-hero-sub {
-  font-size: 12px;
-  color: #6B5D4F;
-  letter-spacing: 0.04em;
-  margin: 0;
-}
-
-.cn-progress-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cn-progress-label {
-  font-size: 12px;
-  color: #6B5D4F;
-  white-space: nowrap;
-}
-
-.cn-progress-track {
-  width: 160px;
-  height: 6px;
-  background: #D4C9B5;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.cn-progress-fill {
-  height: 100%;
-  background: #8B2500;
-  border-radius: 3px;
-  transition: width 0.8s ease;
-}
-
-.cn-progress-pct {
-  font-size: 13px;
-  font-weight: 700;
-  color: #8B2500;
-  min-width: 32px;
-}
-
-/* ── 角色标签 ── */
-.cn-role-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.cn-role-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
-  border: 1px solid #D4C9B5;
-  background: #EDE5D6;
-  color: #6B5D4F;
-  font-family: var(--font-title, inherit);
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: all 0.2s ease;
-}
-
-.cn-role-tab:hover {
-  border-color: #8B2500;
-  color: #8B2500;
-}
-
-.cn-role-tab.is-active {
-  background: #8B2500;
-  border-color: #8B2500;
-  color: #F7F2E8;
-}
-
-.cn-role-tab-icon {
-  font-size: 14px;
-}
-
-/* ── 主体布局 ── */
-.cn-body {
+/* ═══ WORKSPACE ═══ */
+.rp-workspace {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 20px;
-  align-items: start;
-}
-
-/* ── 左侧路径 ── */
-.cn-stages {
-  background: #EDE5D6;
-  border: 1px solid #D4C9B5;
-  border-radius: 2px;
+  grid-template-columns: 480px 1fr;
+  position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
-.cn-stages-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid #D4C9B5;
-}
 
-.cn-stages-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1A1410;
-  letter-spacing: 0.06em;
-}
-
-.cn-stages-role-badge {
-  font-size: 12px;
-  padding: 2px 10px;
-  background: color-mix(in srgb, #8B2500 10%, #EDE5D6 90%);
-  color: #8B2500;
-  border: 1px solid color-mix(in srgb, #8B2500 25%, #D4C9B5 75%);
-  border-radius: 1px;
-}
-
-.cn-stage-list {
-  padding: 16px 20px;
+/* ═══ LEFT PANEL ═══ */
+.rp-left {
+  padding: 24px 36px 20px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0;
-}
-
-/* ── 阶段卡片 ── */
-.cn-stage-card {
+  gap: 12px;
+  min-height: 0;
+  border-right: 1px solid #D4C9B5;
+  background: #F7F2E8;
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px 16px;
-  margin-left: 0;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: transparent;
-}
-
-.cn-stage-card:hover {
-  background: color-mix(in srgb, #8B2500 5%, #EDE5D6 95%);
-  border-color: #D4C9B5;
-}
-
-.cn-stage-card.is-selected {
-  background: color-mix(in srgb, #8B2500 8%, #F7F2E8 92%);
-  border-color: color-mix(in srgb, #8B2500 30%, #D4C9B5 70%);
-}
-
-/* 连接线 */
-.cn-connector {
-  position: absolute;
-  left: 31px;
-  top: 100%;
-  width: 2px;
-  height: 16px;
-  background: #D4C9B5;
   z-index: 1;
 }
 
-.cn-connector.is-completed {
-  background: #5B7744;
-}
-
-.cn-connector.is-current {
-  background: linear-gradient(to bottom, #8B2500, #D4C9B5);
-}
-
-/* 节点圆点 */
-.cn-node-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid #D4C9B5;
-  background: #F7F2E8;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-  z-index: 2;
-  position: relative;
-}
-
-.cn-node-dot.is-completed {
-  border-color: #5B7744;
-  background: #5B7744;
-  color: #fff;
-}
-
-.cn-node-dot.is-current {
-  border-color: #8B2500;
-  background: #F7F2E8;
-  color: #8B2500;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #8B2500 15%, transparent 85%);
-}
-
-.cn-node-dot.is-locked {
-  border-color: #9C8B78;
-  background: #F0E6D2;
-  color: #9C8B78;
-}
-
-.cn-node-icon {
-  font-size: 13px;
-}
-
-.cn-node-num {
-  font-size: 11px;
-  font-weight: 700;
-}
-
-/* 卡片内容 */
-.cn-stage-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.cn-stage-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 5px;
-}
-
-.cn-stage-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1A1410;
-  letter-spacing: 0.03em;
-}
-
-.cn-stage-status-tag {
-  font-size: 10px;
-  padding: 1px 7px;
-  border-radius: 1px;
-}
-
-.cn-stage-status-tag.is-completed {
-  background: color-mix(in srgb, #5B7744 12%, #EDE5D6 88%);
-  color: #5B7744;
-  border: 1px solid color-mix(in srgb, #5B7744 30%, #D4C9B5 70%);
-}
-
-.cn-stage-status-tag.is-current {
-  background: color-mix(in srgb, #8B2500 12%, #EDE5D6 88%);
-  color: #8B2500;
-  border: 1px solid color-mix(in srgb, #8B2500 30%, #D4C9B5 70%);
-}
-
-.cn-stage-status-tag.is-locked {
-  background: color-mix(in srgb, #9C8B78 10%, #EDE5D6 90%);
-  color: #9C8B78;
-  border: 1px solid #D4C9B5;
-}
-
-.cn-stage-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #6B5D4F;
-}
-
-.cn-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.cn-meta-icon {
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-.cn-meta-sep {
-  opacity: 0.4;
-}
-
-.cn-meta-salary {
-  color: #8B6914;
-  font-weight: 600;
-}
-
-.cn-stage-skills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-bottom: 8px;
-}
-
-.cn-skill-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: #F7F2E8;
-  border: 1px solid #D4C9B5;
-  color: #6B5D4F;
-  border-radius: 1px;
-}
-
-.cn-skill-more {
-  color: #9C8B78;
-}
-
-/* 薪资条 */
-.cn-salary-bar-track {
-  height: 3px;
-  background: #D4C9B5;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.cn-salary-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s ease;
-}
-
-.cn-salary-bar-fill.is-completed {
-  background: #5B7744;
-}
-
-.cn-salary-bar-fill.is-current {
-  background: #8B2500;
-}
-
-.cn-salary-bar-fill.is-locked {
-  background: #9C8B78;
-}
-
-/* ── 右侧详情面板 ── */
-.cn-detail-panel {
-  background: #EDE5D6;
-  border: 1px solid #D4C9B5;
-  border-radius: 2px;
-  padding: 20px;
+/* Editorial Headline */
+.rp-editorial {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  position: sticky;
-  top: 16px;
-}
-
-.cn-detail-empty {
-  align-items: center;
-  justify-content: center;
-  min-height: 240px;
-  opacity: 0.5;
-}
-
-.cn-empty-icon {
-  font-size: 40px;
-  color: #9C8B78;
-  margin-bottom: 10px;
-}
-
-.cn-empty-text {
-  font-size: 13px;
-  color: #9C8B78;
-}
-
-.cn-detail-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding-bottom: 16px;
+  gap: 6px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #D4C9B5;
 }
-
-.cn-detail-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border: 1.5px solid #D4C9B5;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  border-radius: 2px;
+.rp-greeting {
+  font-size: 11px; letter-spacing: 0.18em;
+  color: #9C8B78; text-transform: uppercase; font-weight: 600;
 }
-
-.cn-detail-icon-wrap.is-completed {
-  border-color: #5B7744;
-  background: color-mix(in srgb, #5B7744 10%, #EDE5D6 90%);
+.rp-display-title {
+  display: flex; flex-direction: column; gap: 0; margin: 4px 0 0;
 }
-
-.cn-detail-icon-wrap.is-current {
-  border-color: #8B2500;
-  background: color-mix(in srgb, #8B2500 10%, #EDE5D6 90%);
+.rp-dt-a {
+  display: block; font-size: 20px; font-weight: 400;
+  color: #6B5D4F; letter-spacing: 0.08em; line-height: 1.3;
 }
-
-.cn-detail-icon {
-  font-size: 20px;
-  color: #6B5D4F;
+.rp-dt-b {
+  display: block; font-size: 34px; font-weight: 900;
+  color: #1A1410; letter-spacing: 0.01em; line-height: 1.1; margin: 1px 0;
 }
-
-.cn-detail-icon-wrap.is-completed .cn-detail-icon { color: #5B7744; }
-.cn-detail-icon-wrap.is-current .cn-detail-icon { color: #8B2500; }
-
-.cn-detail-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #1A1410;
-  letter-spacing: 0.04em;
-  margin-bottom: 3px;
+.rp-dt-c {
+  display: block; font-size: 24px; font-weight: 700;
+  color: #8B2500; letter-spacing: 0.06em; line-height: 1.15;
 }
-
-.cn-detail-alias {
-  font-size: 12px;
-  color: #6B5D4F;
+.rp-data-proof {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #9C8B78; margin: 4px 0 0; letter-spacing: 0.04em;
 }
+.rp-sep { font-style: normal; color: #C4B9A6; font-size: 10px; }
 
-.cn-detail-section {
+/* Step indicator (inline compact) */
+.rp-steps-inline { display: flex; align-items: center; gap: 8px; }
+.rp-si-step { display: flex; align-items: center; gap: 5px; opacity: 0.35; transition: opacity 0.2s ease; }
+.rp-si-step--active { opacity: 1; }
+.rp-si-dot { width: 6px; height: 6px; border-radius: 50%; background: #C4B9A6; flex-shrink: 0; transition: background 0.2s ease; }
+.rp-si-step--active .rp-si-dot { background: #8B2500; }
+.rp-si-num { font-size: 10px; font-weight: 700; color: #9C8B78; letter-spacing: 0.1em; }
+.rp-si-step--active .rp-si-num { color: #8B2500; }
+.rp-si-name { font-size: 11px; color: #6B5D4F; letter-spacing: 0.04em; white-space: nowrap; }
+.rp-si-step--active .rp-si-name { font-weight: 700; color: #1A1410; }
+.rp-si-line { flex: 1; max-width: 28px; height: 1px; background: #D4C9B5; }
+
+/* Idle form wrapper (fills remaining height) */
+.rp-idle-form {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+.rp-idle-form .rp-textarea {
+  flex: 1;
+  min-height: 72px;
+  resize: none;
 }
 
-.cn-detail-section-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #9C8B78;
-  text-transform: uppercase;
-  border-left: 2px solid #8B2500;
-  padding-left: 8px;
-}
-
-.cn-detail-salary {
+/* Done state wrapper */
+.rp-done-wrap {
+  flex: 1;
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.cn-detail-salary-num {
-  font-size: 20px;
-  font-weight: 700;
-  color: #8B6914;
-  letter-spacing: 0.02em;
+/* Drop Zone */
+.rp-drop-zone {
+  position: relative;
+  background: #F0EBE0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease;
+  user-select: none;
+  border: 1px dashed #C4B9A6;
+}
+.rp-drop-zone:hover,
+.rp-drop-zone--over {
+  background: color-mix(in srgb, #8B2500 4%, #F0EBE0 96%);
+  border-color: #8B2500;
 }
 
-.cn-detail-salary-unit {
-  font-size: 11px;
-  color: #9C8B78;
+.rp-drop-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  transition: width 0.25s ease, height 0.25s ease, border-color 0.25s ease;
+}
+.rp-drop-corner--tl { top: 0; left: 0; border-top: 2px solid #8B6914; border-left: 2px solid #8B6914; }
+.rp-drop-corner--tr { top: 0; right: 0; border-top: 2px solid #8B6914; border-right: 2px solid #8B6914; }
+.rp-drop-corner--bl { bottom: 0; left: 0; border-bottom: 2px solid #8B6914; border-left: 2px solid #8B6914; }
+.rp-drop-corner--br { bottom: 0; right: 0; border-bottom: 2px solid #8B6914; border-right: 2px solid #8B6914; }
+.rp-drop-zone:hover .rp-drop-corner,
+.rp-drop-zone--over .rp-drop-corner { border-color: #8B2500; width: 20px; height: 20px; }
+
+.rp-file-input {
+  position: absolute; inset: 0; opacity: 0;
+  width: 100%; height: 100%; cursor: pointer; z-index: -1;
 }
 
-.cn-detail-salary-bar-track {
-  height: 5px;
-  background: #D4C9B5;
-  border-radius: 3px;
+.rp-drop-body { display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 1; }
+
+.rp-drop-icon-wrap {
+  width: 40px; height: 40px; border: 1.5px solid #C4B9A6;
+  display: grid; place-items: center; background: #EDE5D6;
+  margin-bottom: 2px; transition: all 0.25s ease;
+}
+.rp-drop-zone:hover .rp-drop-icon-wrap,
+.rp-drop-zone--over .rp-drop-icon-wrap {
+  border-color: #8B2500;
+  background: color-mix(in srgb, #8B2500 6%, #EDE5D6 94%);
+}
+.rp-drop-icon { color: #8B6914; }
+
+.rp-drop-title {
+  font-size: 14px; font-weight: 700; color: #1A1410;
+  letter-spacing: 0.04em; margin: 0;
+  text-align: center; max-width: 240px; word-break: break-all;
+}
+.rp-drop-formats { font-size: 11px; color: #9C8B78; margin: 0; letter-spacing: 0.08em; }
+
+/* Or divider */
+.rp-or-row { display: flex; align-items: center; gap: 8px; }
+.rp-or-line { flex: 1; height: 1px; background: #D4C9B5; }
+.rp-or-text { font-size: 11px; color: #9C8B78; letter-spacing: 0.08em; white-space: nowrap; }
+
+/* ── Textarea ── */
+.rp-textarea {
+  width: 100%; box-sizing: border-box;
+  background: #F0EBE0; border: 1px solid #C4B9A6; border-left: 3px solid #C4B9A6;
+  padding: 9px 12px; font-size: 12px; color: #1A1410;
+  font-family: var(--font-body, 'Noto Sans SC', sans-serif);
+  line-height: 1.65; resize: none; min-height: 72px; outline: none;
+  transition: border-left-color 0.2s ease;
+}
+.rp-textarea:focus { border-left-color: #8B2500; }
+.rp-textarea::placeholder { color: #B5A898; }
+
+/* Direction tiles */
+.rp-dir-section { display: flex; flex-direction: column; gap: 7px; }
+.rp-dir-label { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #6B5D4F; text-transform: uppercase; margin: 0; }
+.rp-dir-hint { font-weight: 400; color: #9C8B78; font-size: 9px; }
+.rp-dir-tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+.rp-dir-tile {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 11px; border: 1px solid #D4C9B5;
+  background: #EDE5D6; color: #6B5D4F;
+  font-size: 11px; font-family: inherit;
+  cursor: pointer; transition: all 0.2s ease; letter-spacing: 0.04em;
+}
+.rp-dir-tile:hover { border-color: #8B6914; color: #8B6914; background: color-mix(in srgb, #8B6914 5%, #EDE5D6 95%); }
+.rp-dir-tile--active { border-color: #8B2500; background: #8B2500; color: #F7F2E8; }
+.rp-dir-tile__icon { flex-shrink: 0; color: #9C8B78; transition: color 0.2s ease; }
+.rp-dir-tile--active .rp-dir-tile__icon { color: #F7F2E8; }
+.rp-dir-tile__name { white-space: nowrap; }
+
+/* Parse button */
+.rp-parse-btn {
+  width: 100%; height: 46px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #8B2500; border: none; color: #F7F2E8;
+  font-size: 14px; font-family: var(--font-title, inherit);
+  letter-spacing: 0.1em; cursor: pointer;
+  transition: background 0.2s ease; position: relative; overflow: hidden;
+}
+.rp-parse-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  transform: translateX(-100%); transition: transform 0.45s ease;
+}
+.rp-parse-btn:hover:not(:disabled)::before { transform: translateX(100%); }
+.rp-parse-btn:hover:not(:disabled) { background: #A0472D; }
+.rp-parse-btn:hover:not(:disabled) .rp-parse-btn__arrow { transform: translateX(4px); }
+.rp-parse-btn__arrow { transition: transform 0.2s ease; }
+.rp-parse-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Loading ── */
+.rp-loading-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px 0;
+}
+.rp-loading-seal {
+  width: 60px; height: 60px;
+  border: 2px solid color-mix(in srgb, #8B2500 25%, #D4C9B5 75%);
+  display: grid; place-items: center;
+  background: color-mix(in srgb, #8B2500 4%, #EDE5D6 96%);
+}
+.rp-loading-spin { color: #8B2500; animation: rp-spin 1.2s linear infinite; }
+@keyframes rp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.rp-loading-msg { font-size: 13px; color: #6B5D4F; letter-spacing: 0.06em; margin: 0; }
+.rp-progress-track { width: 220px; height: 3px; background: #D4C9B5; overflow: hidden; }
+.rp-progress-fill { height: 100%; background: linear-gradient(90deg, #8B6914, #8B2500); transition: width 0.15s linear; }
+.rp-progress-pct { font-size: 13px; font-weight: 700; color: #8B2500; margin: 0; letter-spacing: 0.08em; }
+
+/* Done state (left) */
+.rp-done-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: color-mix(in srgb, #5B7744 5%, #F0EBE0 95%);
+  border: 1px solid color-mix(in srgb, #5B7744 20%, #D4C9B5 80%);
+  font-size: 13px; font-weight: 600; color: #1A1410;
+}
+.rp-done-icon { color: #5B7744; flex-shrink: 0; }
+.rp-done-status span { flex: 1; }
+
+.rp-result-reset {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border: 1px solid #D4C9B5;
+  background: transparent; color: #9C8B78;
+  font-size: 11px; font-family: inherit; cursor: pointer;
+  transition: all 0.2s ease; letter-spacing: 0.04em;
+}
+.rp-result-reset:hover { border-color: #8B2500; color: #8B2500; }
+
+.rp-privacy {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, #5B7744 4%, #EDE5D6 96%);
+  border: 1px solid color-mix(in srgb, #5B7744 15%, #D4C9B5 85%);
+}
+.rp-privacy__icon { color: #5B7744; flex-shrink: 0; margin-top: 1px; }
+.rp-privacy__text { font-size: 11px; color: #6B5D4F; line-height: 1.6; margin: 0; }
+
+/* ═══ RIGHT PANEL (dark) ═══ */
+.rp-right {
+  background: var(--rp-dark);
+  display: flex;
+  flex-direction: column;
+  position: relative;
   overflow: hidden;
 }
 
-.cn-detail-salary-bar-fill {
+.rp-orbital-scene {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.rp-orbital-field {
+  position: relative;
+  width: min(100%, calc(100vh - 200px));
+  aspect-ratio: 1 / 1;
+}
+
+.rp-orbital-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.8s ease;
 }
 
-.cn-detail-salary-bar-fill.is-completed { background: #5B7744; }
-.cn-detail-salary-bar-fill.is-current { background: #8B2500; }
-.cn-detail-salary-bar-fill.is-locked { background: #9C8B78; }
+/* Ring flow animations */
+.rp-ring--1 { animation: ring-f1 22s linear infinite; }
+.rp-ring--2 { animation: ring-f2 38s linear infinite; }
+.rp-ring--3 { animation: ring-f3 55s linear infinite; }
+@keyframes ring-f1 { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -628; } }
+@keyframes ring-f2 { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 1037; } }
+@keyframes ring-f3 { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -1395; } }
 
-.cn-detail-skills-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+/* Orbital center */
+.rp-orbital-center {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  z-index: 2;
+}
+.rp-orbital-avatar {
+  width: 50px; height: 50px; border-radius: 50%;
+  background: linear-gradient(135deg, #8B2500 0%, #4A1200 100%);
+  border: 2px solid rgba(139,37,0,0.6);
+  box-shadow: 0 0 24px rgba(139,37,0,0.4), 0 0 48px rgba(139,37,0,0.12);
+  display: grid; place-items: center;
+  font-size: 18px; font-weight: 900; color: #F7E8DC;
+  font-family: var(--font-title, 'LXGW WenKai', serif);
+}
+.rp-oc-label {
+  font-size: 9px; letter-spacing: 0.14em;
+  color: rgba(197,180,160,0.65); white-space: nowrap;
 }
 
-.cn-detail-skill-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #1A1410;
+/* Orbit nodes */
+.rp-onode {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center;
+  z-index: 3;
+}
+.rp-onode--sm { opacity: 0.8; }
+
+.rp-obubble {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--nbg, rgba(139,37,0,0.15));
+  border: 1.5px solid var(--nc, #8B2500);
+  display: grid; place-items: center;
+  color: var(--nc, #8B2500);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 0 10px var(--nbg, rgba(139,37,0,0.1));
+}
+.rp-onode--sm .rp-obubble { width: 28px; height: 28px; }
+.rp-onode:hover .rp-obubble {
+  transform: scale(1.15);
+  box-shadow: 0 0 18px var(--nbg, rgba(139,37,0,0.25));
 }
 
-.cn-detail-skill-num {
-  font-size: 10px;
-  color: #9C8B78;
-  font-weight: 700;
-  min-width: 18px;
+/* Node labels (absolutely positioned relative to the node) */
+.rp-olabel {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  pointer-events: none;
+}
+.rp-olabel--above { bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); }
+.rp-olabel--below { top: calc(100% + 7px); left: 50%; transform: translateX(-50%); }
+.rp-olabel--right { left: calc(100% + 9px); top: 50%; transform: translateY(-50%); align-items: flex-start; }
+.rp-olabel--left { right: calc(100% + 9px); top: 50%; transform: translateY(-50%); align-items: flex-end; }
+
+.rp-oname {
+  font-size: 11px; font-weight: 700;
+  color: rgba(220,205,185,0.9); letter-spacing: 0.08em; white-space: nowrap;
+}
+.rp-ocount {
+  font-size: 9px; color: rgba(155,140,115,0.65);
+  letter-spacing: 0.04em; white-space: nowrap;
 }
 
-.cn-detail-skill-dot {
-  font-size: 10px;
+/* Right footer data strip */
+.rp-right-footer {
   flex-shrink: 0;
+  height: 50px;
+  background: #100D06;
+  border-top: 1px solid rgba(139,37,0,0.22);
+  display: flex; align-items: center; justify-content: center;
+  gap: 14px; padding: 0 24px;
+}
+.rp-rf-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.rp-rf-val { font-size: 13px; font-weight: 700; color: rgba(215,190,155,0.9); letter-spacing: 0.04em; line-height: 1; }
+.rp-rf-lbl { font-size: 9px; color: rgba(135,120,95,0.65); letter-spacing: 0.1em; white-space: nowrap; }
+.rp-rf-sep { color: rgba(95,80,60,0.35); font-size: 12px; }
+
+/* Done results overlay */
+.rp-right-results {
+  position: absolute;
+  inset: 0; bottom: 50px;
+  background: rgba(20,12,5,0.94);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  overflow-y: auto;
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 12px;
+  z-index: 10;
 }
 
-.cn-detail-skill-dot.is-completed { color: #5B7744; }
-.cn-detail-skill-dot.is-current { color: #8B2500; }
-.cn-detail-skill-dot.is-locked { color: #9C8B78; }
-
-.cn-detail-skill-name {
-  color: #3D3228;
+.rp-result-card {
+  background: rgba(237,229,214,0.05);
+  border: 1px solid rgba(212,201,181,0.18);
+  padding: 13px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.rp-result-card__head {
+  display: flex; align-items: center; gap: 7px;
+  padding-bottom: 8px; border-bottom: 1px solid rgba(212,201,181,0.12);
+}
+.rp-result-ok { color: #5B7744; flex-shrink: 0; }
+.rp-result-card__title {
+  font-size: 11px; font-weight: 700;
+  color: rgba(220,205,185,0.8); letter-spacing: 0.12em; text-transform: uppercase;
 }
 
-.cn-detail-milestones {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.rp-skill-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.rp-skill-chip {
+  font-size: 10px; padding: 3px 9px;
+  background: rgba(240,235,224,0.05); border: 1px solid rgba(196,185,166,0.2);
+  color: rgba(200,185,165,0.8); white-space: nowrap; letter-spacing: 0.04em;
+}
+.rp-skill-chip--fe { border-color: rgba(43,76,111,0.5); color: rgba(130,165,200,0.9); }
+.rp-skill-chip--be { border-color: rgba(91,119,68,0.5); color: rgba(130,185,130,0.9); }
+.rp-skill-chip--qa { border-color: rgba(139,105,20,0.5); color: rgba(200,165,80,0.9); }
+.rp-skill-chip--da { border-color: rgba(107,63,140,0.5); color: rgba(180,140,210,0.9); }
+.rp-skill-chip--ml { border-color: rgba(139,37,0,0.5); color: rgba(220,130,100,0.9); }
+
+.rp-career-cards { display: flex; flex-direction: column; gap: 6px; }
+.rp-career-card {
+  display: grid; grid-template-columns: 16px 1fr 1fr 34px;
+  align-items: center; gap: 8px;
+  padding: 7px 10px;
+  background: rgba(240,235,224,0.04);
+  border: 1px solid rgba(212,201,181,0.1);
+}
+.rp-career-rank { font-size: 10px; font-weight: 700; color: rgba(139,105,20,0.8); text-align: center; }
+.rp-career-card:first-child .rp-career-rank { color: rgba(139,37,0,0.9); }
+.rp-career-role { font-size: 11px; font-weight: 600; color: rgba(220,205,185,0.85); white-space: nowrap; }
+.rp-career-bar-wrap { height: 3px; background: rgba(212,201,181,0.12); overflow: hidden; }
+.rp-career-bar { height: 100%; background: linear-gradient(90deg, #8B6914, #8B2500); transition: width 0.6s ease; }
+.rp-career-score { font-size: 10px; font-weight: 700; color: rgba(139,37,0,0.9); text-align: right; }
+
+.rp-cta-block { display: flex; flex-direction: column; gap: 7px; padding-top: 2px; }
+.rp-next-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  align-self: flex-start; padding: 10px 24px;
+  background: #8B2500; border: none; color: #F7F2E8;
+  font-size: 13px; font-family: inherit; letter-spacing: 0.08em;
+  cursor: pointer; transition: background 0.2s ease;
+}
+.rp-next-btn:hover { background: #A0472D; }
+.rp-next-hint { font-size: 10px; color: rgba(140,125,100,0.65); margin: 0; }
+
+/* Fade transition */
+.rp-fade-enter-active { transition: opacity 0.4s ease, transform 0.35s ease; }
+.rp-fade-leave-active { transition: opacity 0.25s ease; }
+.rp-fade-enter-from { opacity: 0; transform: translateY(10px); }
+.rp-fade-leave-to { opacity: 0; }
+
+/* Responsive */
+@media (max-width: 1280px) { .rp-workspace { grid-template-columns: 420px 1fr; } }
+@media (max-width: 1024px) {
+  .rp-workspace { grid-template-columns: 340px 1fr; }
+  .rp-left { padding: 18px 22px 16px; gap: 10px; }
+  .rp-dt-b { font-size: 28px; }
+  .rp-dt-c { font-size: 20px; }
+}
+@media (max-width: 768px) {
+  .rp-workspace { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+  .rp-right { min-height: 400px; }
+  .rp-orbital-field { width: min(100%, 360px); }
 }
 
-.cn-detail-milestone {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  color: #3D3228;
-  line-height: 1.5;
-}
-
-.cn-milestone-icon {
-  font-size: 15px;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.cn-milestone-icon.is-completed { color: #5B7744; }
-.cn-milestone-icon.is-current { color: #8B2500; }
-.cn-milestone-icon.is-locked { color: #9C8B78; }
-
-/* 行动建议 */
-.cn-action-box {
-  padding: 14px;
-  border-radius: 2px;
-  background: #F7F2E8;
-  border: 1px solid #D4C9B5;
-}
-
-.cn-action-box.is-current {
-  border-color: color-mix(in srgb, #8B2500 25%, #D4C9B5 75%);
-  background: color-mix(in srgb, #8B2500 4%, #F7F2E8 96%);
-}
-
-.cn-action-text {
-  font-size: 12px;
-  color: #6B5D4F;
-  line-height: 1.7;
-  margin: 0 0 12px;
-}
-
-.cn-action-btns {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.cn-action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-family: var(--font-title, inherit);
-  letter-spacing: 0.04em;
-  border: 1px solid #D4C9B5;
-  background: transparent;
-  color: #6B5D4F;
-  cursor: pointer;
-  border-radius: 1px;
-  transition: all 0.2s ease;
-}
-
-.cn-action-btn:hover {
-  border-color: #8B2500;
-  color: #8B2500;
-}
-
-.cn-action-btn--primary {
-  background: #8B2500;
-  border-color: #8B2500;
-  color: #F7F2E8;
-}
-
-.cn-action-btn--primary:hover {
-  background: #A0472D;
-  border-color: #A0472D;
-  color: #F7F2E8;
-}
-
-/* ── 响应式 ── */
-@media (max-width: 900px) {
-  .cn-body {
-    grid-template-columns: 1fr;
-  }
-
-  .cn-detail-panel {
-    position: static;
-  }
-}
-
-@media (max-width: 640px) {
-  .cn-root {
-    padding: 16px;
-  }
-
-  .cn-progress-track {
-    width: 100px;
-  }
-
-  .cn-hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
 </style>
