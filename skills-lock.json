@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "skills": {
+    "animation-designer": {
+      "source": "daffy0208/ai-dev-standards",
+      "sourceType": "github",
+      "computedHash": "8d67411378f8609415a2ea727013490c8432bfd941ae3f4a343b8bf4d874ec81"
+    },
+    "animejs-animation": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "874bbe210591b5fef54fc3c68f6f0eec69d528695005836e7306d8640e9163ea"
+    },
+    "frontend-css-patterns": {
+      "source": "majesticlabs-dev/majestic-marketplace",
+      "sourceType": "github",
+      "computedHash": "d26ef99581d6df03f92a7c8264ca4a16620558845644c3c87e7ae1045185ceb6"
+    },
+    "frontend-design-pro": {
+      "source": "binjuhor/shadcn-lar",
+      "sourceType": "github",
+      "computedHash": "ac0ee19a6c01837e02fe4d79464acc59dd0fe203f9b27608d87617f865c1d814"
+    },
+    "glassmorphism": {
+      "source": "ainergiz/design-inspirations",
+      "sourceType": "github",
+      "computedHash": "96b57506515153cbca213dc6a38588e1698591283de67c733c9caa29eec7fe12"
+    },
+    "gusto-ui-skills": {
+      "source": "ihlamury/design-skills",
+      "sourceType": "github",
+      "computedHash": "82d269745cd1cda126d6097cca977c2dd8d67990434d2ddf056cf93e766aaddb"
+    },
+    "kpi-dashboard-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "450bc47e5845632aa4363da7d45a823815c42a510c8c122b27894a920cda2e61"
+    },
+    "landing-page-design": {
+      "source": "inferen-sh/skills",
+      "sourceType": "github",
+      "computedHash": "c2588da4b3c084ad762e28388d36bfafbbe2c1870d52a0f98d6e4095ee01b26d"
+    },
+    "lemonsqueezy-ui-skills": {
+      "source": "ihlamury/design-skills",
+      "sourceType": "github",
+      "computedHash": "fec10108a56b5e4a5a998d99e453e0142c92d58f73955b566c2cf7bf8da1fcdc"
+    },
+    "material-design-3-typography": {
+      "source": "shelbeely/shelbeely-agent-skills",
+      "sourceType": "github",
+      "computedHash": "ef0f377adbea7e67774e150bb14e16d2a91e62b5e1d6fdd1df97fa61d19b7a6f"
+    },
+    "minoan-frontend-design": {
+      "source": "tdimino/claude-code-minoan",
+      "sourceType": "github",
+      "computedHash": "b37a722c4e3b59bfd18d6e87d34542b04cf513972090699cfd386f640ae38f5b"
+    },
+    "mobile-design-director": {
+      "source": "kafka000/mobile-design-director",
+      "sourceType": "github",
+      "computedHash": "aa6e103838f12c66344e844d2b5fd65905c44e7905e16713f748e51b32fd048c"
+    },
+    "ui-ux-master": {
+      "source": "kdbhalala/ui-ux-master",
+      "sourceType": "github",
+      "computedHash": "df82e056daf4d0ce05f195177d797e0a3ecbedbbbf22d352efffd18d84018e0e"
+    },
+    "userinterface-wiki": {
+      "source": "raphaelsalaja/userinterface-wiki",
+      "sourceType": "github",
+      "computedHash": "1d1fbf49afa29712573e39bea7669b932160ae93bdf96a16d729849641b1fa22"
+    },
+    "web-animation-design": {
+      "source": "connorads/dotfiles",
+      "sourceType": "github",
+      "computedHash": "2a1f00587a8752a2f2072d75f7c7b9d6008bc8a999ceb92a33bfb49006f66f53"
+    }
+  }
+}

@@ -268,6 +268,7 @@ curl -X GET "https://<host>/api/v1/career/domains" \
 **请求**
 
 ```
+
 GET /api/v1/career/domains
 ```
 

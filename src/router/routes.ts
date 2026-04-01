@@ -153,7 +153,19 @@ export const routes: RouteRecordRaw[] = [
         path: 'student/career-navigation',
         name: 'student-career-navigation',
         component: () => import('@/views/student/CareerNavigation.vue'),
-        meta: { title: '职途导航', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER] },
+        meta: { title: '职途导航', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER], immersive: true },
+      },
+      {
+        path: 'student/resume-builder',
+        name: 'student-resume-builder',
+        component: () => import('@/views/student/ResumeBuilder.vue'),
+        meta: { title: '快速制作简历', requiresAuth: true, roles: [UserRole.STUDENT], immersive: true },
+      },
+      {
+        path: 'student/career-report',
+        name: 'student-career-report',
+        component: () => import('@/views/student/CareerReport.vue'),
+        meta: { title: '职业生涯发展报告', requiresAuth: true, roles: [UserRole.STUDENT, UserRole.TEACHER], immersive: true },
       },
       {
         path: 'student/career-ability',

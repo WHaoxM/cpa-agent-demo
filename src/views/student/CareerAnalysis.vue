@@ -1022,22 +1022,6 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           </div>
         </div>
 
-        <!-- #10 年份选择器 — 滑块 -->
-        <div class="da-section">
-          <div class="da-section__title"><Icon icon="lucide:calendar" :width="14" />数据年份</div>
-          <div class="year-slider">
-            <input
-              type="range" :min="0" :max="timelineYears.length - 1"
-              :value="currentYearIndex"
-              @input="switchYear(Number(($event.target as HTMLInputElement).value))"
-              class="year-slider__input"
-            />
-            <div class="year-slider__labels">
-              <span v-for="(y, i) in timelineYears" :key="y"
-                :class="{ active: currentYearIndex === i }">{{ y }}</span>
-            </div>
-          </div>
-        </div>
       </aside>
 
       <!-- 中央区域：气泡图（上50%）+ 地图&薪资图（下50%） -->
@@ -1062,9 +1046,17 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           />
         </div>
 
-        <!-- 下半：地图 + 薪资柱状图 -->
+        <!-- 下半：薪资柱状图 + 地图 -->
         <div class="da-bottom">
-          <!-- 左：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
+          <!-- 左：薪资对比柱状图 -->
+          <div class="da-salary-chart">
+            <div class="da-section__title da-section__title--sm">
+              <Icon icon="lucide:bar-chart-2" :width="12" />薪资区间对比（K/月）
+            </div>
+            <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
+          </div>
+
+          <!-- 右：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
           <div class="da-map-inner" ref="scrollRef">
             <img :src="parchmentBaseUrl" class="da-map-inner__base" alt="" draggable="false" />
             <VChart
@@ -1104,12 +1096,22 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
             </div>
           </div>
 
-          <!-- 右：薪资对比柱状图 -->
-          <div class="da-salary-chart">
-            <div class="da-section__title da-section__title--sm">
-              <Icon icon="lucide:bar-chart-2" :width="12" />薪资区间对比（K/月）
+          <!-- 年份条 — 仿地图需求条样式 -->
+          <div class="da-year-bar">
+            <span class="da-year-bar__label--top">{{ timelineYears[timelineYears.length - 1] }}</span>
+            <div class="da-year-bar__track">
+              <div class="da-year-bar__gradient"></div>
+              <input
+                type="range"
+                class="da-year-bar__range"
+                :min="0"
+                :max="timelineYears.length - 1"
+                :value="currentYearIndex"
+                @input="switchYear(Number(($event.target as HTMLInputElement).value))"
+              />
             </div>
-            <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
+            <span class="da-year-bar__label--bottom">{{ timelineYears[0] }}</span>
+            <div class="da-year-bar__badge">{{ currentYear }}</div>
           </div>
         </div>
       </main>
@@ -1492,7 +1494,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 /* 下半左：卷轴风格地图容器 */
 .da-map-inner {
   flex: 1; min-width: 0; position: relative;
-  border-right: 1px solid var(--bg-300);
+  border-left: 1px solid var(--bg-300);
   overflow: hidden;
 }
 /* 左右卷轴边（用伪元素模拟，不影响 ECharts DOM） */
@@ -1634,6 +1636,69 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 @keyframes hintPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* 年份条（仿地图需求条） */
+.da-year-bar {
+  flex-shrink: 0;
+  width: 52px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 6px;
+  background: rgba(240,230,210,0.85);
+  border-left: 1px solid rgba(139,105,20,0.25);
+  font-family: var(--font-title), KaiTi, serif;
+}
+.da-year-bar__label--top {
+  font-size: 11px; font-weight: 700; color: #6B3A0A;
+  letter-spacing: 0.03em;
+}
+.da-year-bar__label--bottom {
+  font-size: 11px; font-weight: 700; color: #9C8B78;
+}
+.da-year-bar__track {
+  flex: 1; min-height: 0;
+  position: relative; display: flex; align-items: center; justify-content: center;
+  width: 32px;
+}
+.da-year-bar__gradient {
+  position: absolute;
+  width: 12px; top: 0; bottom: 0;
+  border-radius: 6px;
+  background: linear-gradient(180deg,
+    #6B3A0A 0%, #8B5E14 16%, #b07840 33%, #c49a6c 50%, #d4b896 66%, #e0d4be 100%
+  );
+  border: 1px solid rgba(139,105,20,0.28);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.08);
+  pointer-events: none;
+}
+.da-year-bar__range {
+  writing-mode: vertical-lr;
+  direction: rtl;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 100%;
+  background: transparent;
+  cursor: pointer;
+  position: relative; z-index: 1;
+  outline: none;
+}
+.da-year-bar__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px; height: 8px;
+  background: rgba(247,242,232,0.96);
+  border: 1.5px solid rgba(107,58,10,0.6);
+  border-radius: 2px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.28);
+  cursor: grab;
+}
+.da-year-bar__range::-webkit-slider-runnable-track { background: transparent; }
+.da-year-bar__badge {
+  font-size: 13px; font-weight: 700; color: var(--primary-100);
+  background: rgba(139,37,0,0.08);
+  border: 1px solid rgba(139,37,0,0.2);
+  border-radius: 3px; padding: 2px 5px;
+  letter-spacing: 0.04em;
 }
 
 /* ═══ 右面板 ═══ */

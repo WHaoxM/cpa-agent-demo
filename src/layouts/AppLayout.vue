@@ -213,6 +213,21 @@ function onLeave(el: Element, done: () => void) {
   })
 }
 
+function onImmersiveEnter(_el: Element, done: () => void) {
+  done()
+}
+
+function onImmersiveLeave(el: Element, done: () => void) {
+  if (prefersReduced.value) { done(); return }
+  const h = el as HTMLElement
+  h.style.willChange = 'opacity'
+  gsap.to(h, {
+    opacity: 0,
+    duration: 0.18, ease: 'power1.out',
+    onComplete: () => { h.style.willChange = ''; done() },
+  })
+}
+
 /* ===== 生命周期 ===== */
 const shellRef = ref<HTMLElement | null>(null)
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
@@ -360,9 +375,8 @@ onBeforeUnmount(() => {
           <Transition
             :css="false"
             mode="out-in"
-            @before-enter="onBeforeEnter"
-            @enter="onEnter"
-            @leave="onLeave"
+            @enter="onImmersiveEnter"
+            @leave="onImmersiveLeave"
           >
             <component :is="Component" />
           </Transition>
