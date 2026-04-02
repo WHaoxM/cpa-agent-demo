@@ -33,8 +33,27 @@ let radarChart: echarts.ECharts | null = null
 const DIM_NAMES = ['专业技能', '证书资质', '创新能力', '学习能力', '抗压能力', '沟通能力', '实习经验'] as const
 
 const LINE_COLORS: Record<string, string> = {
-  frontend: '#C4622D', data: '#B8962E', qa: '#3A8A7A', fullstack: '#6A5B8A',
+  frontend: '#8B2500',
+  data:     '#8B6914',
+  qa:       '#2B4C6F',
+  fullstack:'#5B7744',
 }
+
+/* 气泡漂移坐标（黄金角分布，模块级常量，稳定不重算） */
+const BUBBLE_DRIFTS = Array.from({ length: 20 }, (_, i) => {
+  const a1 = (i * 137.5) % 360
+  const a2 = (i * 137.5 + 80) % 360
+  const a3 = (i * 137.5 + 160) % 360
+  const s = 4 + (i % 3)
+  return {
+    dx1: +(Math.cos(a1 * Math.PI / 180) * s).toFixed(1),
+    dy1: +(Math.sin(a1 * Math.PI / 180) * s * 0.7).toFixed(1),
+    dx2: +(Math.cos(a2 * Math.PI / 180) * s).toFixed(1),
+    dy2: +(Math.sin(a2 * Math.PI / 180) * s * 0.7).toFixed(1),
+    dx3: +(Math.cos(a3 * Math.PI / 180) * s).toFixed(1),
+    dy3: +(Math.sin(a3 * Math.PI / 180) * s * 0.7).toFixed(1),
+  }
+})
 
 const LEVEL_ORDER: Record<JobLevel, number> = {
   intern: 0, junior: 1, mid: 2, senior: 3, lead: 4, expert: 5,
@@ -104,12 +123,20 @@ const bubbleLayout = computed<BubbleItem[]>(() => {
 
 /* ══ 竖向流程图布局 ══ */
 type FlowNode = JobPortrait & { x: number; y: number }
-type SkillDot = { x: number; y: number; label: string; side: 'left' | 'right' }
-type FlowEdgeLayout = { fromNode: FlowNode; toNode: FlowNode; type: 'promote' | 'transfer'; skills: string[]; dots: SkillDot[] }
+type FlowBead = { x: number; y: number; label: string }
+type FlowEdgeLayout = {
+  fromNode: FlowNode; toNode: FlowNode
+  type: 'promote' | 'transfer'; skills: string[]
+  mid: { x: number; y: number }
+  beads: FlowBead[]
+}
 
-const FC_W = 290, FC_H = 520
+const FC_W = 340, FC_H = 520
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t }
+function lerpPt(a: {x:number;y:number}, b: {x:number;y:number}, t: number) {
+  return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) }
+}
 
 const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() => {
   if (!selectedJobId.value) return { nodes: [], edges: [] }
@@ -144,7 +171,7 @@ const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() =
     transfers.forEach((edge, i) => {
       if (!nodeMap.has(edge.toId)) {
         const sign = i % 2 === 0 ? -1 : 1
-        const off = Math.ceil((i + 1) / 2) * 130
+        const off = Math.ceil((i + 1) / 2) * 110
         addNode(edge.toId, parent.x + sign * off)
         queue.push({ id: edge.toId, depth: curr.depth + 1 })
       }
@@ -168,21 +195,33 @@ const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() =
 
   const edges: FlowEdgeLayout[] = []
   for (const edge of CAREER_PATH_EDGES) {
-    const fn = nodeMap.get(edge.fromId)
-    const tn = nodeMap.get(edge.toId)
-    if (!fn || !tn) continue
-    const dx = tn.x - fn.x, dy = tn.y - fn.y
-    const len = Math.sqrt(dx * dx + dy * dy)
-    const nx = len > 0 ? -dy / len : 0
-    const ny = len > 0 ? dx / len : 1
-    const shown = edge.skills.slice(0, 6)
-    const dots: SkillDot[] = shown.map((label, i) => {
-      const t = (i + 1) / (shown.length + 1)
-      const side: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right'
-      const offset = 18 * (side === 'left' ? -1 : 1)
-      return { label, side, x: Math.round(lerp(fn.x, tn.x, t) + nx * offset), y: Math.round(lerp(fn.y, tn.y, t) + ny * offset) }
+    const fromNode = nodeMap.get(edge.fromId)
+    const toNode = nodeMap.get(edge.toId)
+    if (!fromNode || !toNode) continue
+    const fn = { x: fromNode.x, y: fromNode.y }
+    const tn = { x: toNode.x,   y: toNode.y   }
+    /* 折点：晋升路径向内侧偏移（Z形），转岗路径取正中（V形） */
+    const mid = edge.type === 'promote'
+      ? { x: fn.x + (fn.x < FC_W / 2 ? 22 : -22), y: (fn.y + tn.y) / 2 }
+      : { x: (fn.x + tn.x) / 2, y: (fn.y + tn.y) / 2 }
+    /* 串珠密度限制：按段长动态计算 */
+    const seg1Len = Math.sqrt((mid.x - fn.x) ** 2 + (mid.y - fn.y) ** 2)
+    const seg2Len = Math.sqrt((tn.x - mid.x) ** 2 + (tn.y - mid.y) ** 2)
+    const maxBeads = Math.min(8, Math.floor((seg1Len + seg2Len) / 10))
+    const skills = edge.skills.slice(0, maxBeads)
+    const beads: FlowBead[] = skills.map((label, i) => {
+      const t = (i + 0.5) / skills.length
+      let pt: { x: number; y: number }
+      if (t <= 0.5) {
+        const st = t * 2
+        pt = lerpPt(lerpPt(fn, mid, 0.15), lerpPt(fn, mid, 0.85), st)
+      } else {
+        const st = (t - 0.5) * 2
+        pt = lerpPt(lerpPt(mid, tn, 0.15), lerpPt(mid, tn, 0.85), st)
+      }
+      return { x: Math.round(pt.x), y: Math.round(pt.y), label }
     })
-    edges.push({ fromNode: fn, toNode: tn, type: edge.type, skills: edge.skills, dots })
+    edges.push({ fromNode, toNode, type: edge.type, skills: edge.skills, mid, beads })
   }
 
   return { nodes, edges }
@@ -205,20 +244,20 @@ function buildRadarOption() {
   return {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item' },
-    legend: { bottom: 0, textStyle: { color: 'rgba(212,201,181,0.65)', fontSize: 10 }, data: ['我的能力', '岗位要求'] },
+    legend: { bottom: 0, textStyle: { color: '#6B5D4F', fontSize: 10 }, data: ['我的能力', '岗位要求'] },
     radar: {
       indicator: DIM_NAMES.map(name => ({ name, max: 100 })),
       radius: '58%', center: ['50%', '46%'], splitNumber: 4,
-      axisName: { color: 'rgba(212,201,181,0.7)', fontSize: 10 },
-      splitLine: { lineStyle: { color: 'rgba(212,201,181,0.1)' } },
-      splitArea: { areaStyle: { color: ['rgba(30,20,10,0.2)', 'rgba(30,20,10,0.08)'] } },
-      axisLine: { lineStyle: { color: 'rgba(212,201,181,0.12)' } },
+      axisName: { color: '#6B5D4F', fontSize: 10 },
+      splitLine: { lineStyle: { color: 'rgba(139,37,0,0.12)' } },
+      splitArea: { areaStyle: { color: ['rgba(247,242,232,0.6)', 'rgba(237,229,214,0.4)'] } },
+      axisLine: { lineStyle: { color: 'rgba(139,37,0,0.15)' } },
     },
     series: [{ type: 'radar', data: [
       { value: DIM_NAMES.map(n => studentDim.value[n]), name: '我的能力',
-        lineStyle: { color: '#C4622D', width: 1.5 }, areaStyle: { color: 'rgba(196,98,45,0.18)' }, itemStyle: { color: '#C4622D' } },
+        lineStyle: { color: '#8B2500', width: 1.5 }, areaStyle: { color: 'rgba(139,37,0,0.12)' }, itemStyle: { color: '#8B2500' } },
       { value: DIM_NAMES.map(n => job.sevenDim[n]), name: '岗位要求',
-        lineStyle: { color: '#B8962E', width: 1.5, type: 'dashed' }, areaStyle: { color: 'rgba(184,150,46,0.1)' }, itemStyle: { color: '#B8962E' } },
+        lineStyle: { color: '#8B6914', width: 1.5, type: 'dashed' }, areaStyle: { color: 'rgba(139,105,20,0.08)' }, itemStyle: { color: '#8B6914' } },
     ] }],
   }
 }
@@ -339,30 +378,22 @@ onBeforeUnmount(() => {
             :width="FC_W" :height="FC_H"
             fill="none"
           >
-            <!-- 边（连线） -->
+            <!-- 折线边（Z/V 形两段斜线）-->
             <g v-for="(edge, ei) in flowLayout.edges" :key="'e'+ei">
-              <line
-                :x1="edge.fromNode.x" :y1="edge.fromNode.y"
-                :x2="edge.toNode.x"   :y2="edge.toNode.y"
-                :stroke="edge.type === 'promote' ? 'rgba(196,98,45,0.55)' : 'rgba(106,91,138,0.45)'"
-                :stroke-width="edge.type === 'promote' ? 2 : 1.5"
-                :stroke-dasharray="edge.type === 'transfer' ? '5 4' : ''"
-                stroke-linecap="round"
+              <polyline
+                :points="`${edge.fromNode.x},${edge.fromNode.y} ${edge.mid.x},${edge.mid.y} ${edge.toNode.x},${edge.toNode.y}`"
+                :stroke="edge.type === 'promote' ? 'rgba(139,37,0,0.22)' : 'rgba(43,76,111,0.2)'"
+                stroke-width="1" fill="none" stroke-linejoin="round"
               />
-              <!-- 技能点 -->
-              <g v-for="(dot, di) in edge.dots" :key="'d'+ei+di">
-                <rect
-                  :x="dot.x - 24" :y="dot.y - 7"
-                  width="48" height="13" rx="6"
-                  :fill="edge.type === 'promote' ? 'rgba(139,37,0,0.22)' : 'rgba(74,58,110,0.22)'"
-                  :stroke="edge.type === 'promote' ? 'rgba(196,98,45,0.4)' : 'rgba(106,91,138,0.4)'"
+              <!-- 串珠技能节点 -->
+              <g v-for="bead in edge.beads" :key="bead.label">
+                <circle
+                  :cx="bead.x" :cy="bead.y" r="3.5"
+                  :fill="edge.type === 'promote' ? 'rgba(139,37,0,0.3)' : 'rgba(43,76,111,0.28)'"
+                  :stroke="edge.type === 'promote' ? '#8B2500' : '#2B4C6F'"
                   stroke-width="0.8"
                 />
-                <text
-                  :x="dot.x" :y="dot.y + 3.5"
-                  text-anchor="middle"
-                  class="cr-skill-dot-text"
-                >{{ dot.label.length > 10 ? dot.label.slice(0,9)+'…' : dot.label }}</text>
+                <title>{{ bead.label }}</title>
               </g>
             </g>
 
@@ -375,11 +406,10 @@ onBeforeUnmount(() => {
               <circle
                 :cx="node.x" :cy="node.y" r="22"
                 :fill="selectedJobId === node.id
-                  ? (LINE_COLORS[node.lineId] ?? '#888')
-                  : 'rgba(237,229,214,0.06)'"
-                :stroke="LINE_COLORS[node.lineId] ?? '#888'"
+                  ? (LINE_COLORS[node.lineId] ?? '#8B2500')
+                  : 'rgba(237,229,214,0.55)'"
+                :stroke="LINE_COLORS[node.lineId] ?? '#8B2500'"
                 :stroke-width="selectedJobId === node.id ? 2.5 : 1.5"
-                :fill-opacity="selectedJobId === node.id ? 1 : 0.9"
               />
               <text :x="node.x" :y="node.y + 4" text-anchor="middle" class="cr-fc-node-text"
                 :class="{'cr-fc-node-text--active': selectedJobId === node.id}">
@@ -393,9 +423,9 @@ onBeforeUnmount(() => {
 
             <!-- 图例 -->
             <g transform="translate(8,12)">
-              <line x1="0" y1="0" x2="14" y2="0" stroke="rgba(196,98,45,0.6)" stroke-width="2"/>
+              <polyline points="0,0 7,0 14,0" stroke="rgba(139,37,0,0.55)" stroke-width="2" fill="none"/>
               <text x="18" y="4" class="cr-fc-legend-text">晋升路径</text>
-              <line x1="0" y1="14" x2="14" y2="14" stroke="rgba(106,91,138,0.55)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <polyline points="0,14 7,14 14,14" stroke="rgba(43,76,111,0.5)" stroke-width="1.5" fill="none" stroke-dasharray="3 2"/>
               <text x="18" y="18" class="cr-fc-legend-text">转岗路径</text>
             </g>
           </svg>
@@ -420,42 +450,53 @@ onBeforeUnmount(() => {
               <span>岗位匹配气泡图</span>
               <span class="cr-panel-sub">气泡越大匹配度越高</span>
             </div>
-            <div class="cr-bubble-wrap">
-              <svg :viewBox="`0 0 ${BB_W} ${BB_H}`" :width="BB_W" :height="BB_H" class="cr-bubble-svg">
-                <!-- 连线：其他泡到中心 -->
+            <div class="cr-bubble-stage">
+              <!-- 连线：其他泡→中心泡 -->
+              <svg class="cr-bubble-lines" :viewBox="`0 0 ${BB_W} ${BB_H}`"
+                :width="BB_W" :height="BB_H" style="position:absolute;top:0;left:0;pointer-events:none">
                 <line
                   v-for="item in bubbleLayout.slice(1)" :key="'bl-'+item.job.id"
                   :x1="item.x" :y1="item.y"
                   :x2="bubbleLayout[0]?.x ?? BB_W/2" :y2="bubbleLayout[0]?.y ?? BB_H/2"
-                  stroke="rgba(196,185,166,0.1)" stroke-width="1"
+                  stroke="rgba(139,37,0,0.1)" stroke-width="0.8"
                 />
-                <!-- 气泡 -->
-                <g
-                  v-for="item in bubbleLayout" :key="item.job.id"
-                  class="cr-bubble-node"
-                  @click="selectJob(item.job.id)"
-                >
-                  <circle
-                    :cx="item.x" :cy="item.y" :r="item.r"
-                    :fill="selectedJobId === item.job.id
-                      ? (LINE_COLORS[item.job.lineId] ?? '#888')
-                      : (item.isCenter ? 'rgba(196,98,45,0.35)' : 'rgba(237,229,214,0.08)')"
-                    :stroke="LINE_COLORS[item.job.lineId] ?? '#888'"
-                    :stroke-width="item.isCenter ? 2 : 1"
-                    :fill-opacity="selectedJobId === item.job.id ? 0.85 : (item.isCenter ? 0.8 : 0.7)"
-                  />
-                  <text v-if="item.r >= 18"
-                    :x="item.x" :y="item.y + 3"
-                    text-anchor="middle" class="cr-bubble-text"
-                    :class="{'cr-bubble-text--active': selectedJobId === item.job.id}"
-                  >{{ item.job.title.length > 5 ? item.job.title.slice(0,5) : item.job.title }}</text>
-                  <!-- 匹配度百分比（仅中心泡） -->
-                  <text v-if="item.isCenter"
-                    :x="item.x" :y="item.y + item.r + 12"
-                    text-anchor="middle" class="cr-bubble-pct"
-                  >{{ Math.round(item.job.matchScore * 100) }}%</text>
-                </g>
               </svg>
+              <!-- div 气泡 -->
+              <div
+                v-for="(item, i) in bubbleLayout" :key="item.job.id"
+                class="cr-bubble"
+                :class="{ 'cr-bubble--selected': selectedJobId === item.job.id }"
+                :style="{
+                  left: (item.x - item.r) + 'px',
+                  top:  (item.y - item.r) + 'px',
+                  width:  item.r * 2 + 'px',
+                  height: item.r * 2 + 'px',
+                  '--c':         LINE_COLORS[item.job.lineId] ?? '#8B2500',
+                  '--dur':       (5.5 + i * 0.7) + 's',
+                  '--neg-delay': '-' + (i * 0.9 + 1.2) + 's',
+                  '--dx1': (BUBBLE_DRIFTS[i % 20]?.dx1 ?? 0) + 'px',
+                  '--dy1': (BUBBLE_DRIFTS[i % 20]?.dy1 ?? 0) + 'px',
+                  '--dx2': (BUBBLE_DRIFTS[i % 20]?.dx2 ?? 0) + 'px',
+                  '--dy2': (BUBBLE_DRIFTS[i % 20]?.dy2 ?? 0) + 'px',
+                  '--dx3': (BUBBLE_DRIFTS[i % 20]?.dx3 ?? 0) + 'px',
+                  '--dy3': (BUBBLE_DRIFTS[i % 20]?.dy3 ?? 0) + 'px',
+                }"
+                @click="selectJob(item.job.id)"
+              >
+                <!-- 大泡：完整标题 + 匹配度 -->
+                <template v-if="item.r >= 22">
+                  <span class="cr-bubble-title">{{ item.job.title }}</span>
+                  <span class="cr-bubble-pct">{{ Math.round(item.job.matchScore * 100) }}%</span>
+                </template>
+                <!-- 中泡：4字简写 -->
+                <template v-else-if="item.r >= 14">
+                  <span class="cr-bubble-abbr" :title="item.job.title">
+                    {{ item.job.title.slice(0, 4) }}
+                  </span>
+                </template>
+                <!-- 小泡：外部下方标签 -->
+                <span v-else class="cr-bubble-ext-label">{{ item.job.title }}</span>
+              </div>
             </div>
           </div>
 
@@ -486,28 +527,10 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- 中栏下半：未来规划 + AI 占位 -->
+        <!-- 中栏下半：个性化成长计划 -->
         <div class="cr-center-bottom">
 
-          <!-- AI 智能体占位区 -->
-          <div class="cr-ai-placeholder">
-            <div class="cr-ai-header">
-              <Icon icon="lucide:bot" :width="13"/>
-              <span>AI 职业顾问</span>
-              <span class="cr-ai-badge">即将接入</span>
-            </div>
-            <div class="cr-ai-body">
-              <p class="cr-ai-hint">输入问题，AI 将结合你的能力画像给出个性化建议</p>
-              <div class="cr-ai-input-row">
-                <input class="cr-ai-input" disabled placeholder="例如：我适合从哪个岗位入手？" />
-                <button class="cr-ai-send" disabled>
-                  <Icon icon="lucide:send" :width="11"/>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 未来规划 -->
+          <!-- 成长计划 -->
           <div class="cr-planning">
             <div class="cr-panel-title">
               <Icon icon="lucide:calendar-check" :width="12"/>
@@ -573,230 +596,291 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* ══ CSS 变量（对齐 CareerNavigation 左栏） ══ */
+.cr-page {
+  --cr-bg:     #F7F2E8;
+  --cr-panel:  #EDE5D6;
+  --cr-border: #D4C9B5;
+  --cr-muted:  #C4B9A6;
+  --cr-red:    #8B2500;
+  --cr-gold:   #8B6914;
+  --cr-text:   #1A1410;
+  --cr-sub:    #6B5D4F;
+  --cr-hint:   #9C8B78;
+  --cr-dark:   #1A1008;
+}
+
+/* ══ 页面容器 ══ */
 .cr-page {
   position: relative; width: 100%; height: 100vh; max-height: 100vh;
-  background: #120C04; display: flex; flex-direction: column;
+  background: var(--cr-bg); display: flex; flex-direction: column;
   font-family: var(--font-title, 'LXGW WenKai', serif); overflow: hidden;
 }
-
-/* ── HEADER ── */
-.cr-header {
-  flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 0 20px; height: 48px; min-height: 48px;
-  border-bottom: 1px solid rgba(196,185,166,0.1);
-  background: rgba(8,4,0,0.75); backdrop-filter: blur(12px); z-index: 20;
+.cr-page::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(26,20,16,0.06) 1px, transparent 0);
+  background-size: 4px 4px;
 }
-.cr-header__left { display: flex; align-items: center; gap: 10px; }
-.cr-header__center { display: flex; align-items: center; gap: 5px; }
+
+/* ══ HEADER ══ */
+.cr-header {
+  position: relative; z-index: 10;
+  flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; padding: 0 24px; height: 48px; min-height: 48px;
+  background: var(--cr-panel); border-bottom: 1px solid var(--cr-border);
+}
+.cr-header__left  { display: flex; align-items: center; gap: 12px; }
+.cr-header__center{ display: flex; align-items: center; gap: 5px; justify-content: center; }
 .cr-header__right { display: flex; justify-content: flex-end; }
 .cr-back {
-  display: flex; align-items: center; gap: 5px; background: none;
-  border: 1px solid rgba(196,185,166,0.18); color: rgba(190,175,155,0.7);
-  font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 4px; background: transparent;
+  border: 1px solid var(--cr-border); color: var(--cr-sub);
+  font-size: 12px; padding: 4px 10px; cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease; letter-spacing: 0.04em;
+  font-family: inherit;
 }
-.cr-back:hover { border-color: rgba(139,37,0,0.5); color: rgba(220,170,130,0.9); }
-.cr-title { font-size: 13px; font-weight: 700; color: rgba(237,229,214,0.9); letter-spacing: 0.08em; }
-.cr-username { font-size: 12px; font-weight: 700; color: rgba(220,170,130,0.9); }
-.cr-sep { font-size: 11px; color: rgba(130,115,95,0.45); margin: 0 2px; }
-.cr-tagline { font-size: 11px; color: rgba(175,160,135,0.5); letter-spacing: 0.06em; }
+.cr-back:hover { border-color: var(--cr-red); color: var(--cr-red); }
+.cr-back:active { transform: scale(0.97); }
+.cr-title    { font-size: 13px; font-weight: 700; color: var(--cr-text); letter-spacing: 0.14em; }
+.cr-username { font-size: 12px; font-weight: 700; color: var(--cr-red); }
+.cr-sep      { font-size: 11px; color: var(--cr-muted); margin: 0 3px; }
+.cr-tagline  { font-size: 11px; color: var(--cr-hint); letter-spacing: 0.04em; }
 .cr-report-btn {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
-  background: rgba(139,37,0,0.2); border: 1px solid rgba(139,37,0,0.45);
-  color: rgba(220,160,120,0.9); font-size: 11px; padding: 5px 14px; border-radius: 4px;
-  transition: all 0.2s; letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--cr-red) 6%, var(--cr-panel) 94%);
+  border: 1px solid rgba(139,37,0,0.35); color: var(--cr-sub);
+  font-size: 11px; padding: 5px 14px; font-family: inherit;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  letter-spacing: 0.04em;
 }
-.cr-report-btn:hover:not(:disabled) { background: rgba(139,37,0,0.35); }
+.cr-report-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cr-red) 12%, var(--cr-panel) 88%);
+  border-color: var(--cr-red); color: var(--cr-red);
+}
+.cr-report-btn:active:not(:disabled) { transform: scale(0.97); }
 .cr-report-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* ── 主布局：左栏 + 中栏 ── */
+/* ══ 主布局 ══ */
 .cr-main {
-  flex: 1; display: grid; grid-template-columns: 310px 1fr;
-  overflow: hidden; min-height: 0;
+  flex: 1; display: grid; grid-template-columns: 350px 1fr;
+  overflow: hidden; min-height: 0; position: relative; z-index: 1;
 }
 
-/* ── 左栏：流程图 ── */
+/* ══ 左栏：路径图 ══ */
 .cr-left {
   display: flex; flex-direction: column;
-  border-right: 1px solid rgba(196,185,166,0.09);
-  overflow: hidden;
+  border-right: 1px solid var(--cr-border); overflow: hidden;
+  background: var(--cr-bg);
 }
 .cr-fc-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
   display: flex; justify-content: center; padding: 8px 4px 12px;
 }
 .cr-fc-wrap::-webkit-scrollbar { width: 3px; }
-.cr-fc-wrap::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.25); }
+.cr-fc-wrap::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-fc-svg { display: block; flex-shrink: 0; cursor: default; }
 .cr-fc-node { cursor: pointer; }
+.cr-fc-node:hover circle { filter: brightness(1.15); }
 .cr-fc-node-text {
-  font-size: 8.5px; fill: rgba(237,229,214,0.75); pointer-events: none; font-weight: 600;
+  font-size: 9px; fill: var(--cr-sub); pointer-events: none; font-weight: 600;
 }
 .cr-fc-node-text--active { fill: #fff; }
 .cr-fc-label {
-  font-size: 8px; fill: rgba(190,175,155,0.55); pointer-events: none;
+  font-size: 9px; fill: var(--cr-hint); pointer-events: none;
 }
-.cr-fc-label--active { fill: rgba(237,229,214,0.85); font-size: 8.5px; }
-.cr-skill-dot-text {
-  font-size: 7px; fill: rgba(200,185,165,0.75); pointer-events: none;
-}
-.cr-fc-legend-text { font-size: 8px; fill: rgba(150,135,110,0.5); }
+.cr-fc-label--active { fill: var(--cr-sub); font-weight: 700; }
+.cr-fc-legend-text { font-size: 9px; fill: var(--cr-hint); }
 .cr-fc-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 10px; color: rgba(130,115,95,0.4);
+  justify-content: center; gap: 10px; color: var(--cr-muted);
   font-size: 11px; text-align: center; line-height: 1.6;
 }
 
-/* ── 中栏 ── */
-.cr-center {
-  display: flex; flex-direction: column; overflow: hidden; min-height: 0;
-}
+/* ══ 中栏 ══ */
+.cr-center { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
-/* 中栏上：气泡 + 雷达 */
+/* 中栏上：气泡 + 雷达（固定高度） */
 .cr-center-top {
-  flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid rgba(196,185,166,0.09); min-height: 0;
+  flex: 0 0 270px; display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--cr-border); overflow: hidden;
 }
 .cr-bubble-panel, .cr-radar-panel {
-  display: flex; flex-direction: column; padding: 8px 12px 10px; overflow: hidden;
+  display: flex; flex-direction: column; overflow: hidden;
 }
-.cr-bubble-panel { border-right: 1px solid rgba(196,185,166,0.09); }
-.cr-bubble-wrap { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.cr-bubble-svg { display: block; cursor: default; }
-.cr-bubble-node { cursor: pointer; }
-.cr-bubble-text { font-size: 9px; fill: rgba(237,229,214,0.85); pointer-events: none; font-weight: 600; }
-.cr-bubble-text--active { fill: #fff; }
-.cr-bubble-pct { font-size: 9px; fill: rgba(220,170,130,0.75); pointer-events: none; }
+.cr-bubble-panel { border-right: 1px solid var(--cr-border); }
+
+/* ── 气泡图容器（div 绝对定位方案）── */
+.cr-bubble-stage {
+  flex: 1; position: relative; overflow: visible;
+  width: 300px; height: 220px; margin: auto;
+}
+
+/* ── 水泡动画 ── */
+@keyframes cr-float {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  20%  { transform: translate(var(--dx1), var(--dy1)) scale(1.06); }
+  40%  { transform: translate(var(--dx2), var(--dy2)) scale(0.96); }
+  65%  { transform: translate(var(--dx3), var(--dy3)) scale(1.05); }
+  80%  { transform: translate(var(--dx1), calc(var(--dy1) * -1)) scale(0.98); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+.cr-bubble {
+  position: absolute; border-radius: 50%; cursor: pointer;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0) 36%),
+    radial-gradient(circle at 66% 72%, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 24%),
+    color-mix(in srgb, var(--c) 20%, rgba(240,234,220,0.7) 80%);
+  border: 1.5px solid color-mix(in srgb, var(--c) 55%, rgba(255,255,255,0.6) 45%);
+  box-shadow:
+    inset 0 -5px 10px -2px color-mix(in srgb, var(--c) 30%, transparent),
+    inset 0  3px  5px -1px rgba(255,255,255,0.45),
+    0 3px 12px rgba(26,20,16,0.07);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  will-change: transform;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  animation: cr-float var(--dur, 6s) ease-in-out var(--neg-delay, -1.2s) infinite;
+}
+.cr-bubble--selected {
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 34%),
+    radial-gradient(circle at 66% 72%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%),
+    color-mix(in srgb, var(--c) 55%, rgba(247,242,232,0.5) 45%);
+  border-color: var(--c); border-width: 2px;
+  box-shadow:
+    inset 0 -5px 10px -2px color-mix(in srgb, var(--c) 40%, transparent),
+    inset 0  3px  5px -1px rgba(255,255,255,0.5),
+    0 4px 16px rgba(26,20,16,0.12);
+  z-index: 10;
+}
+.cr-bubble:hover { filter: brightness(1.08); }
+.cr-bubble:active { transform: scale(0.93) !important; }
+/* 岗位标注 */
+.cr-bubble-title {
+  font-size: 11px; font-weight: 700; color: var(--cr-text);
+  text-align: center; pointer-events: none; line-height: 1.2; padding: 0 4px;
+}
+.cr-bubble-pct {
+  font-size: 9px; color: var(--cr-sub); pointer-events: none; letter-spacing: 0.04em;
+}
+.cr-bubble-abbr {
+  font-size: 9.5px; font-weight: 700; color: var(--cr-text); pointer-events: none;
+}
+.cr-bubble--selected .cr-bubble-title,
+.cr-bubble--selected .cr-bubble-abbr { color: #fff; }
+.cr-bubble--selected .cr-bubble-pct  { color: rgba(255,255,255,0.8); }
+.cr-bubble-ext-label {
+  position: absolute; top: calc(100% + 4px); left: 50%;
+  transform: translateX(-50%); white-space: nowrap;
+  font-size: 9px; color: var(--cr-sub); pointer-events: none;
+  background: rgba(247,242,232,0.9); padding: 1px 4px; letter-spacing: 0.03em;
+}
+
+/* 雷达图 */
 .cr-radar-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  color: rgba(130,115,95,0.4); font-size: 11px; text-align: center; line-height: 1.7;
+  color: var(--cr-muted); font-size: 11px; text-align: center; line-height: 1.7;
 }
-.cr-radar { flex-shrink: 0; width: 100%; height: 160px; }
-.cr-gap-bars { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-.cr-gap-row { display: flex; align-items: center; gap: 6px; }
-.cr-gap-dim { font-size: 9.5px; color: rgba(165,150,128,0.75); width: 46px; flex-shrink: 0; }
-.cr-gap-track { flex: 1; height: 4px; background: rgba(237,229,214,0.07); border-radius: 2px; position: relative; overflow: visible; }
-.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: rgba(196,98,45,0.6); border-radius: 2px; }
-.cr-gap-bar--need { position: absolute; top: 0; height: 100%; background: rgba(196,98,45,0.2); border: 1px dashed rgba(196,98,45,0.35); border-radius: 2px; }
-.cr-gap-num { font-size: 9.5px; width: 28px; text-align: right; color: rgba(200,100,80,0.8); }
-.cr-gap-num--pos { color: rgba(90,160,100,0.8); }
+.cr-radar { flex-shrink: 0; width: 100%; height: 150px; }
+.cr-gap-bars { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 8px; }
+.cr-gap-row  { display: flex; align-items: center; gap: 6px; }
+.cr-gap-dim  { font-size: 9.5px; color: var(--cr-sub); width: 48px; flex-shrink: 0; }
+.cr-gap-track { flex: 1; height: 4px; background: var(--cr-border); border-radius: 2px; position: relative; overflow: visible; }
+.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: rgba(139,37,0,0.55); border-radius: 2px; }
+.cr-gap-bar--need { position: absolute; top: 0; height: 100%; background: rgba(139,37,0,0.2); border: 1px dashed rgba(139,37,0,0.35); border-radius: 2px; }
+.cr-gap-num  { font-size: 9.5px; width: 28px; text-align: right; color: rgba(180,80,60,0.9); }
+.cr-gap-num--pos { color: rgba(60,140,80,0.85); }
 
-/* 中栏下：规划 + AI */
-.cr-center-bottom {
-  flex: 1; display: grid; grid-template-columns: 280px 1fr;
-  overflow: hidden; min-height: 0;
-}
-.cr-ai-placeholder {
-  border-right: 1px solid rgba(196,185,166,0.09);
-  display: flex; flex-direction: column; padding: 10px 12px; gap: 8px; overflow: hidden;
-}
-.cr-ai-header {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 600; color: rgba(190,175,155,0.7);
-}
-.cr-ai-badge {
-  font-size: 9px; padding: 1px 6px; border-radius: 3px;
-  background: rgba(196,185,166,0.08); border: 1px solid rgba(196,185,166,0.2);
-  color: rgba(150,135,110,0.6);
-}
-.cr-ai-body { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.cr-ai-hint { font-size: 10px; color: rgba(140,125,100,0.5); line-height: 1.5; margin: 0; }
-.cr-ai-input-row { display: flex; gap: 6px; margin-top: auto; }
-.cr-ai-input {
-  flex: 1; background: rgba(237,229,214,0.04); border: 1px solid rgba(196,185,166,0.15);
-  color: rgba(190,175,155,0.6); font-size: 10px; padding: 5px 8px; border-radius: 4px;
-  cursor: not-allowed; font-family: inherit;
-}
-.cr-ai-send {
-  background: rgba(196,185,166,0.08); border: 1px solid rgba(196,185,166,0.15);
-  color: rgba(150,135,110,0.5); padding: 5px 8px; border-radius: 4px; cursor: not-allowed;
-}
-
-.cr-planning { flex: 1; display: flex; flex-direction: column; padding: 10px 12px; overflow: hidden; }
+/* 中栏下：成长计划独占 */
+.cr-center-bottom { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.cr-planning { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .cr-planning-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 10px; color: rgba(130,115,95,0.4);
+  justify-content: center; gap: 10px; color: var(--cr-muted);
   font-size: 11px; text-align: center; line-height: 1.6;
 }
-.cr-plan-stages { flex: 1; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+.cr-plan-stages { flex: 1; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding: 0 12px 10px; }
 .cr-plan-stages::-webkit-scrollbar { height: 3px; }
 .cr-plan-stages::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-plan-stage {
-  flex: 1; min-width: 220px; background: rgba(237,229,214,0.04);
-  border: 1px solid rgba(196,185,166,0.12); border-radius: 6px;
+  flex: 1; min-width: 200px;
+  background: var(--cr-panel); border: 1px solid var(--cr-border);
   padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
 }
 .cr-plan-stage::-webkit-scrollbar { width: 2px; }
-.cr-plan-stage--short { border-color: rgba(139,37,0,0.25); }
-.cr-plan-stage--mid   { border-color: rgba(139,105,20,0.22); }
+.cr-plan-stage--short { border-color: color-mix(in srgb, var(--cr-red) 30%, var(--cr-border) 70%); }
+.cr-plan-stage--mid   { border-color: color-mix(in srgb, var(--cr-gold) 30%, var(--cr-border) 70%); }
 .cr-ps-head { display: flex; flex-direction: column; gap: 4px; }
 .cr-ps-label {
-  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 3px;
+  font-size: 9.5px; font-weight: 700; padding: 2px 7px;
   display: inline-block; width: fit-content;
 }
-.cr-plan-stage--short .cr-ps-label { background: rgba(139,37,0,0.2); color: rgba(220,140,100,0.9); }
-.cr-plan-stage--mid   .cr-ps-label { background: rgba(139,105,20,0.2); color: rgba(200,170,90,0.9); }
-.cr-ps-goal { font-size: 10px; color: rgba(195,180,160,0.8); line-height: 1.55; }
+.cr-plan-stage--short .cr-ps-label { background: color-mix(in srgb, var(--cr-red) 10%, var(--cr-bg) 90%); color: var(--cr-red); border: 1px solid rgba(139,37,0,0.25); }
+.cr-plan-stage--mid   .cr-ps-label { background: color-mix(in srgb, var(--cr-gold) 10%, var(--cr-bg) 90%); color: var(--cr-gold); border: 1px solid rgba(139,105,20,0.25); }
+.cr-ps-goal { font-size: 10px; color: var(--cr-sub); line-height: 1.55; }
 .cr-ps-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-.cr-ps-list li { display: flex; align-items: flex-start; gap: 5px; font-size: 10px; color: rgba(165,150,130,0.75); line-height: 1.5; }
+.cr-ps-list li { display: flex; align-items: flex-start; gap: 5px; font-size: 10px; color: var(--cr-sub); line-height: 1.5; }
 .cr-ps-milestone {
   display: flex; align-items: flex-start; gap: 5px; font-size: 9.5px;
-  color: rgba(175,148,85,0.75); padding-top: 6px;
-  border-top: 1px solid rgba(196,185,166,0.1); margin-top: auto;
+  color: var(--cr-gold); padding-top: 6px;
+  border-top: 1px solid var(--cr-border); margin-top: auto;
 }
 
-/* ── 公用面板标题 ── */
+/* ══ 公用面板标题 ══ */
 .cr-panel-title {
   flex-shrink: 0; display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 600; color: rgba(196,185,166,0.7);
+  font-size: 11px; font-weight: 600; color: var(--cr-sub);
   letter-spacing: 0.06em; padding: 8px 12px 6px;
-  border-bottom: 1px solid rgba(196,185,166,0.08);
+  border-bottom: 1px solid var(--cr-border);
 }
-.cr-panel-sub { font-size: 9.5px; font-weight: 400; color: rgba(140,125,100,0.5); margin-left: 4px; }
+.cr-panel-sub { font-size: 9.5px; font-weight: 400; color: var(--cr-hint); margin-left: 4px; }
 
-/* ── 智能汇报抽屉 ── */
+/* ══ 智能汇报抽屉（保持深色） ══ */
 .cr-drawer {
   position: fixed; top: 0; right: 0; bottom: 0;
-  width: min(640px, 50vw);
-  background: #0E0804;
-  border-left: 1px solid rgba(196,185,166,0.15);
+  width: min(480px, 40vw);
+  background: var(--cr-dark);
+  border-left: 1px solid rgba(212,201,181,0.15);
   display: flex; flex-direction: column;
   transform: translateX(100%);
-  transition: transform 0.32s cubic-bezier(0.22,0.61,0.36,1);
+  transition: transform 250ms cubic-bezier(0.215, 0.61, 0.355, 1);
   z-index: 100;
-  box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+  box-shadow: -6px 0 24px rgba(0,0,0,0.35);
 }
 .cr-drawer--open { transform: translateX(0); }
 .cr-drawer-mask {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+  position: fixed; inset: 0; background: rgba(26,20,16,0.3);
   z-index: 99; cursor: pointer;
 }
 .cr-drawer-header {
   flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; height: 48px; border-bottom: 1px solid rgba(196,185,166,0.1);
-  background: rgba(8,4,0,0.6);
+  padding: 0 16px; height: 48px; border-bottom: 1px solid rgba(212,201,181,0.12);
+  background: rgba(10,6,2,0.5);
 }
 .cr-drawer-title {
   display: flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 700; color: rgba(237,229,214,0.9);
+  font-size: 13px; font-weight: 700; color: rgba(220,205,185,0.9);
 }
 .cr-drawer-actions { display: flex; align-items: center; gap: 6px; }
 .cr-drawer-btn {
   display: flex; align-items: center; gap: 4px; cursor: pointer;
-  background: rgba(196,185,166,0.07); border: 1px solid rgba(196,185,166,0.18);
-  color: rgba(180,165,145,0.75); font-size: 10.5px; padding: 4px 10px; border-radius: 4px;
-  transition: all 0.2s; font-family: inherit;
+  background: rgba(212,201,181,0.07); border: 1px solid rgba(212,201,181,0.18);
+  color: rgba(180,165,145,0.75); font-size: 10.5px; padding: 4px 10px;
+  transition: background 150ms ease; font-family: inherit;
 }
-.cr-drawer-btn:hover:not(:disabled) { background: rgba(196,185,166,0.14); }
+.cr-drawer-btn:hover:not(:disabled) { background: rgba(212,201,181,0.14); }
 .cr-drawer-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-.cr-drawer-btn--edit { color: rgba(196,165,100,0.85); border-color: rgba(196,165,100,0.28); }
-.cr-drawer-btn--export { color: rgba(220,160,120,0.9); border-color: rgba(139,37,0,0.4); background: rgba(139,37,0,0.15); }
+.cr-drawer-btn--edit   { color: rgba(196,165,100,0.85); border-color: rgba(196,165,100,0.28); }
+.cr-drawer-btn--export {
+  color: rgba(210,150,100,0.9); border-color: rgba(139,37,0,0.4);
+  background: rgba(139,37,0,0.15);
+}
 .cr-drawer-btn--export:hover { background: rgba(139,37,0,0.28); }
 .cr-drawer-close {
   background: none; border: none; color: rgba(160,145,125,0.6);
   cursor: pointer; padding: 4px; display: flex; align-items: center;
-  transition: color 0.2s;
+  transition: color 150ms ease;
 }
-.cr-drawer-close:hover { color: rgba(220,170,130,0.9); }
+.cr-drawer-close:hover { color: rgba(220,205,185,0.9); }
 .cr-drawer-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 .cr-drawer-editor {
   flex: 1; width: 100%; resize: none; background: rgba(237,229,214,0.03);
@@ -811,7 +895,14 @@ onBeforeUnmount(() => {
   color: rgba(210,195,175,0.85); line-height: 1.8; margin: 0;
 }
 
-/* ── 打印 ── */
+/* ══ prefers-reduced-motion ══ */
+@media (prefers-reduced-motion: reduce) {
+  .cr-bubble { animation: none; }
+  .cr-drawer { transition: none; }
+  .cr-back, .cr-report-btn, .cr-drawer-btn, .cr-drawer-close { transition: none; }
+}
+
+/* ══ 打印 ══ */
 @media print {
   .cr-back, .cr-report-btn, .cr-drawer-mask { display: none !important; }
   .cr-page { height: auto; background: #fff; }
