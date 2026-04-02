@@ -95,7 +95,7 @@ const growthPlan = computed(() => selectedJobId.value ? getGrowthPlan(selectedJo
 /* ══ 气泡图布局 ══ */
 type BubbleItem = { job: JobPortrait; x: number; y: number; r: number; isCenter: boolean }
 
-const BB_W = 300, BB_H = 220
+const BB_W = 320, BB_H = 240
 
 const bubbleLayout = computed<BubbleItem[]>(() => {
   const sorted = [...JOB_PORTRAITS]
@@ -105,19 +105,40 @@ const bubbleLayout = computed<BubbleItem[]>(() => {
   const items: BubbleItem[] = []
   const center = sorted[0]
   if (!center) return items
-  items.push({ job: center, x: cx, y: cy, r: Math.round(16 + center.matchScore * 36), isCenter: true })
+  const r0 = Math.round(18 + center.matchScore * 28)  /* 中心泡半径 */
+  items.push({ job: center, x: cx, y: cy, r: r0, isCenter: true })
   const rest = sorted.slice(1)
-  const n = rest.length
-  rest.forEach((job, i) => {
-    const angle = (i / n) * 2 * Math.PI - Math.PI / 2
-    const dist = 90 + (1 - job.matchScore) * 25
+  const inner = rest.slice(0, 5)   /* 内圈：贴着中心泡 */
+  const outer = rest.slice(5)      /* 外圈：贴着内圈 */
+  /* 内圈布局 */
+  inner.forEach((job, i) => {
+    const ri = Math.round(9 + job.matchScore * 18)
+    const angle = (i / inner.length) * 2 * Math.PI - Math.PI / 2
+    const dist = r0 + ri + 3
     items.push({
       job, isCenter: false,
       x: Math.round(cx + dist * Math.cos(angle)),
       y: Math.round(cy + dist * Math.sin(angle)),
-      r: Math.round(10 + job.matchScore * 22),
+      r: ri,
     })
   })
+  /* 外圈布局 */
+  if (outer.length) {
+    const maxInnerR = inner.length
+      ? Math.max(...inner.map(j => Math.round(9 + j.matchScore * 18)))
+      : 14
+    outer.forEach((job, i) => {
+      const ri = Math.round(7 + job.matchScore * 14)
+      const angle = (i / outer.length) * 2 * Math.PI - Math.PI / 3
+      const dist = r0 + maxInnerR * 2 + 6 + ri
+      items.push({
+        job, isCenter: false,
+        x: Math.round(cx + dist * Math.cos(angle)),
+        y: Math.round(cy + dist * Math.sin(angle)),
+        r: ri,
+      })
+    })
+  }
   return items
 })
 
@@ -131,7 +152,7 @@ type FlowEdgeLayout = {
   beads: FlowBead[]
 }
 
-const FC_W = 340, FC_H = 520
+const FC_W = 320, FC_H = 520
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t }
 function lerpPt(a: {x:number;y:number}, b: {x:number;y:number}, t: number) {
@@ -171,7 +192,7 @@ const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() =
     transfers.forEach((edge, i) => {
       if (!nodeMap.has(edge.toId)) {
         const sign = i % 2 === 0 ? -1 : 1
-        const off = Math.ceil((i + 1) / 2) * 110
+        const off = Math.ceil((i + 1) / 2) * 100
         addNode(edge.toId, parent.x + sign * off)
         queue.push({ id: edge.toId, depth: curr.depth + 1 })
       }
@@ -181,16 +202,17 @@ const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() =
   const nodes = [...nodeMap.values()]
   if (!nodes.length) return { nodes: [], edges: [] }
 
-  const levels = nodes.map(n => LEVEL_ORDER[n.level as JobLevel] ?? 0)
-  const minLvl = Math.min(...levels), maxLvl = Math.max(...levels)
-  const pad = 60
-  const range = FC_H - 2 * pad
+  const pad = 55
+  const STEP = 88  /* px per level */
+  /* 销定选中节点平面、所有其他节点的 y 相对它向上延伸 */
+  const selNode = nodeMap.get(selectedJobId.value)
+  const selLvl = selNode ? (LEVEL_ORDER[selNode.level as JobLevel] ?? 2) : 2
 
   for (const node of nodes) {
     const lvl = LEVEL_ORDER[node.level as JobLevel] ?? 0
-    node.y = maxLvl === minLvl
-      ? FC_H / 2
-      : FC_H - pad - ((lvl - minLvl) / (maxLvl - minLvl)) * range
+    const delta = lvl - selLvl  /* 超过 sel 的层数 */
+    /* 选中节点 delta=0 在最底部；更高层就平进展；更低层销定到同一行 */
+    node.y = Math.round((FC_H - pad) - Math.max(delta, 0) * STEP)
   }
 
   const edges: FlowEdgeLayout[] = []
@@ -201,8 +223,9 @@ const flowLayout = computed<{ nodes: FlowNode[]; edges: FlowEdgeLayout[] }>(() =
     const fn = { x: fromNode.x, y: fromNode.y }
     const tn = { x: toNode.x,   y: toNode.y   }
     /* 折点：晋升路径向内侧偏移（Z形），转岗路径取正中（V形） */
+    const halfW = FC_W / 2
     const mid = edge.type === 'promote'
-      ? { x: fn.x + (fn.x < FC_W / 2 ? 22 : -22), y: (fn.y + tn.y) / 2 }
+      ? { x: fn.x + (fn.x < halfW ? 18 : -18), y: (fn.y + tn.y) / 2 }
       : { x: (fn.x + tn.x) / 2, y: (fn.y + tn.y) / 2 }
     /* 串珠密度限制：按段长动态计算 */
     const seg1Len = Math.sqrt((mid.x - fn.x) ** 2 + (mid.y - fn.y) ** 2)
@@ -404,18 +427,18 @@ onBeforeUnmount(() => {
               @click="selectJob(node.id)"
             >
               <circle
-                :cx="node.x" :cy="node.y" r="22"
+                :cx="node.x" :cy="node.y" r="12"
                 :fill="selectedJobId === node.id
                   ? (LINE_COLORS[node.lineId] ?? '#8B2500')
-                  : 'rgba(237,229,214,0.55)'"
+                  : 'rgba(237,229,214,0.65)'"
                 :stroke="LINE_COLORS[node.lineId] ?? '#8B2500'"
-                :stroke-width="selectedJobId === node.id ? 2.5 : 1.5"
+                :stroke-width="selectedJobId === node.id ? 2 : 1"
               />
               <text :x="node.x" :y="node.y + 4" text-anchor="middle" class="cr-fc-node-text"
                 :class="{'cr-fc-node-text--active': selectedJobId === node.id}">
                 {{ node.title.length > 5 ? node.title.slice(0,5) : node.title }}
               </text>
-              <text :x="node.x" :y="node.y + 34" text-anchor="middle" class="cr-fc-label"
+              <text :x="node.x" :y="node.y + 18" text-anchor="middle" class="cr-fc-label"
                 :class="{'cr-fc-label--active': selectedJobId === node.id}">
                 {{ node.title }}
               </text>
@@ -451,17 +474,7 @@ onBeforeUnmount(() => {
               <span class="cr-panel-sub">气泡越大匹配度越高</span>
             </div>
             <div class="cr-bubble-stage">
-              <!-- 连线：其他泡→中心泡 -->
-              <svg class="cr-bubble-lines" :viewBox="`0 0 ${BB_W} ${BB_H}`"
-                :width="BB_W" :height="BB_H" style="position:absolute;top:0;left:0;pointer-events:none">
-                <line
-                  v-for="item in bubbleLayout.slice(1)" :key="'bl-'+item.job.id"
-                  :x1="item.x" :y1="item.y"
-                  :x2="bubbleLayout[0]?.x ?? BB_W/2" :y2="bubbleLayout[0]?.y ?? BB_H/2"
-                  stroke="rgba(139,37,0,0.1)" stroke-width="0.8"
-                />
-              </svg>
-              <!-- div 气泡 -->
+              <!-- div 气泡（无连线）-->
               <div
                 v-for="(item, i) in bubbleLayout" :key="item.job.id"
                 class="cr-bubble"
@@ -596,81 +609,65 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* ══ CSS 变量（对齐 CareerNavigation 左栏） ══ */
-.cr-page {
-  --cr-bg:     #F7F2E8;
-  --cr-panel:  #EDE5D6;
-  --cr-border: #D4C9B5;
-  --cr-muted:  #C4B9A6;
-  --cr-red:    #8B2500;
-  --cr-gold:   #8B6914;
-  --cr-text:   #1A1410;
-  --cr-sub:    #6B5D4F;
-  --cr-hint:   #9C8B78;
-  --cr-dark:   #1A1008;
-}
-
-/* ══ 页面容器 ══ */
+/* ══ 页面容器（直接使用全局 token，无自定义 --cr-* 变量） ══ */
 .cr-page {
   position: relative; width: 100%; height: 100vh; max-height: 100vh;
-  background: var(--cr-bg); display: flex; flex-direction: column;
-  font-family: var(--font-title, 'LXGW WenKai', serif); overflow: hidden;
-}
-.cr-page::before {
-  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image: radial-gradient(circle at 1px 1px, rgba(26,20,16,0.06) 1px, transparent 0);
-  background-size: 4px 4px;
+  background: var(--bg-100); display: flex; flex-direction: column;
+  font-family: var(--font-title); overflow: hidden;
+  /* 无额外 ::before 纹理：全局 body::before 已有 SVG noise */
 }
 
 /* ══ HEADER ══ */
 .cr-header {
   position: relative; z-index: 10;
   flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 0 24px; height: 48px; min-height: 48px;
-  background: var(--cr-panel); border-bottom: 1px solid var(--cr-border);
+  align-items: center; padding: 0 20px; height: 48px; min-height: 48px;
+  background: var(--bg-200); border-bottom: 2px solid var(--primary-100);
 }
-.cr-header__left  { display: flex; align-items: center; gap: 12px; }
+.cr-header__left  { display: flex; align-items: center; gap: 10px; }
 .cr-header__center{ display: flex; align-items: center; gap: 5px; justify-content: center; }
 .cr-header__right { display: flex; justify-content: flex-end; }
 .cr-back {
   display: flex; align-items: center; gap: 4px; background: transparent;
-  border: 1px solid var(--cr-border); color: var(--cr-sub);
+  border: 1px solid var(--bg-300); color: var(--text-200);
   font-size: 12px; padding: 4px 10px; cursor: pointer;
+  border-radius: 0;
   transition: border-color 200ms ease, color 200ms ease; letter-spacing: 0.04em;
-  font-family: inherit;
+  font-family: var(--font-ui);
 }
-.cr-back:hover { border-color: var(--cr-red); color: var(--cr-red); }
+.cr-back:hover { border-color: var(--primary-100); color: var(--primary-100); }
 .cr-back:active { transform: scale(0.97); }
-.cr-title    { font-size: 13px; font-weight: 700; color: var(--cr-text); letter-spacing: 0.14em; }
-.cr-username { font-size: 12px; font-weight: 700; color: var(--cr-red); }
-.cr-sep      { font-size: 11px; color: var(--cr-muted); margin: 0 3px; }
-.cr-tagline  { font-size: 11px; color: var(--cr-hint); letter-spacing: 0.04em; }
+.cr-title    { font-size: 13px; font-weight: 700; color: var(--text-100); letter-spacing: 0.14em; font-family: var(--font-title); }
+.cr-username { font-size: 12px; font-weight: 700; color: var(--primary-100); font-family: var(--font-title); }
+.cr-sep      { font-size: 11px; color: var(--bg-400); margin: 0 3px; }
+.cr-tagline  { font-size: 11px; color: var(--text-300); letter-spacing: 0.04em; }
 .cr-report-btn {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
-  background: color-mix(in srgb, var(--cr-red) 6%, var(--cr-panel) 94%);
-  border: 1px solid rgba(139,37,0,0.35); color: var(--cr-sub);
-  font-size: 11px; padding: 5px 14px; font-family: inherit;
+  background: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
+  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200);
+  border-radius: 0;
+  font-size: 11px; padding: 5px 14px; font-family: var(--font-ui);
   transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
   letter-spacing: 0.04em;
 }
 .cr-report-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--cr-red) 12%, var(--cr-panel) 88%);
-  border-color: var(--cr-red); color: var(--cr-red);
+  background: color-mix(in srgb, var(--primary-100) 12%, var(--bg-200) 88%);
+  border-color: var(--primary-100); color: var(--primary-100);
 }
 .cr-report-btn:active:not(:disabled) { transform: scale(0.97); }
 .cr-report-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ══ 主布局 ══ */
 .cr-main {
-  flex: 1; display: grid; grid-template-columns: 350px 1fr;
+  flex: 1; display: grid; grid-template-columns: 340px 1fr;
   overflow: hidden; min-height: 0; position: relative; z-index: 1;
 }
 
 /* ══ 左栏：路径图 ══ */
 .cr-left {
   display: flex; flex-direction: column;
-  border-right: 1px solid var(--cr-border); overflow: hidden;
-  background: var(--cr-bg);
+  border-right: 1px solid var(--bg-300); overflow: hidden;
+  background: var(--bg-100);
 }
 .cr-fc-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -680,19 +677,19 @@ onBeforeUnmount(() => {
 .cr-fc-wrap::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-fc-svg { display: block; flex-shrink: 0; cursor: default; }
 .cr-fc-node { cursor: pointer; }
-.cr-fc-node:hover circle { filter: brightness(1.15); }
+.cr-fc-node:hover circle { filter: brightness(1.1); }
 .cr-fc-node-text {
-  font-size: 9px; fill: var(--cr-sub); pointer-events: none; font-weight: 600;
+  font-size: 8px; fill: #6B5D4F; pointer-events: none; font-weight: 600;
 }
 .cr-fc-node-text--active { fill: #fff; }
 .cr-fc-label {
-  font-size: 9px; fill: var(--cr-hint); pointer-events: none;
+  font-size: 8.5px; fill: #9C8B78; pointer-events: none;
 }
-.cr-fc-label--active { fill: var(--cr-sub); font-weight: 700; }
-.cr-fc-legend-text { font-size: 9px; fill: var(--cr-hint); }
+.cr-fc-label--active { fill: #6B5D4F; font-weight: 700; }
+.cr-fc-legend-text { font-size: 8.5px; fill: #9C8B78; }
 .cr-fc-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 10px; color: var(--cr-muted);
+  justify-content: center; gap: 10px; color: var(--bg-400);
   font-size: 11px; text-align: center; line-height: 1.6;
 }
 
@@ -702,17 +699,17 @@ onBeforeUnmount(() => {
 /* 中栏上：气泡 + 雷达（固定高度） */
 .cr-center-top {
   flex: 0 0 270px; display: grid; grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--cr-border); overflow: hidden;
+  border-bottom: 1px solid var(--bg-300); overflow: hidden;
 }
 .cr-bubble-panel, .cr-radar-panel {
   display: flex; flex-direction: column; overflow: hidden;
 }
-.cr-bubble-panel { border-right: 1px solid var(--cr-border); }
+.cr-bubble-panel { border-right: 1px solid var(--bg-300); }
 
-/* ── 气泡图容器（div 绝对定位方案）── */
+/* ── 气泡图容器 ── */
 .cr-bubble-stage {
   flex: 1; position: relative; overflow: visible;
-  width: 300px; height: 220px; margin: auto;
+  width: 320px; height: 240px; margin: auto;
 }
 
 /* ── 水泡动画 ── */
@@ -734,7 +731,7 @@ onBeforeUnmount(() => {
   box-shadow:
     inset 0 -5px 10px -2px color-mix(in srgb, var(--c) 30%, transparent),
     inset 0  3px  5px -1px rgba(255,255,255,0.45),
-    0 3px 12px rgba(26,20,16,0.07);
+    0 2px 8px rgba(26,20,16,0.06);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   will-change: transform;
   transition: border-color 150ms ease, box-shadow 150ms ease;
@@ -749,21 +746,24 @@ onBeforeUnmount(() => {
   box-shadow:
     inset 0 -5px 10px -2px color-mix(in srgb, var(--c) 40%, transparent),
     inset 0  3px  5px -1px rgba(255,255,255,0.5),
-    0 4px 16px rgba(26,20,16,0.12);
+    0 3px 12px rgba(26,20,16,0.1);
   z-index: 10;
 }
 .cr-bubble:hover { filter: brightness(1.08); }
 .cr-bubble:active { transform: scale(0.93) !important; }
 /* 岗位标注 */
 .cr-bubble-title {
-  font-size: 11px; font-weight: 700; color: var(--cr-text);
+  font-size: 11px; font-weight: 700; color: var(--text-100);
   text-align: center; pointer-events: none; line-height: 1.2; padding: 0 4px;
+  font-family: var(--font-title);
 }
 .cr-bubble-pct {
-  font-size: 9px; color: var(--cr-sub); pointer-events: none; letter-spacing: 0.04em;
+  font-size: 9px; color: var(--text-200); pointer-events: none; letter-spacing: 0.04em;
+  font-family: var(--font-ui);
 }
 .cr-bubble-abbr {
-  font-size: 9.5px; font-weight: 700; color: var(--cr-text); pointer-events: none;
+  font-size: 9.5px; font-weight: 700; color: var(--text-100); pointer-events: none;
+  font-family: var(--font-title);
 }
 .cr-bubble--selected .cr-bubble-title,
 .cr-bubble--selected .cr-bubble-abbr { color: #fff; }
@@ -771,23 +771,24 @@ onBeforeUnmount(() => {
 .cr-bubble-ext-label {
   position: absolute; top: calc(100% + 4px); left: 50%;
   transform: translateX(-50%); white-space: nowrap;
-  font-size: 9px; color: var(--cr-sub); pointer-events: none;
-  background: rgba(247,242,232,0.9); padding: 1px 4px; letter-spacing: 0.03em;
+  font-size: 9px; color: var(--text-200); pointer-events: none;
+  background: rgba(247,242,232,0.92); padding: 1px 4px; letter-spacing: 0.03em;
+  font-family: var(--font-ui);
 }
 
 /* 雷达图 */
 .cr-radar-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  color: var(--cr-muted); font-size: 11px; text-align: center; line-height: 1.7;
+  color: var(--bg-400); font-size: 11px; text-align: center; line-height: 1.7;
 }
 .cr-radar { flex-shrink: 0; width: 100%; height: 150px; }
 .cr-gap-bars { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px 8px; }
 .cr-gap-row  { display: flex; align-items: center; gap: 6px; }
-.cr-gap-dim  { font-size: 9.5px; color: var(--cr-sub); width: 48px; flex-shrink: 0; }
-.cr-gap-track { flex: 1; height: 4px; background: var(--cr-border); border-radius: 2px; position: relative; overflow: visible; }
-.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: rgba(139,37,0,0.55); border-radius: 2px; }
-.cr-gap-bar--need { position: absolute; top: 0; height: 100%; background: rgba(139,37,0,0.2); border: 1px dashed rgba(139,37,0,0.35); border-radius: 2px; }
-.cr-gap-num  { font-size: 9.5px; width: 28px; text-align: right; color: rgba(180,80,60,0.9); }
+.cr-gap-dim  { font-size: 9.5px; color: var(--text-200); width: 48px; flex-shrink: 0; font-family: var(--font-ui); }
+.cr-gap-track { flex: 1; height: 4px; background: var(--bg-300); position: relative; overflow: visible; }
+.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: var(--primary-100); opacity: 0.6; }
+.cr-gap-bar--need { position: absolute; top: 0; height: 100%; background: rgba(139,37,0,0.15); border: 1px dashed rgba(139,37,0,0.3); }
+.cr-gap-num  { font-size: 9.5px; width: 28px; text-align: right; color: rgba(180,80,60,0.9); font-family: var(--font-ui); }
 .cr-gap-num--pos { color: rgba(60,140,80,0.85); }
 
 /* 中栏下：成长计划独占 */
@@ -795,50 +796,53 @@ onBeforeUnmount(() => {
 .cr-planning { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .cr-planning-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 10px; color: var(--cr-muted);
+  justify-content: center; gap: 10px; color: var(--bg-400);
   font-size: 11px; text-align: center; line-height: 1.6;
 }
 .cr-plan-stages { flex: 1; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding: 0 12px 10px; }
 .cr-plan-stages::-webkit-scrollbar { height: 3px; }
 .cr-plan-stages::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-plan-stage {
-  flex: 1; min-width: 200px;
-  background: var(--cr-panel); border: 1px solid var(--cr-border);
+  flex: 1; min-width: 190px;
+  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 0;
   padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto;
 }
 .cr-plan-stage::-webkit-scrollbar { width: 2px; }
-.cr-plan-stage--short { border-color: color-mix(in srgb, var(--cr-red) 30%, var(--cr-border) 70%); }
-.cr-plan-stage--mid   { border-color: color-mix(in srgb, var(--cr-gold) 30%, var(--cr-border) 70%); }
+.cr-plan-stage--short { border-top: 2px solid var(--primary-100); }
+.cr-plan-stage--mid   { border-top: 2px solid #8B6914; }
 .cr-ps-head { display: flex; flex-direction: column; gap: 4px; }
 .cr-ps-label {
-  font-size: 9.5px; font-weight: 700; padding: 2px 7px;
-  display: inline-block; width: fit-content;
+  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 0;
+  display: inline-block; width: fit-content; font-family: var(--font-ui);
 }
-.cr-plan-stage--short .cr-ps-label { background: color-mix(in srgb, var(--cr-red) 10%, var(--cr-bg) 90%); color: var(--cr-red); border: 1px solid rgba(139,37,0,0.25); }
-.cr-plan-stage--mid   .cr-ps-label { background: color-mix(in srgb, var(--cr-gold) 10%, var(--cr-bg) 90%); color: var(--cr-gold); border: 1px solid rgba(139,105,20,0.25); }
-.cr-ps-goal { font-size: 10px; color: var(--cr-sub); line-height: 1.55; }
+.cr-plan-stage--short .cr-ps-label { background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100) 90%); color: var(--primary-100); border: 1px solid rgba(139,37,0,0.25); }
+.cr-plan-stage--mid   .cr-ps-label { background: color-mix(in srgb, #8B6914 10%, var(--bg-100) 90%); color: #8B6914; border: 1px solid rgba(139,105,20,0.25); }
+.cr-ps-goal { font-size: 10px; color: var(--text-200); line-height: 1.55; }
 .cr-ps-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-.cr-ps-list li { display: flex; align-items: flex-start; gap: 5px; font-size: 10px; color: var(--cr-sub); line-height: 1.5; }
+.cr-ps-list li { display: flex; align-items: flex-start; gap: 5px; font-size: 10px; color: var(--text-200); line-height: 1.5; }
 .cr-ps-milestone {
   display: flex; align-items: flex-start; gap: 5px; font-size: 9.5px;
-  color: var(--cr-gold); padding-top: 6px;
-  border-top: 1px solid var(--cr-border); margin-top: auto;
+  color: #8B6914; padding-top: 6px;
+  border-top: 1px solid var(--bg-300); margin-top: auto; font-family: var(--font-ui);
 }
 
-/* ══ 公用面板标题 ══ */
+/* ══ 公用面板标题（朱砂顶线 + Noto Serif SC）══ */
 .cr-panel-title {
   flex-shrink: 0; display: flex; align-items: center; gap: 5px;
-  font-size: 11px; font-weight: 600; color: var(--cr-sub);
-  letter-spacing: 0.06em; padding: 8px 12px 6px;
-  border-bottom: 1px solid var(--cr-border);
+  font-size: 12px; font-weight: 600; color: var(--text-200);
+  font-family: var(--font-title); letter-spacing: 0.08em;
+  padding: 7px 12px 6px;
+  border-top: 2px solid var(--primary-100);
+  border-bottom: 1px solid var(--bg-300);
+  background: var(--bg-200);
 }
-.cr-panel-sub { font-size: 9.5px; font-weight: 400; color: var(--cr-hint); margin-left: 4px; }
+.cr-panel-sub { font-size: 9.5px; font-weight: 400; color: var(--text-300); margin-left: 4px; font-family: var(--font-ui); }
 
 /* ══ 智能汇报抽屉（保持深色） ══ */
 .cr-drawer {
   position: fixed; top: 0; right: 0; bottom: 0;
   width: min(480px, 40vw);
-  background: var(--cr-dark);
+  background: #1A1008;
   border-left: 1px solid rgba(212,201,181,0.15);
   display: flex; flex-direction: column;
   transform: translateX(100%);
@@ -901,6 +905,11 @@ onBeforeUnmount(() => {
   .cr-drawer { transition: none; }
   .cr-back, .cr-report-btn, .cr-drawer-btn, .cr-drawer-close { transition: none; }
 }
+
+/* ══ 无 border-radius 全局覆盖（防止漏掉的 2-4px 角圆） ══ */
+.cr-bubble-stage, .cr-plan-stage,
+.cr-plan-stages, .cr-planning,
+.cr-center-bottom { border-radius: 0; }
 
 /* ══ 打印 ══ */
 @media print {
