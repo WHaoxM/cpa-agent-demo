@@ -1553,20 +1553,20 @@ function getMatchPct(key: string): number {
 }
 .rp-orbital-avatar {
   width: 50px; height: 50px; border-radius: 50%;
-  background: linear-gradient(135deg, #8B2500 0%, #4A1200 100%);
-  border: 2px solid rgba(139,37,0,0.6);
-  box-shadow: 0 0 24px rgba(139,37,0,0.4), 0 0 48px rgba(139,37,0,0.12);
+  background: linear-gradient(135deg, #C03418 0%, #7A1E08 100%);
+  border: 2px solid rgba(192,52,24,0.78);
+  box-shadow: 0 0 28px rgba(192,52,24,0.58), 0 0 58px rgba(192,52,24,0.22);
   display: grid; place-items: center;
   font-size: 18px; font-weight: 900; color: #F7E8DC;
   font-family: var(--font-title, 'LXGW WenKai', serif);
 }
 .rp-oc-name {
   font-size: 10px; font-weight: 700;
-  color: rgba(220,205,185,0.8); letter-spacing: 0.1em; white-space: nowrap;
+  color: rgba(240,225,200,0.97); letter-spacing: 0.1em; white-space: nowrap;
 }
 .rp-oc-status {
   font-size: 9px; letter-spacing: 0.08em;
-  color: rgba(160,145,120,0.6); white-space: nowrap; text-align: center;
+  color: rgba(182,165,132,0.85); white-space: nowrap; text-align: center;
   max-width: 120px; line-height: 1.4;
   transition: opacity 0.3s ease;
 }
@@ -1577,9 +1577,9 @@ function getMatchPct(key: string): number {
 /* Spokes */
 .rp-spoke {
   transition: stroke-opacity 0.25s ease, stroke-width 0.25s ease;
-  stroke-opacity: 0.12;
+  stroke-opacity: 0.2;
 }
-.rp-spoke--active { stroke-opacity: 0.72; stroke-width: 1.2; }
+.rp-spoke--active { stroke-opacity: 0.88; stroke-width: 1.4; }
 .rp-spoke--dim   { stroke-opacity: 0.03; }
 
 /* Orbit nodes */
@@ -1640,13 +1640,13 @@ function getMatchPct(key: string): number {
 .rp-popup__divider { height: 1px; background: rgba(212,201,181,0.1); }
 .rp-popup__match { display: flex; align-items: center; gap: 5px; }
 .rp-popup__bar-wrap { flex: 1; height: 3px; background: rgba(212,201,181,0.1); overflow: hidden; }
-.rp-popup__bar { height: 100%; background: linear-gradient(90deg, #8B6914, #8B2500); transition: width 0.5s ease 0.15s; }
-.rp-popup__pct { font-size: 10px; font-weight: 700; color: rgba(139,37,0,0.9); white-space: nowrap; }
+.rp-popup__bar { height: 100%; background: linear-gradient(90deg, #C4961E, #C03418); transition: width 0.5s ease 0.15s; }
+.rp-popup__pct { font-size: 10px; font-weight: 700; color: rgba(218,78,52,0.99); white-space: nowrap; }
 
 /* Popup enriched sections */
 .rp-popup__section-lbl {
   font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
-  color: rgba(130,115,90,0.55); text-transform: uppercase; margin-top: 2px;
+  color: rgba(175,155,110,0.82); text-transform: uppercase; margin-top: 2px;
 }
 .rp-popup__freq-list,
 .rp-popup__city-list { display: flex; flex-direction: column; gap: 3px; }
@@ -1680,7 +1680,7 @@ function getMatchPct(key: string): number {
 /* Active (clicked) node */
 .rp-onode--active .rp-obubble {
   transform: scale(1.2);
-  box-shadow: 0 0 22px var(--nbg, rgba(139,37,0,0.3));
+  box-shadow: 0 0 28px var(--nbg, rgba(192,52,24,0.5));
 }
 
 /* ── Job listing panel ── */
@@ -1776,17 +1776,17 @@ function getMatchPct(key: string): number {
 
 .rp-obubble {
   width: 36px; height: 36px; border-radius: 50%;
-  background: var(--nbg, rgba(139,37,0,0.15));
-  border: 1.5px solid var(--nc, #8B2500);
+  background: var(--nbg, rgba(192,52,24,0.22));
+  border: 1.5px solid var(--nc, #C03418);
   display: grid; place-items: center;
-  color: var(--nc, #8B2500);
+  color: var(--nc, #C03418);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-  box-shadow: 0 0 10px var(--nbg, rgba(139,37,0,0.1));
+  box-shadow: 0 0 12px var(--nbg, rgba(192,52,24,0.18));
 }
 .rp-onode--sm .rp-obubble { width: 28px; height: 28px; }
 .rp-onode:hover .rp-obubble {
   transform: scale(1.15);
-  box-shadow: 0 0 18px var(--nbg, rgba(139,37,0,0.25));
+  box-shadow: 0 0 22px var(--nbg, rgba(192,52,24,0.42));
 }
 
 /* Node labels (absolutely positioned relative to the node) */
@@ -1802,10 +1802,10 @@ function getMatchPct(key: string): number {
 
 .rp-oname {
   font-size: 11px; font-weight: 700;
-  color: rgba(220,205,185,0.9); letter-spacing: 0.08em; white-space: nowrap;
+  color: rgba(238,222,198,0.97); letter-spacing: 0.08em; white-space: nowrap;
 }
 .rp-ocount {
-  font-size: 9px; color: rgba(155,140,115,0.65);
+  font-size: 9px; color: rgba(178,162,130,0.88);
   letter-spacing: 0.04em; white-space: nowrap;
 }
 
@@ -1819,8 +1819,8 @@ function getMatchPct(key: string): number {
   gap: 14px; padding: 0 24px;
 }
 .rp-rf-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.rp-rf-val { font-size: 13px; font-weight: 700; color: rgba(215,190,155,0.9); letter-spacing: 0.04em; line-height: 1; }
-.rp-rf-lbl { font-size: 9px; color: rgba(135,120,95,0.65); letter-spacing: 0.1em; white-space: nowrap; }
+.rp-rf-val { font-size: 13px; font-weight: 700; color: rgba(238,212,172,0.98); letter-spacing: 0.04em; line-height: 1; }
+.rp-rf-lbl { font-size: 9px; color: rgba(162,145,112,0.88); letter-spacing: 0.1em; white-space: nowrap; }
 .rp-rf-sep { color: rgba(95,80,60,0.35); font-size: 12px; }
 
 /* ══════════════════════════════════════════
@@ -1866,12 +1866,12 @@ function getMatchPct(key: string): number {
 }
 .rp-portrait::-webkit-scrollbar { width: 3px; }
 .rp-portrait::-webkit-scrollbar-track { background: transparent; }
-.rp-portrait::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.3); }
+.rp-portrait::-webkit-scrollbar-thumb { background: rgba(192,52,24,0.42); }
 
 .rp-portrait__section-lbl {
   display: block;
   font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(130,115,90,0.55); text-transform: uppercase;
+  color: rgba(175,155,110,0.82); text-transform: uppercase;
   margin-bottom: 6px;
 }
 
@@ -1886,8 +1886,8 @@ function getMatchPct(key: string): number {
 .rp-portrait__header-top { display: flex; align-items: center; gap: 12px; }
 .rp-portrait__avatar {
   width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, rgba(139,37,0,0.6), rgba(139,105,20,0.5));
-  border: 1.5px solid rgba(139,37,0,0.4);
+  background: linear-gradient(135deg, rgba(192,52,24,0.75), rgba(196,150,30,0.65));
+  border: 1.5px solid rgba(192,52,24,0.62);
   display: grid; place-items: center;
   font-size: 18px; font-weight: 700; color: rgba(240,225,200,0.9);
 }
@@ -1896,14 +1896,14 @@ function getMatchPct(key: string): number {
 .rp-portrait__name { font-size: 16px; font-weight: 800; color: rgba(230,215,190,0.95); letter-spacing: 0.04em; }
 .rp-portrait__grade {
   font-size: 10px; padding: 2px 8px; border-radius: 10px;
-  background: rgba(139,105,20,0.18); border: 1px solid rgba(139,105,20,0.3);
-  color: rgba(200,165,80,0.85); letter-spacing: 0.06em;
+  background: rgba(196,150,30,0.22); border: 1px solid rgba(196,150,30,0.48);
+  color: rgba(238,198,88,0.98); letter-spacing: 0.06em;
 }
-.rp-portrait__target { font-size: 11px; font-weight: 600; color: rgba(139,37,0,0.85); letter-spacing: 0.06em; }
+.rp-portrait__target { font-size: 11px; font-weight: 600; color: rgba(218,78,52,0.97); letter-spacing: 0.06em; }
 .rp-portrait__school-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.rp-portrait__school-row span { font-size: 11px; color: rgba(180,165,140,0.75); }
-.rp-portrait__meta-icon { color: rgba(140,125,100,0.5); flex-shrink: 0; }
-.rp-portrait__sep { color: rgba(100,88,68,0.4) !important; }
+.rp-portrait__school-row span { font-size: 11px; color: rgba(202,188,162,0.92); }
+.rp-portrait__meta-icon { color: rgba(165,148,118,0.72); flex-shrink: 0; }
+.rp-portrait__sep { color: rgba(128,112,86,0.6) !important; }
 
 /* 评分横幅 */
 .rp-portrait__score-banner {
@@ -1914,27 +1914,27 @@ function getMatchPct(key: string): number {
   padding: 10px 12px; border-radius: 6px; gap: 3px;
 }
 .rp-portrait__score-card--completeness {
-  background: rgba(91,119,68,0.12); border: 1px solid rgba(91,119,68,0.3);
+  background: rgba(80,165,90,0.18); border: 1px solid rgba(80,165,90,0.5);
 }
 .rp-portrait__score-card--competitiveness {
-  background: rgba(139,37,0,0.12); border: 1px solid rgba(139,37,0,0.3);
+  background: rgba(200,60,38,0.18); border: 1px solid rgba(200,60,38,0.48);
 }
 .rp-portrait__score-card--honors {
-  background: rgba(139,105,20,0.08); border: 1px solid rgba(139,105,20,0.2);
+  background: rgba(196,150,30,0.14); border: 1px solid rgba(196,150,30,0.38);
 }
 .rp-portrait__score-val {
   font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: -0.02em;
 }
-.rp-portrait__score-card--completeness .rp-portrait__score-val { color: rgba(130,185,130,0.95); }
-.rp-portrait__score-card--competitiveness .rp-portrait__score-val { color: rgba(220,130,100,0.95); }
+.rp-portrait__score-card--completeness .rp-portrait__score-val { color: rgb(95,218,128); }
+.rp-portrait__score-card--competitiveness .rp-portrait__score-val { color: rgb(240,100,68); }
 .rp-portrait__score-val em { font-size: 12px; font-weight: 600; font-style: normal; opacity: 0.7; }
-.rp-portrait__score-lbl { font-size: 9px; color: rgba(140,125,100,0.65); letter-spacing: 0.1em; }
+.rp-portrait__score-lbl { font-size: 9px; color: rgba(168,152,122,0.88); letter-spacing: 0.1em; }
 .rp-portrait__honor-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .rp-portrait__honor-item {
   display: flex; align-items: center; gap: 4px;
-  font-size: 11px; color: rgba(185,170,145,0.8); letter-spacing: 0.04em;
+  font-size: 11px; color: rgba(215,200,175,0.97); letter-spacing: 0.04em;
 }
-.rp-portrait__honor-item strong { color: rgba(220,195,145,0.95); font-size: 13px; }
+.rp-portrait__honor-item strong { color: rgba(245,220,158,1); font-size: 13px; }
 
 /* ── [B+C] 雷达 + 分项评分 ── */
 .rp-portrait__viz-row {
@@ -1951,34 +1951,34 @@ function getMatchPct(key: string): number {
 .rp-portrait__dims { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
 .rp-portrait__dim-item { display: flex; flex-direction: column; gap: 2px; }
 .rp-portrait__dim-top { display: flex; align-items: center; gap: 5px; }
-.rp-portrait__dim-label { font-size: 12px; font-weight: 600; color: rgba(200,185,165,0.9); flex: 1; }
+.rp-portrait__dim-label { font-size: 12px; font-weight: 600; color: rgba(228,212,190,1.0); flex: 1; }
 .rp-portrait__dim-badge {
   font-size: 9px; padding: 1px 6px; border-radius: 8px; letter-spacing: 0.06em;
 }
-.rp-portrait__dim-badge--good { background: rgba(91,119,68,0.2); color: rgba(130,185,130,0.9); border: 1px solid rgba(91,119,68,0.3); }
-.rp-portrait__dim-badge--mid  { background: rgba(139,105,20,0.15); color: rgba(200,165,80,0.85); border: 1px solid rgba(139,105,20,0.3); }
-.rp-portrait__dim-badge--low  { background: rgba(139,37,0,0.12); color: rgba(200,100,80,0.8); border: 1px solid rgba(139,37,0,0.25); }
+.rp-portrait__dim-badge--good { background: rgba(80,165,90,0.22); color: rgb(100,218,138); border: 1px solid rgba(80,165,90,0.48); }
+.rp-portrait__dim-badge--mid  { background: rgba(196,150,30,0.18); color: rgb(238,200,85); border: 1px solid rgba(196,150,30,0.48); }
+.rp-portrait__dim-badge--low  { background: rgba(200,60,38,0.15); color: rgb(242,108,78); border: 1px solid rgba(200,60,38,0.38); }
 .rp-portrait__dim-src {
   display: inline-flex; align-items: center; padding: 2px 5px; cursor: default;
-  border: 1px solid rgba(196,185,166,0.15); color: rgba(130,115,90,0.55); border-radius: 3px;
+  border: 1px solid rgba(196,185,166,0.25); color: rgba(175,155,110,0.82); border-radius: 3px;
 }
-.rp-portrait__dim-src--agent { border-color: rgba(107,63,140,0.3); color: rgba(180,140,210,0.75); }
+.rp-portrait__dim-src--agent { border-color: rgba(145,88,200,0.48); color: rgba(198,158,232,0.95); }
 /* 进度条（修复：增加背景轨道） */
 .rp-portrait__dim-bar-wrap {
   display: grid; grid-template-columns: 1fr 28px; align-items: center; gap: 6px;
 }
 .rp-portrait__dim-track {
-  height: 3px; background: rgba(212,201,181,0.12); border-radius: 2px; overflow: hidden;
+  height: 3px; background: rgba(212,201,181,0.22); border-radius: 2px; overflow: hidden;
 }
 .rp-portrait__dim-bar {
   height: 100%; border-radius: 2px;
   transition: width 0.7s cubic-bezier(0.22,0.61,0.36,1) 0.2s;
 }
-.rp-portrait__dim-bar--good { background: linear-gradient(90deg, rgba(91,119,68,0.55), rgba(130,185,130,0.8)); }
-.rp-portrait__dim-bar--mid  { background: linear-gradient(90deg, rgba(139,105,20,0.55), rgba(200,165,80,0.7)); }
-.rp-portrait__dim-bar--low  { background: linear-gradient(90deg, rgba(139,37,0,0.45), rgba(200,100,80,0.6)); }
-.rp-portrait__dim-score { font-size: 11px; font-weight: 700; color: rgba(200,185,165,0.75); text-align: right; }
-.rp-portrait__dim-desc { font-size: 10px; color: rgba(155,140,115,0.6); line-height: 1.45; margin: 0; }
+.rp-portrait__dim-bar--good { background: linear-gradient(90deg, rgba(80,165,90,0.8), rgb(100,218,138)); }
+.rp-portrait__dim-bar--mid  { background: linear-gradient(90deg, rgba(196,150,30,0.8), rgb(238,200,85)); }
+.rp-portrait__dim-bar--low  { background: linear-gradient(90deg, rgba(200,60,38,0.7), rgb(242,108,78)); }
+.rp-portrait__dim-score { font-size: 11px; font-weight: 700; color: rgba(225,208,182,0.95); text-align: right; }
+.rp-portrait__dim-desc { font-size: 10px; color: rgba(178,162,132,0.85); line-height: 1.45; margin: 0; }
 
 /* ── [D] 技能标签云 ── */
 .rp-portrait__tags-section {
@@ -1994,20 +1994,20 @@ function getMatchPct(key: string): number {
   border: 1px solid; /* color set per variant */
 }
 /* 前端 */
-.rp-portrait__tag--fe { color: rgba(210,140,100,0.9); background: rgba(139,37,0,0.08); border-color: rgba(139,37,0,0.2); }
-.rp-portrait__tag--fe:hover { border-color: rgba(139,37,0,0.45); }
+.rp-portrait__tag--fe { color: rgb(235,158,112); background: rgba(200,60,38,0.12); border-color: rgba(200,60,38,0.32); }
+.rp-portrait__tag--fe:hover { border-color: rgba(200,60,38,0.62); }
 /* 后端 */
-.rp-portrait__tag--be { color: rgba(200,165,80,0.9); background: rgba(139,105,20,0.08); border-color: rgba(139,105,20,0.2); }
-.rp-portrait__tag--be:hover { border-color: rgba(139,105,20,0.45); }
+.rp-portrait__tag--be { color: rgb(242,205,90); background: rgba(196,150,30,0.12); border-color: rgba(196,150,30,0.35); }
+.rp-portrait__tag--be:hover { border-color: rgba(196,150,30,0.62); }
 /* 测试 */
-.rp-portrait__tag--qa { color: rgba(120,155,190,0.9); background: rgba(74,107,138,0.08); border-color: rgba(74,107,138,0.2); }
-.rp-portrait__tag--qa:hover { border-color: rgba(74,107,138,0.45); }
+.rp-portrait__tag--qa { color: rgb(135,178,228); background: rgba(74,120,168,0.12); border-color: rgba(74,120,168,0.32); }
+.rp-portrait__tag--qa:hover { border-color: rgba(74,120,168,0.62); }
 /* 数据/机器学习 */
-.rp-portrait__tag--data { color: rgba(100,175,140,0.9); background: rgba(74,139,106,0.08); border-color: rgba(74,139,106,0.2); }
-.rp-portrait__tag--data:hover { border-color: rgba(74,139,106,0.45); }
+.rp-portrait__tag--data { color: rgb(102,205,158); background: rgba(74,168,122,0.12); border-color: rgba(74,168,122,0.32); }
+.rp-portrait__tag--data:hover { border-color: rgba(74,168,122,0.62); }
 /* 通用 */
-.rp-portrait__tag--gen { color: rgba(190,175,155,0.85); background: rgba(196,185,166,0.06); border-color: rgba(196,185,166,0.15); }
-.rp-portrait__tag--gen:hover { border-color: rgba(196,185,166,0.35); }
+.rp-portrait__tag--gen { color: rgba(215,200,178,0.97); background: rgba(196,185,166,0.1); border-color: rgba(196,185,166,0.28); }
+.rp-portrait__tag--gen:hover { border-color: rgba(196,185,166,0.58); }
 
 /* ── [E] 证书 & 实习 ── */
 .rp-portrait__honors-section {
@@ -2022,14 +2022,14 @@ function getMatchPct(key: string): number {
   padding: 8px 12px; border-radius: 6px; border: 1px solid;
   flex: 1; min-width: 160px;
 }
-.rp-portrait__honor-card--cert { background: rgba(139,105,20,0.08); border-color: rgba(139,105,20,0.25); }
-.rp-portrait__honor-card--intern { background: rgba(74,107,138,0.08); border-color: rgba(74,107,138,0.25); }
-.rp-portrait__honor-card--award { background: rgba(139,37,0,0.08); border-color: rgba(139,37,0,0.25); }
-.rp-portrait__honor-icon { flex-shrink: 0; opacity: 0.7; }
-.rp-portrait__honor-card--cert .rp-portrait__honor-icon { color: rgba(200,165,80,0.85); }
-.rp-portrait__honor-card--intern .rp-portrait__honor-icon { color: rgba(120,155,190,0.85); }
-.rp-portrait__honor-card--award .rp-portrait__honor-icon { color: rgba(210,140,100,0.85); }
-.rp-portrait__honor-lbl { font-size: 11px; color: rgba(190,175,155,0.85); letter-spacing: 0.02em; }
+.rp-portrait__honor-card--cert { background: rgba(196,150,30,0.13); border-color: rgba(196,150,30,0.42); }
+.rp-portrait__honor-card--intern { background: rgba(74,120,168,0.12); border-color: rgba(74,120,168,0.38); }
+.rp-portrait__honor-card--award { background: rgba(200,60,38,0.12); border-color: rgba(200,60,38,0.38); }
+.rp-portrait__honor-icon { flex-shrink: 0; opacity: 0.9; }
+.rp-portrait__honor-card--cert .rp-portrait__honor-icon { color: rgb(242,202,85); }
+.rp-portrait__honor-card--intern .rp-portrait__honor-icon { color: rgb(132,178,228); }
+.rp-portrait__honor-card--award .rp-portrait__honor-icon { color: rgb(238,148,108); }
+.rp-portrait__honor-lbl { font-size: 11px; color: rgba(215,200,178,0.97); letter-spacing: 0.02em; }
 
 /* ── [F] 项目经历（左竖色条） ── */
 .rp-portrait__projects-section {
@@ -2046,18 +2046,18 @@ function getMatchPct(key: string): number {
   border-radius: 6px;
   transition: border-color 0.2s ease;
 }
-.rp-portrait__project-card:hover { border-color: rgba(139,37,0,0.28); }
-.rp-portrait__project-accent { width: 3px; flex-shrink: 0; background: rgba(139,37,0,0.55); }
+.rp-portrait__project-card:hover { border-color: rgba(192,52,24,0.48); }
+.rp-portrait__project-accent { width: 3px; flex-shrink: 0; background: rgba(200,60,38,0.8); }
 .rp-portrait__project-body { flex: 1; padding: 9px 12px; display: flex; flex-direction: column; gap: 4px; }
 .rp-portrait__project-head { display: flex; align-items: center; gap: 8px; }
-.rp-portrait__project-name { font-size: 13px; font-weight: 700; color: rgba(220,205,185,0.92); }
+.rp-portrait__project-name { font-size: 13px; font-weight: 700; color: rgba(240,224,202,0.99); }
 .rp-portrait__project-role {
   font-size: 10px; padding: 1px 7px; border-radius: 8px;
-  background: rgba(139,105,20,0.12); border: 1px solid rgba(139,105,20,0.25);
-  color: rgba(200,165,80,0.8);
+  background: rgba(196,150,30,0.16); border: 1px solid rgba(196,150,30,0.42);
+  color: rgb(242,205,90);
 }
 .rp-portrait__project-desc {
-  font-size: 11px; color: rgba(175,160,140,0.72); line-height: 1.5; margin: 0;
+  font-size: 11px; color: rgba(195,180,158,0.92); line-height: 1.5; margin: 0;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
@@ -2069,7 +2069,7 @@ function getMatchPct(key: string): number {
 }
 .rp-portrait__tags-inline-lbl {
   display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(130,115,90,0.55); text-transform: uppercase; margin-bottom: 6px;
+  color: rgba(175,155,110,0.82); text-transform: uppercase; margin-bottom: 6px;
 }
 
 /* ── [D] 经历亮点（合并区）── */
@@ -2106,12 +2106,12 @@ function getMatchPct(key: string): number {
   padding: 1px 6px; border-radius: 3px; white-space: nowrap; margin-top: 1px;
 }
 .rp-portrait__suggestion--strength .rp-portrait__suggestion-lbl {
-  background: rgba(94,159,107,0.18); color: rgba(100,185,120,0.9);
+  background: rgba(80,165,90,0.22); color: rgb(100,218,138);
 }
 .rp-portrait__suggestion--improve .rp-portrait__suggestion-lbl {
-  background: rgba(212,168,85,0.18); color: rgba(212,168,85,0.9);
+  background: rgba(196,150,30,0.22); color: rgb(238,200,85);
 }
-.rp-portrait__suggestion-text { color: rgba(185,170,148,0.85); }
+.rp-portrait__suggestion-text { color: rgba(208,192,168,0.97); }
 
 /* ── [G] AI 综合评语 + 打字机 ── */
 .rp-portrait__summary {
@@ -2122,7 +2122,7 @@ function getMatchPct(key: string): number {
   display: flex; flex-direction: column; gap: 6px;
 }
 .rp-portrait__summary-text {
-  font-size: 11px; color: rgba(190,175,155,0.88); line-height: 1.7; margin: 0;
+  font-size: 11px; color: rgba(212,196,172,0.97); line-height: 1.7; margin: 0;
   letter-spacing: 0.02em; cursor: pointer;
 }
 .rp-typing-cursor {
@@ -2135,7 +2135,7 @@ function getMatchPct(key: string): number {
   height: 1px; background: rgba(139,37,0,0.12); margin: 2px 0;
 }
 .rp-portrait__self-summary {
-  font-size: 11px; color: rgba(170,155,135,0.7); line-height: 1.6; margin: 0;
+  font-size: 11px; color: rgba(188,172,150,0.88); line-height: 1.6; margin: 0;
   font-style: italic;
 }
 
@@ -2151,21 +2151,21 @@ function getMatchPct(key: string): number {
 }
 .rp-portrait__step-guide-info { display: flex; flex-direction: column; gap: 4px; }
 .rp-portrait__step-guide-title {
-  font-size: 12px; font-weight: 700; color: rgba(220,195,160,0.9); letter-spacing: 0.04em;
+  font-size: 12px; font-weight: 700; color: rgba(240,215,175,1); letter-spacing: 0.04em;
 }
 .rp-portrait__step-guide-desc {
-  font-size: 10px; color: rgba(160,145,120,0.7); line-height: 1.5; margin: 0; max-width: 380px;
+  font-size: 10px; color: rgba(182,165,138,0.88); line-height: 1.5; margin: 0; max-width: 380px;
 }
 .rp-portrait__step-guide-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 6px; font-family: inherit;
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  border: 1px solid rgba(139,37,0,0.5); color: rgba(220,160,120,0.92);
-  background: rgba(139,37,0,0.18); cursor: pointer;
+  border: 1px solid rgba(192,58,32,0.7); color: rgba(242,182,142,0.99);
+  background: rgba(192,58,32,0.25); cursor: pointer;
   white-space: nowrap; transition: background 0.2s, border-color 0.2s;
 }
 .rp-portrait__step-guide-btn:hover:not(:disabled) {
-  background: rgba(139,37,0,0.32); border-color: rgba(139,37,0,0.75);
+  background: rgba(192,58,32,0.42); border-color: rgba(192,58,32,0.9);
 }
 .rp-portrait__step-guide-btn:disabled {
   opacity: 0.38; cursor: not-allowed;

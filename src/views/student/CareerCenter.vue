@@ -126,11 +126,11 @@ const chartTextColor = computed(() => {
 })
 const chartPrimary = computed(() => {
   const t = document.documentElement.dataset.theme
-  return t === 'cyberNexus' ? '#00e5c6' : '#5B8C5A'
+  return t === 'cyberNexus' ? '#00e5c6' : '#3EA85C'
 })
 const chartAccent = computed(() => {
   const t = document.documentElement.dataset.theme
-  return t === 'cyberNexus' ? '#ff2d6a' : '#C2895B'
+  return t === 'cyberNexus' ? '#ff2d6a' : '#D4782E'
 })
 
 // ─── 雷达图 ───

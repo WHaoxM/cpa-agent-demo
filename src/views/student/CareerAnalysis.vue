@@ -25,17 +25,17 @@ const C = {
   bg: '#F7F2E8',
   panel: '#EDE5D6',
   panelBorder: '#D4C9B5',
-  zhusha: '#8B2500',
-  zhushaLight: '#A0472D',
-  gold: '#8B6914',
-  accent: '#2B4C6F',
-  green: '#5B7744',
+  zhusha: '#BB3418',
+  zhushaLight: '#C85A3A',
+  gold: '#C4961E',
+  accent: '#3A6EAE',
+  green: '#4A9058',
   textPrimary: '#1A1410',
   textSecondary: '#6B5D4F',
   textMuted: '#9C8B78',
   parchment: '#F0E6D2',
   parchmentDark: '#D4C4A8',
-  mapBorder: 'rgba(139,37,0,0.18)',
+  mapBorder: 'rgba(192,52,24,0.22)',
 }
 
 /* ═══ 省份简称映射 ═══ */

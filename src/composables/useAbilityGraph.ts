@@ -32,11 +32,11 @@ export interface AbilityGraphData {
 
 /* ═══ 板块颜色 ═══ */
 export const GROUP_COLORS: Record<AbilityGroup, string> = {
-  job:          '#8B2500',   // 朱砂 — 岗位中心
-  professional: '#2B6CB0',   // 靛蓝 — 专业技能
-  position:     '#B7791F',   // 赭金 — 岗位技能
-  cognitive:    '#2F855A',   // 竹绿 — 认知技能
-  general:      '#805AD5',   // 藤紫 — 通用技能
+  job:          '#C03418',   // 朱砂 — 岗位中心
+  professional: '#3478CC',   // 靛蓝 — 专业技能
+  position:     '#D49428',   // 赭金 — 岗位技能
+  cognitive:    '#2EA86C',   // 竹绿 — 认知技能
+  general:      '#9266E8',   // 藤紫 — 通用技能
 }
 
 export const GROUP_LABELS: Record<AbilityGroup, string> = {
@@ -48,10 +48,10 @@ export const GROUP_LABELS: Record<AbilityGroup, string> = {
 }
 
 export const RELATION_STYLES: Record<EdgeRelationType, { label: string; dash: number[]; curveness: number; color: string }> = {
-  belong:       { label: '归属',   dash: [],       curveness: 0.1,  color: 'rgba(139,37,0,0.35)' },
-  prerequisite: { label: '前置',   dash: [6, 3],   curveness: 0.25, color: '#C05621' },
-  synergy:      { label: '协同',   dash: [3, 3],   curveness: 0.3,  color: '#2F855A' },
-  dependency:   { label: '依赖',   dash: [10, 4],  curveness: 0.2,  color: '#2B6CB0' },
+  belong:       { label: '归属',   dash: [],       curveness: 0.1,  color: 'rgba(192,52,24,0.5)' },
+  prerequisite: { label: '前置',   dash: [6, 3],   curveness: 0.25, color: '#D45828' },
+  synergy:      { label: '协同',   dash: [3, 3],   curveness: 0.3,  color: '#2EA86C' },
+  dependency:   { label: '依赖',   dash: [10, 4],  curveness: 0.2,  color: '#3478CC' },
 }
 
 /* ═══ Mock 数据 ═══ */
