@@ -51,16 +51,19 @@ const portraitAgentLoading = ref(false)
 const radarEl = ref<HTMLDivElement | null>(null)
 let radarChart: echarts.ECharts | null = null
 const displaySummary = ref('')
+const summaryDone = ref(false)
 let typingTimer: ReturnType<typeof setInterval> | null = null
 
 function startTyping(fullText: string) {
   displaySummary.value = ''
+  summaryDone.value = false
   let idx = 0
   typingTimer = setInterval(() => {
     displaySummary.value += fullText[idx++] ?? ''
     if (idx >= fullText.length) {
       clearInterval(typingTimer!)
       typingTimer = null
+      summaryDone.value = true
     }
   }, 28)
 }
@@ -68,6 +71,7 @@ function startTyping(fullText: string) {
 function stopTyping() {
   if (typingTimer) { clearInterval(typingTimer); typingTimer = null }
   displaySummary.value = portraitData.value?.agentSummary ?? ''
+  summaryDone.value = true
 }
 
 function exportPortrait() {
@@ -208,6 +212,7 @@ function resetPage() {
   portraitData.value = null
   stopTyping()
   displaySummary.value = ''
+  summaryDone.value = false
   disposeRadarChart()
   pasteText.value = ''
   uploadedFileName.value = ''
@@ -933,7 +938,7 @@ function getMatchPct(key: string): number {
                 <span class="rp-portrait__step-guide-title">能力画像已生成 —— 下一步</span>
                 <p class="rp-portrait__step-guide-desc">基于以上能力画像，系统将对你进行人岗匹配分析、职业路径规划与个性化成长方案</p>
               </div>
-              <button class="rp-portrait__step-guide-btn" @click="router.push({ name: 'student-career-report' })">
+              <button class="rp-portrait__step-guide-btn" :disabled="!summaryDone" @click="router.push({ name: 'student-career-report' })">
                 <Icon icon="lucide:map" :width="13"/>
                 进入职业生涯发展报告
                 <Icon icon="lucide:arrow-right" :width="12"/>
@@ -2155,9 +2160,17 @@ function getMatchPct(key: string): number {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 6px; font-family: inherit;
   font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  border: 1px solid rgba(139,37,0,0.25); color: rgba(180,145,110,0.6);
-  background: rgba(139,37,0,0.06); cursor: not-allowed; opacity: 0.6;
-  white-space: nowrap;
+  border: 1px solid rgba(139,37,0,0.5); color: rgba(220,160,120,0.92);
+  background: rgba(139,37,0,0.18); cursor: pointer;
+  white-space: nowrap; transition: background 0.2s, border-color 0.2s;
+}
+.rp-portrait__step-guide-btn:hover:not(:disabled) {
+  background: rgba(139,37,0,0.32); border-color: rgba(139,37,0,0.75);
+}
+.rp-portrait__step-guide-btn:disabled {
+  opacity: 0.38; cursor: not-allowed;
+  border-color: rgba(139,37,0,0.2); color: rgba(160,130,100,0.5);
+  background: rgba(139,37,0,0.05);
 }
 
 /* ══════════════════════════════════════════
