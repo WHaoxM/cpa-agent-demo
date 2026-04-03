@@ -203,7 +203,7 @@ function startSim(items: BubbleItem[]) {
   _sim = forceSimulation(nodes)
     /* 核心轨道力：每 tick 推进旋转角，驱动各气泡沿轨道环追踪 */
     .force('orbit', () => {
-      _orbitAngle += 0.004  /* rad/tick，约 25s 一圈（60fps）*/
+      _orbitAngle += 0.0005  /* rad/tick，约 45s 一圈（60fps）*/
       nonCenter.forEach((n, i) => {
         const angle = _orbitAngle + i * (2 * Math.PI / nCount)
         const tx = cx + Math.cos(angle) * orbitR
@@ -424,24 +424,67 @@ function buildRadarOption() {
   if (!job) return null
   return {
     backgroundColor: 'transparent',
-    animationDuration: 600,
+    animationDuration: 700,
     animationEasing: 'cubicOut' as const,
-    tooltip: { trigger: 'item' as const },
-    legend: { bottom: 0, textStyle: { color: '#6B5D4F', fontSize: 11 }, data: ['我的能力', '岗位要求'] },
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: (params: { name: string; value: number[] }) => {
+        const vals = params.value
+        return DIM_NAMES.map((n, i) => `<span style="color:#9C8B78">${n}</span> ${vals[i]}`).join('<br/>')
+      },
+    },
     radar: {
       indicator: DIM_NAMES.map(name => ({ name, max: 100 })),
-      radius: '68%', center: ['50%', '46%'], splitNumber: 4,
-      axisName: { color: '#6B5D4F', fontSize: 11 },
-      splitLine: { lineStyle: { color: 'rgba(139,37,0,0.12)' } },
-      splitArea: { areaStyle: { color: ['rgba(247,242,232,0.8)', 'rgba(240,234,220,0.5)', 'rgba(233,225,210,0.3)', 'rgba(226,217,200,0.2)'] } },
-      axisLine: { lineStyle: { color: 'rgba(139,37,0,0.15)' } },
+      /* 42% × 250px 容器 = 105px 半径，上下各留 ~20px 给标签，不再溢出 */
+      radius: '42%',
+      center: ['50%', '50%'],
+      splitNumber: 4,
+      nameGap: 6,
+      axisName: {
+        color: '#5C4A38',
+        fontSize: 10.5,
+        fontFamily: 'var(--font-ui)',
+        backgroundColor: 'rgba(247,242,232,0.75)',
+        borderRadius: 3,
+        padding: [2, 5],
+      },
+      splitLine: { lineStyle: { color: 'rgba(139,37,0,0.10)', width: 1 } },
+      splitArea: {
+        show: true,
+        areaStyle: {
+          color: [
+            'rgba(247,242,232,0.55)',
+            'rgba(240,234,220,0.40)',
+            'rgba(233,225,210,0.25)',
+            'rgba(226,217,200,0.12)',
+          ],
+        },
+      },
+      axisLine: { lineStyle: { color: 'rgba(139,37,0,0.12)' } },
     },
-    series: [{ type: 'radar', data: [
-      { value: DIM_NAMES.map(n => studentDim.value[n]), name: '我的能力',
-        lineStyle: { color: '#8B2500', width: 1.5 }, areaStyle: { color: 'rgba(139,37,0,0.18)' }, itemStyle: { color: '#8B2500' } },
-      { value: DIM_NAMES.map(n => job.sevenDim[n]), name: '岗位要求',
-        lineStyle: { color: '#2B4C6F', width: 1.5, type: 'dashed' as const }, areaStyle: { color: 'rgba(43,76,111,0.1)' }, itemStyle: { color: '#2B4C6F' } },
-    ] }],
+    series: [{
+      type: 'radar',
+      data: [
+        {
+          value: DIM_NAMES.map(n => studentDim.value[n]),
+          name: '我的能力',
+          symbol: 'circle',
+          symbolSize: 5,
+          lineStyle: { color: '#C0501A', width: 2 },
+          areaStyle: { color: 'rgba(192,80,26,0.20)' },
+          itemStyle: { color: '#C0501A', borderColor: '#fff', borderWidth: 1.5 },
+        },
+        {
+          value: DIM_NAMES.map(n => job.sevenDim[n]),
+          name: '岗位要求',
+          symbol: 'rect',
+          symbolSize: 4,
+          lineStyle: { color: '#2B6CB0', width: 1.8, type: 'dashed' as const },
+          areaStyle: { color: 'rgba(43,108,176,0.08)' },
+          itemStyle: { color: '#2B6CB0' },
+        },
+      ],
+    }],
   }
 }
 
@@ -864,6 +907,10 @@ onBeforeUnmount(() => {
             <div class="cr-panel-title">
               <Icon icon="lucide:radar" :width="12"/>
               <span>七维能力差距</span>
+              <span class="cr-radar-legend">
+                <span class="cr-legend-dot" style="background:#C0501A"></span><span>我的能力</span>
+                <span class="cr-legend-dot cr-legend-dot--dashed" style="border-color:#2B6CB0"></span><span>岗位要求</span>
+              </span>
             </div>
             <div v-if="!selectedJob" class="cr-radar-empty">
               <p>选中岗位后<br/>展示能力对比</p>
@@ -1017,7 +1064,9 @@ onBeforeUnmount(() => {
   position: relative; z-index: 20;
   flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px; height: 48px; min-height: 48px;
-  background: var(--bg-200); border-bottom: 2px solid var(--primary-100);
+  background: linear-gradient(180deg, var(--bg-200) 0%, var(--bg-100) 100%);
+  border-bottom: 1px solid var(--bg-300);
+  box-shadow: 0 2px 16px rgba(26,20,16,0.09);
 }
 .cr-header__left  { display: flex; align-items: center; gap: 10px; }
 .cr-header__tabs  { display: flex; align-items: center; gap: 0; }
@@ -1025,51 +1074,51 @@ onBeforeUnmount(() => {
 .cr-back {
   display: flex; align-items: center; gap: 4px; background: transparent;
   border: 1px solid var(--bg-300); color: var(--text-200);
-  font-size: 12px; padding: 4px 10px; cursor: pointer; border-radius: 0;
-  transition: border-color 200ms ease, color 200ms ease; font-family: var(--font-ui);
+  font-size: 12px; padding: 4px 10px; cursor: pointer; border-radius: 5px;
+  transition: border-color 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 150ms ease; font-family: var(--font-ui);
 }
-.cr-back:hover { border-color: var(--primary-100); color: var(--primary-100); }
+.cr-back:hover { border-color: var(--primary-100); color: var(--primary-100); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(139,37,0,0.12); }
 .cr-tab {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
-  background: transparent; border: 1px solid var(--bg-300); border-right: none;
-  color: var(--text-300); font-size: 12px; padding: 6px 18px;
-  font-family: var(--font-ui); transition: all 200ms ease;
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--text-300); font-size: 12px; padding: 6px 18px; height: 100%;
+  font-family: var(--font-ui); transition: color 200ms ease, border-color 200ms ease;
 }
-.cr-tab:last-child { border-right: 1px solid var(--bg-300); }
 .cr-tab--active {
-  background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-200) 90%);
-  color: var(--primary-100); border-color: rgba(139,37,0,0.35); font-weight: 700;
+  color: var(--primary-100); font-weight: 700;
+  border-bottom: 2px solid var(--primary-100);
 }
-.cr-tab:hover:not(.cr-tab--active) { color: var(--text-200); background: var(--bg-200); }
+.cr-tab:hover:not(.cr-tab--active) { color: var(--text-200); }
 .cr-username { font-size: 12px; font-weight: 700; color: var(--primary-100); font-family: var(--font-title); }
 .cr-report-btn {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
-  background: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
-  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200); border-radius: 0;
+  background: var(--primary-100); border: 1px solid var(--primary-100);
+  color: #fff; border-radius: 5px; font-weight: 600;
   font-size: 11px; padding: 5px 14px; font-family: var(--font-ui);
-  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  transition: background 200ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 .cr-report-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary-100) 12%, var(--bg-200) 88%);
-  border-color: var(--primary-100); color: var(--primary-100);
+  background: var(--primary-300);
+  transform: translateY(-1px); box-shadow: 0 3px 10px rgba(139,37,0,0.22);
 }
-.cr-report-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.cr-report-btn:disabled { opacity: 0.4; cursor: not-allowed; background: var(--bg-300); border-color: var(--bg-300); color: var(--text-300); }
 
 /* 导出按钮 */
 .cr-export-wrap { position: relative; }
 .cr-export-btn {
   display: flex; align-items: center; gap: 4px; cursor: pointer;
   background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-200) 92%);
-  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200); border-radius: 0;
+  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200); border-radius: 5px;
   font-size: 11px; padding: 5px 12px; font-family: var(--font-ui);
-  transition: background 200ms ease;
+  transition: background 200ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
-.cr-export-btn:hover { background: color-mix(in srgb, var(--primary-100) 15%, var(--bg-200) 85%); }
+.cr-export-btn:hover { background: color-mix(in srgb, var(--primary-100) 15%, var(--bg-200) 85%); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(139,37,0,0.12); }
 .cr-export-menu {
   position: absolute; top: 100%; right: 0; margin-top: 4px;
   background: var(--bg-200); border: 1px solid var(--bg-300);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 30;
+  box-shadow: 0 6px 24px rgba(26,20,16,0.15); z-index: 30;
   display: flex; flex-direction: column; min-width: 160px;
+  border-radius: 6px; overflow: hidden;
 }
 .cr-export-menu button {
   display: flex; align-items: center; gap: 8px; padding: 8px 14px;
@@ -1093,7 +1142,7 @@ onBeforeUnmount(() => {
   margin-left: auto; display: flex; align-items: center; gap: 4px;
   background: none; border: 1px solid rgba(139,37,0,0.25); color: var(--primary-100);
   cursor: pointer; font-size: 10px; padding: 2px 10px; font-family: var(--font-ui);
-  transition: background 200ms ease;
+  transition: background 200ms ease; border-radius: 4px;
 }
 .cr-footer-go:hover { background: rgba(139,37,0,0.06); }
 
@@ -1106,7 +1155,9 @@ onBeforeUnmount(() => {
 /* ══ 左栏：攀岩墙 ══ */
 .cr-left {
   display: flex; flex-direction: column;
-  border-right: 1px solid var(--bg-300); overflow: hidden; background: var(--bg-100);
+  border-right: 1px solid var(--bg-300); overflow: hidden;
+  background: linear-gradient(180deg, var(--bg-200) 0%, var(--bg-100) 60%);
+  box-shadow: 4px 0 16px -4px rgba(26,20,16,0.06);
 }
 .cr-cw-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
@@ -1140,22 +1191,25 @@ onBeforeUnmount(() => {
 .cr-hero {
   flex-shrink: 0; display: flex; align-items: center; gap: 16px;
   padding: 10px 16px; height: 90px;
-  background: var(--bg-200); border-bottom: 1px solid var(--bg-300);
+  background: linear-gradient(135deg, var(--bg-200) 0%, color-mix(in srgb, var(--primary-100) 5%, var(--bg-100) 95%) 100%);
+  border-bottom: 1px solid var(--bg-300);
+  box-shadow: 0 2px 12px rgba(26,20,16,0.07);
 }
 .cr-hero__gauge { flex-shrink: 0; }
 .cr-hero-ring { width: 70px; height: 70px; }
-.cr-hero-pct { font-size: 14px; font-weight: 700; fill: var(--text-100, #3a2a1a); font-family: var(--font-ui); }
+.cr-hero-pct { font-size: 14px; font-weight: 700; fill: var(--primary-100, #8B2500); font-family: var(--font-ui); }
 .cr-hero-pct-label { font-size: 7px; fill: var(--text-300, #9C8B78); }
 .cr-hero__info { flex: 1; min-width: 0; }
-.cr-hero-job { font-size: 15px; font-weight: 700; color: var(--text-100); font-family: var(--font-title); letter-spacing: 0.06em; }
+.cr-hero-job { font-size: 16px; font-weight: 700; color: var(--primary-300); font-family: var(--font-title); letter-spacing: 0.08em; }
 .cr-hero-desc { font-size: 11px; color: var(--text-300); margin-top: 4px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ── 中栏上：气泡 + 雷达 ── */
 .cr-center-top {
-  flex: 0 0 320px; display: grid; grid-template-columns: 1fr 1fr;
+  flex: 0 0 380px; display: grid; grid-template-columns: 1fr 1fr;
   border-bottom: 1px solid var(--bg-300); overflow: hidden;
 }
 .cr-bubble-panel, .cr-radar-panel { display: flex; flex-direction: column; overflow: hidden; }
-.cr-bubble-panel { border-right: 1px solid var(--bg-300); }
+.cr-bubble-panel { border-right: 1px solid var(--bg-300); background: linear-gradient(180deg, var(--bg-100) 0%, color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%) 100%); }
+.cr-radar-panel { background: var(--bg-100); }
 
 /* ── 气泡图 SVG ── */
 .cr-bubble-svg { display: block; width: 100%; flex: 1; }
@@ -1205,12 +1259,25 @@ onBeforeUnmount(() => {
   flex: 1; display: flex; align-items: center; justify-content: center;
   color: var(--bg-400); font-size: 11px; text-align: center; line-height: 1.7;
 }
-.cr-radar { flex-shrink: 0; width: 100%; height: 200px; }
-.cr-gap-bars { display: flex; flex-direction: column; gap: 3px; padding: 4px 10px 6px; }
-.cr-gap-row  { display: flex; align-items: center; gap: 6px; }
-.cr-gap-dim  { font-size: 10px; color: var(--text-200); width: 52px; flex-shrink: 0; font-family: var(--font-ui); }
-.cr-gap-track { flex: 1; height: 7px; background: var(--bg-300); position: relative; overflow: visible; }
-.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: var(--primary-100); opacity: 0.55; transition: width 500ms ease; }
+.cr-radar { flex-shrink: 0; width: 100%; height: 250px; }
+.cr-radar-legend {
+  display: flex; align-items: center; gap: 6px; margin-left: auto;
+  font-size: 10px; color: var(--text-300); font-family: var(--font-ui);
+}
+.cr-legend-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.cr-legend-dot--dashed {
+  background: transparent !important;
+  border: 1.5px dashed;
+  border-radius: 2px;
+}
+.cr-gap-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 4px 8px 6px; }
+.cr-gap-row  { display: flex; align-items: center; gap: 4px; }
+.cr-gap-dim  { font-size: 9.5px; color: var(--text-200); width: 44px; flex-shrink: 0; font-family: var(--font-ui); }
+.cr-gap-track { flex: 1; height: 7px; background: var(--bg-300); position: relative; overflow: hidden; border-radius: 4px; }
+.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: var(--primary-100); opacity: 0.65; transition: width 500ms ease; border-radius: 4px; }
 .cr-gap-bar--need {
   position: absolute; top: 0; height: 100%;
   background: repeating-linear-gradient(135deg, rgba(139,37,0,0.08), rgba(139,37,0,0.08) 2px, rgba(139,37,0,0.18) 2px, rgba(139,37,0,0.18) 4px);
@@ -1221,20 +1288,26 @@ onBeforeUnmount(() => {
 .cr-gap-num--pos { color: rgba(60,140,80,0.85); }
 
 /* ── ⑤ 成长计划 ── */
-.cr-center-bottom { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; min-height: 200px; }
+.cr-center-bottom { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 200px; background: linear-gradient(180deg, var(--bg-100) 0%, var(--bg-200) 100%); }
 .cr-planning { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .cr-planning-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 10px; color: var(--bg-400);
   font-size: 11px; text-align: center; line-height: 1.6;
 }
-.cr-plan-stages { flex: 1; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 8px 14px 12px; }
+.cr-plan-stages { flex: 1; display: flex; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 10px 16px 14px; }
 .cr-plan-stages::-webkit-scrollbar { height: 3px; }
 .cr-plan-stages::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-plan-stage {
   flex: 1; min-width: 240px; position: relative;
-  background: var(--bg-200); border: 1px solid var(--bg-300); border-radius: 0;
+  background: var(--bg-100); border: 1px solid var(--bg-300); border-radius: 8px;
   padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(26,20,16,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.cr-plan-stage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26,20,16,0.10), inset 0 1px 0 rgba(255,255,255,0.6);
 }
 .cr-plan-stage::-webkit-scrollbar { width: 2px; }
 .cr-plan-stage--short { border-top: 3px solid var(--primary-100); }
@@ -1246,7 +1319,7 @@ onBeforeUnmount(() => {
 .cr-ps-icon { flex-shrink: 0; color: var(--primary-100); }
 .cr-plan-stage--mid .cr-ps-icon { color: #8B6914; }
 .cr-ps-label {
-  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 0;
+  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
   display: inline-block; width: fit-content; font-family: var(--font-ui);
 }
 .cr-plan-stage--short .cr-ps-label { background: color-mix(in srgb, var(--primary-100) 18%, var(--bg-100) 82%); color: var(--primary-100); border: 1px solid rgba(139,37,0,0.35); }
@@ -1261,7 +1334,7 @@ onBeforeUnmount(() => {
 .cr-ps-expand {
   background: none; border: 1px dashed var(--bg-300); color: var(--text-300);
   font-size: 10px; padding: 3px 8px; cursor: pointer; font-family: var(--font-ui);
-  transition: color 200ms ease; align-self: flex-start;
+  transition: color 200ms ease; align-self: flex-start; border-radius: 4px;
 }
 .cr-ps-expand:hover { color: var(--primary-100); border-color: rgba(139,37,0,0.3); }
 .cr-ps-milestone {
@@ -1276,13 +1349,13 @@ onBeforeUnmount(() => {
 
 /* ══ 公用面板标题 ══ */
 .cr-panel-title {
-  flex-shrink: 0; display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 600; color: var(--text-200);
-  font-family: var(--font-title); letter-spacing: 0.08em;
-  padding: 7px 12px 6px;
-  border-top: 2px solid var(--primary-100);
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--text-100);
+  font-family: var(--font-title); letter-spacing: 0.06em;
+  padding: 9px 14px 8px 12px;
+  border-left: 3px solid var(--primary-100);
   border-bottom: 1px solid var(--bg-300);
-  background: var(--bg-200);
+  background: linear-gradient(90deg, rgba(139,37,0,0.05) 0%, var(--bg-200) 60%);
 }
 .cr-panel-sub { font-size: 9.5px; font-weight: 400; color: var(--text-300); margin-left: 4px; font-family: var(--font-ui); }
 
@@ -1341,10 +1414,10 @@ onBeforeUnmount(() => {
 .cr-tool-btn {
   display: flex; align-items: center; gap: 6px; cursor: pointer;
   background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-200);
-  font-size: 11px; padding: 7px 12px; font-family: var(--font-ui);
-  transition: background 200ms ease, border-color 200ms ease;
+  font-size: 11px; padding: 7px 12px; font-family: var(--font-ui); border-radius: 5px;
+  transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
 }
-.cr-tool-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-100) 6%, var(--bg-100) 94%); border-color: rgba(139,37,0,0.3); }
+.cr-tool-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-100) 6%, var(--bg-100) 94%); border-color: rgba(139,37,0,0.3); transform: translateY(-1px); }
 .cr-tool-btn:disabled { opacity: 0.5; cursor: wait; }
 .cr-tool-btn--sm { font-size: 10px; padding: 4px 10px; }
 .cr-tool-btn--ok { color: #5B7744; border-color: rgba(91,119,68,0.4); }
