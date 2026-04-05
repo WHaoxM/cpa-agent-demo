@@ -2058,7 +2058,7 @@ function getMatchPct(key: string): number {
 }
 .rp-portrait__project-desc {
   font-size: 11px; color: rgba(195,180,158,0.92); line-height: 1.5; margin: 0;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 
 /* ── 技能标签内嵌（[B+C]底部）── */
@@ -2222,7 +2222,7 @@ function getMatchPct(key: string): number {
   .rp-portrait__self-summary { color: #5a4e42 !important; }
   .rp-portrait__honor-lbl { color: #3a3028 !important; }
   .rp-portrait__project-name { color: #1a1410 !important; }
-  .rp-portrait__project-desc { color: #5a4e42 !important; -webkit-line-clamp: unset !important; }
+  .rp-portrait__project-desc { color: #5a4e42 !important; -webkit-line-clamp: unset !important; line-clamp: unset !important; }
   .rp-portrait__dim-desc { color: #6a5e52 !important; }
 
   /* 打字机光标打印时隐藏 */

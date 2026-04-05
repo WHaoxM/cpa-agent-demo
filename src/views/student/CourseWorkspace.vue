@@ -245,7 +245,7 @@ function goBack() {
 .back-btn {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
   border-radius: 0;
   padding: 10px 12px;
   cursor: pointer;
@@ -299,7 +299,7 @@ function goBack() {
 
 
 .chapter-panel {
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   border-radius: 0;
   box-shadow: none;
@@ -432,7 +432,7 @@ function goBack() {
 }
 
 .workspace-content {
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   border-radius: 0;
   padding: 0;
@@ -446,7 +446,7 @@ function goBack() {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
   border-bottom: 1px solid color-mix(in srgb, var(--bg-300) 40%, transparent 60%);
   padding: 8px 10px 6px;
 }
@@ -470,7 +470,7 @@ function goBack() {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
 }
 
 .drawer-head {
@@ -490,7 +490,7 @@ function goBack() {
 .drawer-close {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
+  background: var(--color-surface-raised);
   border-radius: 0;
   padding: 8px 10px;
   cursor: pointer;

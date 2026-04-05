@@ -3,8 +3,8 @@
 /* ═══ 古籍风字体系统 ═══ */
 :root {
   --font-title: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
-  --font-body: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
-  --font-ui: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-ui: 'Noto Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', 'PingFang SC', sans-serif;
   --font-accent: 'KaiTi', 'STKaiti', 'Noto Serif SC', serif;
   --font-latin: 'Crimson Text', 'Georgia', serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -12,17 +12,17 @@
   --font-cjk: var(--font-title);
   --el-font-family: var(--font-ui);
 
-  --color-background: var(--bg-100);
-  --color-background-soft: var(--bg-200);
-  --color-background-mute: var(--bg-300);
+  --color-background: var(--parchment-100);
+  --color-background-soft: var(--parchment-200);
+  --color-background-mute: var(--parchment-300);
 
-  --color-border: color-mix(in srgb, var(--bg-300) 80%, transparent 20%);
-  --color-border-hover: var(--bg-400, var(--bg-300));
+  --color-border: var(--parchment-400);
+  --color-border-hover: var(--parchment-500);
 
-  --color-heading: var(--text-100);
-  --color-text: var(--text-100);
+  --color-heading: var(--ink-900);
+  --color-text: var(--ink-900);
 
-  --section-gap: 120px;
+  --section-gap: 80px;
 }
 
 *,
@@ -34,7 +34,7 @@
 }
 
 html {
-  font-size: 22px;
+  font-size: 16px;
 }
 
 body {
@@ -42,8 +42,8 @@ body {
   color: var(--color-text);
   line-height: 1.8;
   font-family: var(--font-body);
-  font-size: 22px;
-  letter-spacing: 0.03em;
+  font-size: 16px;
+  letter-spacing: 0.02em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

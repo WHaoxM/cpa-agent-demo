@@ -15,7 +15,6 @@ export const useUserStore = defineStore(
     // Getters
     const userRole = computed(() => currentUser.value?.role || null)
     const isStudent = computed(() => currentUser.value?.role === UserRole.STUDENT)
-    const isTeacher = computed(() => currentUser.value?.role === UserRole.TEACHER)
     const isAdmin = computed(() => currentUser.value?.role === UserRole.ADMIN)
 
     // Actions
@@ -67,7 +66,6 @@ export const useUserStore = defineStore(
       isLoggedIn,
       userRole,
       isStudent,
-      isTeacher,
       isAdmin,
       login,
       loginByRole,

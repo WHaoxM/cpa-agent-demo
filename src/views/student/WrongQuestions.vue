@@ -1,4 +1,4 @@
-﻿<!-- 页面：错题本；路由：student/wrong-questions（student-wrong-questions）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：薄弱点记录；路由：student/wrongquestions（student-wrongquestions）；角色：STUDENT -->
 
 <script setup lang="ts">
 // @ts-nocheck
@@ -287,7 +287,7 @@ function removeWrongQuestion(question: WrongQuestion) {
   if (selectedId.value === question.id) {
     selectedId.value = ''
   }
-  ElMessage.success('已从错题本移除')
+  ElMessage.success('已移除薄弱点')
 }
 
 function goToCourse(analysis: AgentAnalysisResult) {
@@ -395,10 +395,10 @@ onMounted(() => {
 
 <template>
   <div class="wrongbook page page--compact">
-    <div v-if="filteredQuestions.length > 0" class="wb-topbar" aria-label="错题本工具条">
+    <div v-if="filteredQuestions.length > 0" class="wb-topbar" aria-label="薄弱点工具条">
       <div class="wb-toolbar">
         <div class="toolbar__left">
-          <el-input v-model="keyword" placeholder="搜索题干/知识点" clearable :prefix-icon="Search" class="toolbar__search" />
+          <el-input v-model="keyword" placeholder="搜索薄弱点/技能点" clearable :prefix-icon="Search" class="toolbar__search" />
         </div>
         <div class="toolbar__filters">
           <el-select v-model="courseFilter" placeholder="课程" clearable filterable>
@@ -427,11 +427,11 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="filteredQuestions.length > 0" class="wb-workspace card-base" aria-label="错题本工作台">
+    <div v-if="filteredQuestions.length > 0" class="wb-workspace card-base" aria-label="薄弱点工作台">
       <div class="wb-body">
-        <aside class="wb-list" aria-label="错题列表">
+        <aside class="wb-list" aria-label="薄弱点列表">
           <div class="wb-list__head">
-            <div class="list-title">错题列表</div>
+            <div class="list-title">薄弱点列表</div>
             <div class="list-sub">{{ filteredQuestions.length }} 条</div>
           </div>
           <div class="wb-list__table">
@@ -443,12 +443,12 @@ onMounted(() => {
               :row-class-name="({ row }) => (row.id === selectedId ? 'row--active' : '')"
               @row-click="selectRow"
             >
-              <el-table-column label="错题" width="86">
+              <el-table-column label="记录" width="86">
                 <template #default="{ row }">
                   <el-tag type="danger" size="small" effect="plain">×{{ row.times }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="知识点" min-width="140">
+              <el-table-column label="技能点" min-width="140">
                 <template #default="{ row }">
                   <div class="cell-main">
                     <div class="cell-title">{{ (row.question as any)?.knowledgePoint || '未标注' }}</div>
@@ -1024,7 +1024,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0;
-  border: 1px solid #eef2f7;
+  border: 1px solid var(--color-border);
   border-radius: 0;
   overflow: hidden;
 }
@@ -1037,9 +1037,9 @@ onMounted(() => {
   text-align: left;
   padding: 10px 12px;
   border: none;
-  background: #ffffff;
+  background: var(--color-surface);
   cursor: pointer;
-  border-top: 1px solid #eef2f7;
+  border-top: 1px solid var(--color-border);
 }
 
 .note-row:first-child {
@@ -1047,7 +1047,7 @@ onMounted(() => {
 }
 
 .note-row:hover {
-  background: #f9fafb;
+  background: var(--parchment-300);
 }
 
 .note-row__main {
@@ -1078,12 +1078,13 @@ onMounted(() => {
   color: var(--text-200);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .flat-list {
-  border: 1px solid #eef2f7;
+  border: 1px solid var(--color-border);
   border-radius: 0;
   overflow: hidden;
 }
@@ -1094,8 +1095,8 @@ onMounted(() => {
   align-items: flex-start;
   gap: 12px;
   padding: 10px 12px;
-  border-top: 1px solid #eef2f7;
-  background: #ffffff;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .flat-row:first-child {
@@ -1169,12 +1170,12 @@ onMounted(() => {
   max-width: 86%;
   border-radius: 0;
   padding: 10px 12px;
-  border: 1px solid var(--bg-300);
-  background: #ffffff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .msg.user .msg__bubble {
-  background: color-mix(in srgb, var(--primary-100) 10%, #ffffff 90%);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface) 90%);
 }
 
 .msg__content {
@@ -1228,7 +1229,7 @@ onMounted(() => {
 
   .wb-list {
     border-right: none;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--color-border);
   }
 }
 </style>

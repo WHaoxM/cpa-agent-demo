@@ -23,7 +23,6 @@ const profile = computed(() => {
 
 const roleName = computed(() => {
   if (userStore.isStudent) return '学生'
-  if (userStore.isTeacher) return '教师'
   if (userStore.isAdmin) return '管理员'
   return '未知'
 })

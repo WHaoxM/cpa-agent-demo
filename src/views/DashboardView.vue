@@ -1,4 +1,4 @@
-﻿<!-- 页面：首页；路由：/app（dashboard） -->
+<!-- 页面：首页；路由：/app（dashboard） -->
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, onBeforeUnmount, ref } from 'vue'
@@ -13,7 +13,6 @@ const userStore = useUserStore()
 const courseStore = useCourseStore()
 
 const isStudent = computed(() => userStore.isStudent)
-const isTeacher = computed(() => userStore.isTeacher)
 const isAdmin = computed(() => userStore.isAdmin)
 
 const favoriteCourses = computed(() => courseStore.userFavorites.slice(0, 4))
@@ -29,21 +28,13 @@ const studentCards = [
   { title: '学习报告', desc: '查看进度成绩', path: '/app/student/report' },
 ]
 
-const teacherCards = [
-  { title: '课程管理', desc: '管理你的课程', path: '/app/teacher/courses' },
-  { title: '学生管理', desc: '查看学生情况', path: '/app/teacher/students' },
-  { title: '班级报告', desc: '查看数据分析', path: '/app/teacher/class-report' },
-]
-
 const adminCards = [
-  { title: '用户管理', desc: '管理系统用户', path: '/app/admin/users' },
-  { title: '内容审核', desc: '审核课程内容', path: '/app/admin/content-review' },
-  { title: '系统监控', desc: '查看统计数据', path: '/app/admin/system-stats' },
+  { title: '岗位数据集', desc: '上传管理岗位数据', path: '/app/admin/job-dataset' },
+  { title: '知识库维护', desc: '维护本地知识库', path: '/app/admin/knowledge-base' },
 ]
 
 const currentCards = computed(() => {
   if (isStudent.value) return studentCards
-  if (isTeacher.value) return teacherCards
   if (isAdmin.value) return adminCards
   return studentCards
 })
@@ -87,10 +78,10 @@ const kgCapabilities = [
 ]
 
 const agentRoles = [
-  { id: 'locator', label: '知识定位 Agent', color: '#2E7D32', icon: '◉' },
-  { id: 'analyzer', label: '协议分析 Agent', color: '#1565C0', icon: '◉' },
-  { id: 'diagnoser', label: '故障诊断 Agent', color: '#E65100', icon: '◉' },
-  { id: 'advisor', label: '学习建议 Agent', color: '#6A1B9A', icon: '◉' },
+  { id: 'locator', label: '知识定位 Agent', color: '#2E7D32', icon: '?' },
+  { id: 'analyzer', label: '协议分析 Agent', color: '#1565C0', icon: '?' },
+  { id: 'diagnoser', label: '故障诊断 Agent', color: '#E65100', icon: '?' },
+  { id: 'advisor', label: '学习建议 Agent', color: '#6A1B9A', icon: '?' },
 ]
 
 const weeklyTotal = computed(() => calendarData.reduce((sum, d) => sum + d.hours, 0))
@@ -172,959 +163,470 @@ onBeforeUnmount(() => {
 
 
 <template>
+  <!-- 故宫档案室 · Palace Museum Archive Dashboard -->
   <div ref="dashRef" class="dash">
-    <!-- ===== HEADER ===== -->
-    <header class="dash-header zone-animate">
-      <div class="header-left">
-        <div class="header-brand">
-          <span class="brand-icon">学</span>
-          <span class="brand-name">课程系统</span>
-          <span class="brand-sep">·</span>
-          <span class="brand-live">
-            <span class="live-dot"></span>
-            <span>在线</span>
-          </span>
-        </div>
-        <div class="header-sub">
-          <span class="sub-item">知识图谱：<em class="sub-active">{{ graphNodeCount }} 节点 · {{ graphEdgeCount }} 关系</em></span>
-          <span class="sub-sep">|</span>
-          <span class="sub-item">Agent集群：<em class="sub-active">{{ agentRoles.length }}/{{ agentRoles.length }} 就绪</em></span>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="header-status">系统状态：<em class="sub-active">正常</em></div>
-        <div class="header-user">
-          <span>{{ userStore.currentUser?.username || '用户' }}</span>
-          <span class="user-sep">|</span>
-          <span>{{ isStudent ? '学生端' : isTeacher ? '教师端' : '管理员' }}</span>
-        </div>
-      </div>
-    </header>
 
-    <!-- ===== HERO BANNER ===== -->
-    <section class="zone-hero zone-animate" v-if="isStudent">
-      <span class="zone-tag">— 概览 —</span>
-      <div class="hero-content">
-        <div class="hero-streak">
-          <span class="hero-num">7</span>
-          <span class="hero-unit">天</span>
-          <span class="hero-label">连续</span>
-        </div>
-        <div class="hero-divider"></div>
-        <div class="hero-progress">
-          <span class="hero-progress-label">进度</span>
-          <div class="hero-bar">
-            <div class="hero-bar-fill" style="width: 40%"></div>
-          </div>
-          <span class="hero-progress-val">4 / 10</span>
-        </div>
-        <div class="hero-divider"></div>
-        <div class="hero-weekly">
-          <span class="hero-num">{{ weeklyTotal }}</span>
-          <span class="hero-unit">小时</span>
-          <span class="hero-label">本周</span>
-        </div>
+    <!-- ══ 顶部统计横条 ══ -->
+    <div class="dash-stats zone-animate">
+      <div class="stat-item">
+        <span class="stat-num">07</span>
+        <span class="stat-label">连续天数</span>
       </div>
-    </section>
-
-    <!-- ===== KNOWLEDGE GRAPH & AGENT ENTRY ===== -->
-    <section class="zone-cap zone-animate">
-      <span class="zone-tag">— 核心能力 —</span>
-      <div class="cap-grid">
-        <!-- 知识图谱入口卡片 -->
-        <div class="cap-card cap-card--hero clickable" @click="navigateTo('/app/student/knowledge-graph')">
-          <div class="cap-title">
-            <span class="cap-icon">图</span>
-            <span>网络工程知识图谱</span>
-            <span class="cap-go">进入探索 ›</span>
-          </div>
-          <div class="cap-desc">{{ graphNodeCount }} 个知识点 · {{ graphEdgeCount }} 条关系 · 按 OSI 层级组织</div>
-          <div class="kg-caps">
-            <div v-for="cap in kgCapabilities" :key="cap.label" class="kg-cap-item">
-              <span class="kg-cap-icon">{{ cap.icon }}</span>
-              <div class="kg-cap-info">
-                <span class="kg-cap-label">{{ cap.label }}</span>
-                <span class="kg-cap-desc">{{ cap.desc }}</span>
-              </div>
-              <span class="kg-cap-status active">运行中</span>
-            </div>
-          </div>
-          <div class="kg-layer-bar">
-            <div
-              v-for="item in layerDistribution"
-              :key="item.layer"
-              class="kg-layer-seg"
-              :style="{ flex: item.count, background: item.color }"
-              :title="`${item.label}: ${item.count}`"
-            />
-          </div>
-          <div class="kg-layer-legend">
-            <span v-for="item in layerDistribution" :key="item.layer" class="kg-layer-tag">
-              <span class="kg-layer-dot" :style="{ background: item.color }" />
-              {{ item.label }} ({{ item.count }})
-            </span>
-          </div>
-        </div>
-
-        <!-- Agent 协作入口 -->
-        <div class="cap-card">
-          <div class="cap-title">
-            <span class="cap-icon">协</span>
-            <span>多Agent协同分析</span>
-          </div>
-          <div class="agent-list">
-            <div v-for="role in agentRoles" :key="role.id" class="agent-item">
-              <span class="agent-dot online" :style="{ background: role.color }"></span>
-              <span class="agent-id">{{ role.label }}</span>
-              <span class="agent-status online">就绪</span>
-            </div>
-          </div>
-          <div class="pipeline">
-            <span class="pipeline-label">协作流程：</span>
-            <div class="pipeline-flow">
-              <span class="pipe-node">[知识定位]</span>
-              <span class="pipe-arrow">→</span>
-              <span class="pipe-node">[协议分析]</span>
-              <span class="pipe-arrow">→</span>
-              <span class="pipe-node">[故障诊断]</span>
-              <span class="pipe-arrow">→</span>
-              <span class="pipe-node">[学习建议]</span>
-            </div>
-          </div>
-          <!-- 分析历史 -->
-          <div v-if="kgStore.latestRecords.length > 0" class="kg-history">
-            <span class="pipeline-label">最近分析（{{ kgStore.recordCount }}）：</span>
-            <div class="kg-history-list">
-              <div
-                v-for="rec in kgStore.latestRecords.slice(0, 3)"
-                :key="rec.id"
-                class="kg-history-item clickable"
-                @click="navigateTo('/app/student/knowledge-graph')"
-              >
-                <span class="kg-history-name">{{ rec.nodeName }}</span>
-                <span class="kg-history-time">{{ formatHistoryTime(rec.timestamp) }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="cap-cta">
-            <button class="cap-cta-btn" @click="navigateTo('/app/student/knowledge-graph')">
-              打开知识图谱 ›
-            </button>
-          </div>
-        </div>
+      <span class="stat-divider"></span>
+      <div class="stat-item">
+        <span class="stat-num">{{ String(weeklyTotal).padStart(2, '0') }}</span>
+        <span class="stat-label">本周学时</span>
       </div>
-    </section>
+      <span class="stat-divider"></span>
+      <div class="stat-item stat-item--bar">
+        <div class="stat-bar-wrap">
+          <div class="stat-bar-fill" style="width: 40%"></div>
+        </div>
+        <span class="stat-label">课程进度 4 / 10</span>
+      </div>
+      <span class="stat-divider"></span>
+      <div class="stat-item">
+        <span class="stat-num">0{{ agentRoles.length }}</span>
+        <span class="stat-label">Agent 就绪</span>
+      </div>
+      <div class="stat-user">
+        <span class="stat-live-dot"></span>
+        <span class="stat-username">{{ userStore.currentUser?.username || '用户' }}</span>
+        <span class="stat-role">{{ isStudent ? '学生' : '管理员' }}</span>
+      </div>
+    </div>
 
-    <!-- ===== PRIMARY: 日历 + 本周统计 ===== -->
-    <section class="zone-primary zone-animate">
-      <span class="zone-tag">— 核心 —</span>
-      <div class="primary-grid">
-        <div class="primary-calendar">
-          <div class="sec-header">
-            <span class="sec-icon">历</span>
-            <span>学习日历</span>
+    <!-- ══ 主体：左主区 + 右侧栏 ══ -->
+    <div class="dash-body">
+
+      <!-- 左：日历 + 周统计 + 最近访问 -->
+      <div class="dash-main zone-animate">
+
+        <!-- 学习日历 -->
+        <div class="panel-row">
+          <div class="panel-header">
+            <span class="panel-label">学习日历</span>
+            <span class="panel-sub">本月学习记录</span>
           </div>
-          <div class="calendar-box">
+          <div class="calendar-wrap">
             <CalendarChart />
           </div>
         </div>
-        <div class="primary-week" v-if="isStudent">
-          <div class="sec-header">
-            <span class="sec-icon">统</span>
-            <span>本周统计</span>
+
+        <!-- 本周学时柱图（学生端） -->
+        <div class="panel-row" v-if="isStudent">
+          <div class="panel-header panel-header--sep">
+            <span class="panel-label">本周学时</span>
+            <div class="week-summary">
+              <span class="week-big">{{ weeklyTotal }}</span>
+              <span class="week-unit">小时</span>
+            </div>
           </div>
-          <div class="week-total">
-            <span class="week-num">{{ weeklyTotal }}</span>
-            <span class="week-unit">小时</span>
-          </div>
-          <div class="week-bars">
-            <div v-for="day in calendarData" :key="day.day" class="wbar">
+          <div class="week-bars-row">
+            <div v-for="day in calendarData" :key="day.day" class="wbar-col">
               <div class="wbar-track">
                 <div class="wbar-fill" :style="{ height: `${Math.min(day.hours / 5 * 100, 100)}%` }"></div>
               </div>
-              <span class="wbar-label">{{ ['一', '二', '三', '四', '五', '六', '日'][day.day - 1] }}</span>
+              <span class="wbar-lbl">{{ ['一','二','三','四','五','六','日'][day.day - 1] }}</span>
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ===== INFO: 快捷入口 + 公告 + 待办 ===== -->
-    <section class="zone-info zone-animate">
-      <span class="zone-tag">— 信息 —</span>
-      <div class="info-grid">
+        <!-- 最近访问 -->
+        <div class="panel-row">
+          <div class="panel-header panel-header--sep">
+            <span class="panel-label">最近访问</span>
+          </div>
+          <div class="recent-list">
+            <div
+              v-for="visit in recentVisits"
+              :key="visit.id"
+              class="recent-item"
+              @click="navigateTo(visit.path)"
+            >
+              <span class="recent-time">{{ visit.time }}</span>
+              <span class="recent-title">{{ visit.title }}</span>
+              <span class="recent-arrow">?</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右：快捷入口 + 公告 + 待办 + 收藏 -->
+      <div class="dash-rail zone-animate">
+
         <!-- 快捷入口 -->
-        <div class="info-card card-animate">
-          <div class="sec-header">
-            <span class="sec-icon">入</span>
+        <div class="rail-section">
+          <div class="rail-header">
             <span>快捷入口</span>
           </div>
-          <div class="qlist">
-            <div v-for="card in currentCards" :key="card.title" class="qitem" @click="navigateTo(card.path)">
-              <span class="qdot"></span>
-              <div class="qinfo">
-                <span class="qtitle">{{ card.title }}</span>
-                <span class="qdesc">{{ card.desc }}</span>
+          <div class="rail-links">
+            <div
+              v-for="card in currentCards"
+              :key="card.title"
+              class="rail-link"
+              @click="navigateTo(card.path)"
+            >
+              <span class="rail-dot"></span>
+              <div class="rail-link__info">
+                <span class="rail-link__title">{{ card.title }}</span>
+                <span class="rail-link__desc">{{ card.desc }}</span>
               </div>
-              <span class="qarrow">›</span>
+              <span class="rail-arrow">?</span>
             </div>
           </div>
         </div>
 
         <!-- 公告 -->
-        <div class="info-card card-animate">
-          <div class="sec-header">
-            <span class="sec-icon">告</span>
+        <div class="rail-section">
+          <div class="rail-header">
             <span>公告</span>
-            <span class="sec-badge">{{ announcements.length }}</span>
+            <span class="rail-badge">{{ announcements.length }}</span>
           </div>
-          <div class="nlist">
-            <div v-for="item in announcements" :key="item.id" class="nitem" :class="item.type">
-              <span class="ndot"></span>
-              <div class="ncontent">
-                <span class="ntitle">{{ item.title }}</span>
-                <span class="ntime">{{ item.time }}</span>
-              </div>
+          <div class="rail-notices">
+            <div
+              v-for="item in announcements"
+              :key="item.id"
+              class="notice-row"
+              :class="item.type"
+            >
+              <span class="notice-dot"></span>
+              <span class="notice-title">{{ item.title }}</span>
+              <span class="notice-time">{{ item.time }}</span>
             </div>
           </div>
         </div>
 
         <!-- 待办 -->
-        <div class="info-card card-animate">
-          <div class="sec-header">
-            <span class="sec-icon">办</span>
+        <div class="rail-section">
+          <div class="rail-header">
             <span>待办</span>
-            <span class="sec-badge">{{ todos.filter(t => !t.completed).length }}</span>
+            <span class="rail-badge">{{ todos.filter(t => !t.completed).length }}</span>
           </div>
-          <div class="tlist">
-            <div v-for="todo in todos" :key="todo.id" class="titem" :class="{ done: todo.completed }" @click="toggleTodo(todo.id)">
-              <span class="tcheck">{{ todo.completed ? '✓' : '○' }}</span>
-              <span class="ttext">{{ todo.title }}</span>
-              <span class="ttag" :class="todo.priority">{{ todo.deadline }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== SECONDARY: 最近访问 + 收藏/教师/管理员 ===== -->
-    <section class="zone-secondary zone-animate">
-      <span class="zone-tag">— 辅助 —</span>
-      <div class="secondary-grid">
-        <!-- 最近访问 -->
-        <div class="sec-card card-animate">
-          <div class="sec-header">
-            <span class="sec-icon">近</span>
-            <span>最近访问</span>
-          </div>
-          <div class="rlist">
-            <div v-for="visit in recentVisits" :key="visit.id" class="ritem" @click="navigateTo(visit.path)">
-              <span class="rtime">{{ visit.time }}</span>
-              <span class="rtitle">{{ visit.title }}</span>
+          <div class="rail-todos">
+            <div
+              v-for="todo in todos"
+              :key="todo.id"
+              class="todo-row"
+              :class="{ done: todo.completed }"
+              @click="toggleTodo(todo.id)"
+            >
+              <span class="todo-check">{{ todo.completed ? '?' : '○' }}</span>
+              <span class="todo-text">{{ todo.title }}</span>
+              <span class="todo-tag" :class="todo.priority">{{ todo.deadline }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 学生：收藏课程 -->
-        <div class="sec-card card-animate" v-if="isStudent">
-          <div class="sec-header">
-            <span class="sec-icon">藏</span>
+        <!-- 收藏课程（学生，有收藏时） -->
+        <div class="rail-section" v-if="isStudent && favoriteCourses.length > 0">
+          <div class="rail-header">
             <span>收藏课程</span>
-            <span class="sec-badge">{{ favoriteCourses.length }}</span>
+            <span class="rail-badge">{{ favoriteCourses.length }}</span>
           </div>
-          <div class="flist">
-            <div v-for="course in favoriteCourses" :key="course.id" class="fitem" @click="navigateTo(`/app/student/course/${course.id}`)">
-              <span class="fthumb">{{ course.title.charAt(0) }}</span>
-              <div class="finfo">
-                <span class="ftitle">{{ course.title }}</span>
-                <span class="fteacher">{{ course.teacherName }}</span>
-              </div>
-            </div>
-            <div v-if="favoriteCourses.length === 0" class="fempty">暂无收藏</div>
-          </div>
-        </div>
-
-        <!-- 教师：待批改 + 班级 -->
-        <div class="sec-card card-animate" v-if="isTeacher">
-          <div class="sec-header">
-            <span class="sec-icon">待</span>
-            <span>待处理</span>
-          </div>
-          <div class="pend-row">
-            <div class="pend-item" @click="navigateTo('/app/teacher/grading')">
-              <span class="pend-num">12</span>
-              <span class="pend-label">作业待批改</span>
-            </div>
-            <div class="pend-item" @click="navigateTo('/app/teacher/courses')">
-              <span class="pend-num">3</span>
-              <span class="pend-label">课程待审核</span>
+          <div class="rail-favs">
+            <div
+              v-for="course in favoriteCourses"
+              :key="course.id"
+              class="fav-row"
+              @click="navigateTo(`/app/student/course/${course.id}`)"
+            >
+              <span class="fav-thumb">{{ course.title.charAt(0) }}</span>
+              <span class="fav-name">{{ course.title }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 管理员：系统概览 -->
-        <div class="sec-card card-animate" v-if="isAdmin">
-          <div class="sec-header">
-            <span class="sec-icon">系</span>
-            <span>系统概览</span>
+        <!-- 管理员系统概览 -->
+        <div class="rail-section" v-if="isAdmin">
+          <div class="rail-header"><span>系统概览</span></div>
+          <div class="sys-strip">
+            <div class="sys-cell"><span class="sys-n">353</span><span class="sys-l">用户</span></div>
+            <div class="sys-cell"><span class="sys-n">51</span><span class="sys-l">课程</span></div>
+            <div class="sys-cell"><span class="sys-n">3</span><span class="sys-l">待审</span></div>
+            <div class="sys-cell"><span class="sys-n">180</span><span class="sys-l">活跃</span></div>
           </div>
-          <div class="sys-row">
-            <div class="sys-cell">
-              <span class="sys-num">353</span>
-              <span class="sys-label">用户</span>
-            </div>
-            <div class="sys-cell">
-              <span class="sys-num">51</span>
-              <span class="sys-label">课程</span>
-            </div>
-            <div class="sys-cell">
-              <span class="sys-num">3</span>
-              <span class="sys-label">待审</span>
-            </div>
-            <div class="sys-cell">
-              <span class="sys-num">180</span>
-              <span class="sys-label">活跃</span>
-            </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ 底部：知识图谱入口 + Agent 状态 ══ -->
+    <div class="dash-footer zone-animate">
+
+      <!-- KG 入口 -->
+      <div class="footer-kg" @click="navigateTo('/app/student/knowledge-graph')">
+        <span class="footer-kg__icon">图</span>
+        <div class="footer-kg__info">
+          <span class="footer-kg__title">网络工程知识图谱</span>
+          <span class="footer-kg__sub">{{ graphNodeCount }} 节点 · {{ graphEdgeCount }} 关系 · OSI 分层</span>
+        </div>
+        <div class="footer-kg__bar">
+          <div
+            v-for="item in layerDistribution"
+            :key="item.layer"
+            class="footer-kg__seg"
+            :style="{ flex: item.count, background: item.color }"
+            :title="item.label"
+          />
+        </div>
+        <span class="footer-kg__cta">进入探索 ?</span>
+      </div>
+
+      <span class="footer-sep"></span>
+
+      <!-- Agent 状态 -->
+      <div class="footer-agents">
+        <span class="footer-agents__label">Agent 集群</span>
+        <div class="footer-agents__list">
+          <div v-for="role in agentRoles" :key="role.id" class="footer-agent">
+            <span class="footer-agent__dot" :style="{ background: role.color }"></span>
+            <span class="footer-agent__name">{{ role.label }}</span>
           </div>
         </div>
       </div>
-    </section>
+
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* ===== 全局容器 ===== */
+/* ══════════════════════════════════════════════
+   故宫档案室 · Palace Museum Archive Dashboard
+   布局：统计横条 + 左主右栏双栏 + 底部信息条
+   ══════════════════════════════════════════════ */
+
 .dash {
   width: 100%;
   min-height: 100vh;
-  background: var(--bg-100);
-  color: var(--text-100);
-  font-family: var(--font-body);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', 'Source Han Sans SC', sans-serif;
+  display: flex;
+  flex-direction: column;
   overflow-x: hidden;
-  overflow-y: auto;
   scrollbar-width: none;
 }
 
-.dash::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
-}
+.dash::-webkit-scrollbar { display: none; }
 
-:global(.content.hide-scrollbar) {
-  scrollbar-width: none;
-  overflow-y: auto;
-}
+:global(.content.hide-scrollbar) { scrollbar-width: none; overflow-y: auto; }
+:global(.content.hide-scrollbar::-webkit-scrollbar) { display: none; }
 
-:global(.content.hide-scrollbar::-webkit-scrollbar) {
-  width: 0;
-  height: 0;
-  display: none;
-}
-
-/* ===== HEADER ===== */
-.dash-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 16px 24px;
-  background: var(--bg-200);
-  border-bottom: 1px solid var(--bg-300);
-}
-
-.header-brand {
+/* ── 统计横条 ── */
+.dash-stats {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-100);
-  letter-spacing: 0.06em;
-  font-family: var(--font-title);
+  gap: 0;
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 1px solid var(--color-gold);
+  background: var(--color-surface);
+  padding: 0 24px;
+  height: 52px;
+  flex-shrink: 0;
 }
 
-.brand-icon {
-  color: var(--bg-100);
-  background: var(--primary-100);
-  font-size: 14px;
-  font-family: var(--font-title);
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.brand-sep { color: var(--text-300); }
-
-.brand-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
-  border: 1px solid var(--bg-300);
-  color: var(--primary-100);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  font-family: var(--font-body);
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--primary-100);
-}
-
-.header-sub {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--text-200);
-  letter-spacing: 0.03em;
-}
-
-.sub-item em { font-style: normal; }
-.sub-active { color: var(--primary-100); font-weight: 600; }
-.sub-sep { color: var(--bg-300); }
-
-.header-right {
-  text-align: right;
-  font-size: 12px;
-  color: var(--text-200);
-}
-
-.header-status { margin-bottom: 4px; letter-spacing: 0.03em; }
-
-.header-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-end;
-  font-size: 13px;
-  color: var(--text-100);
-}
-
-.user-sep { color: var(--bg-300); }
-
-
-/* ===== ZONE TAG ===== */
-.zone-tag {
-  display: inline-block;
-  position: absolute;
-  top: 10px;
-  left: 14px;
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  color: var(--text-300);
-  font-family: var(--font-body);
-  pointer-events: none;
-}
-
-/* ===== HERO BANNER ===== */
-.zone-hero {
-  position: relative;
-  padding: 28px 24px 24px;
-  background: var(--bg-200);
-  border-bottom: 1px solid var(--bg-300);
-}
-
-.hero-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-}
-
-.hero-streak,
-.hero-weekly {
+.stat-item {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  padding: 0 20px;
 }
 
-.hero-num {
-  font-size: 48px;
+.stat-item:first-child { padding-left: 0; }
+
+.stat-num {
+  font-size: 22px;
   font-weight: 700;
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', 'Fira Code', var(--font-title), monospace;
   line-height: 1;
-  color: var(--primary-100);
-  font-family: var(--font-title);
+  letter-spacing: 0.04em;
 }
 
-.hero-unit {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-200);
-  letter-spacing: 0.06em;
-}
-
-.hero-label {
-  font-size: 10px;
-  color: var(--text-200);
-  letter-spacing: 0.1em;
-  margin-left: 4px;
-}
-
-.hero-divider {
-  width: 1px;
-  height: 40px;
-  background: var(--bg-300);
-}
-
-.hero-progress {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.hero-progress-label {
-  font-size: 10px;
-  color: var(--text-200);
-  letter-spacing: 0.08em;
-}
-
-.hero-bar {
-  width: 160px;
-  height: 8px;
-  background: var(--bg-300);
-}
-
-.hero-bar-fill {
-  height: 100%;
-  background: var(--primary-100);
-  transition: width 0.3s ease;
-}
-
-.hero-progress-val {
-  font-size: 12px;
-  color: var(--text-100);
-  font-weight: 600;
-}
-
-/* ===== CAPABILITY PANEL ===== */
-.zone-cap {
-  position: relative;
-  padding: 28px 24px 20px;
-  border-bottom: 1px solid var(--bg-300);
-}
-
-.cap-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.cap-card {
-  padding: 20px;
-  background: var(--bg-200);
-}
-
-.cap-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-100);
-  margin-bottom: 16px;
-  font-family: var(--font-title);
-}
-
-.cap-icon {
-  color: var(--bg-100);
-  background: var(--primary-100);
-  font-size: 12px;
-  font-family: var(--font-title);
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* KG entry card */
-.cap-card--hero { cursor: pointer; transition: background 0.15s; }
-.cap-card--hero:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-200)); }
-
-.cap-desc {
-  font-size: 12px;
-  color: var(--text-200);
-  margin-bottom: 14px;
-  letter-spacing: 0.02em;
-}
-
-.cap-go {
-  margin-left: auto;
+.stat-label {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--primary-100);
-  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  font-family: var(--font-ui);
 }
 
-.kg-caps {
-  display: flex;
+.stat-item--bar {
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.kg-cap-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--bg-100);
-}
-
-.kg-cap-icon {
-  font-size: 13px;
-  color: var(--bg-100);
-  background: var(--primary-100);
-  font-family: var(--font-title);
-  width: 24px;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: 4px;
   justify-content: center;
+}
+
+.stat-bar-wrap {
+  width: 110px;
+  height: 3px;
+  background: var(--color-border);
+  position: relative;
+}
+
+.stat-bar-fill {
+  position: absolute;
+  inset: 0;
+  right: auto;
+  background: var(--color-primary);
+  transition: width 0.5s ease;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--color-border);
   flex-shrink: 0;
 }
 
-.kg-cap-info { flex: 1; }
-.kg-cap-label { font-size: 11px; font-weight: 600; color: var(--text-100); display: block; }
-.kg-cap-desc { font-size: 10px; color: var(--text-200); display: block; margin-top: 2px; }
+.stat-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-.kg-cap-status {
-  font-size: 10px;
+.stat-live-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.stat-username {
+  font-size: 12px;
   font-weight: 600;
-  padding: 2px 6px;
+  color: var(--color-text);
+  font-family: var(--font-title);
+  letter-spacing: 0.04em;
+}
+
+.stat-role {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 1px 8px;
+  border: 1px solid var(--color-border);
   letter-spacing: 0.06em;
 }
 
-.kg-cap-status.active {
-  color: var(--primary-100);
-  background: color-mix(in srgb, var(--primary-100) 10%, transparent);
+/* ── 主体双栏 ── */
+.dash-body {
+  display: grid;
+  grid-template-columns: 1fr 296px;
+  flex: 1;
+  min-height: 0;
+  border-bottom: 1px solid var(--color-gold);
 }
 
-.kg-layer-bar {
-  display: flex;
-  height: 6px;
-  border-radius: 0;
-  overflow: hidden;
-  gap: 2px;
-  margin-bottom: 8px;
-}
-
-.kg-layer-seg {
-  border-radius: 0;
-  min-width: 4px;
-}
-
-.kg-layer-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 10px;
-  color: var(--text-200);
-}
-
-.kg-layer-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.kg-layer-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 0;
-  display: inline-block;
-}
-
-/* KG history */
-.kg-history {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--bg-300);
-}
-
-.kg-history-list {
+/* ── 左主区 ── */
+.dash-main {
+  padding: 20px 24px;
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.kg-history-item {
+.dash-main::-webkit-scrollbar { display: none; }
+
+.panel-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: var(--bg-100);
-  cursor: pointer;
-  transition: background 0.15s;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.kg-history-item:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
-
-.kg-history-name { font-size: 12px; font-weight: 600; color: var(--text-100); }
-.kg-history-time { font-size: 10px; color: var(--text-200); }
-
-/* CTA button */
-.cap-cta {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--bg-300);
+.panel-header--sep {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
 }
 
-.cap-cta-btn {
-  width: 100%;
-  padding: 10px;
-  background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100));
-  color: var(--primary-100);
-  border: 1px solid color-mix(in srgb, var(--primary-100) 20%, transparent);
+.panel-label {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.cap-cta-btn:hover {
-  background: color-mix(in srgb, var(--primary-100) 18%, var(--bg-100));
-}
-
-.clickable { cursor: pointer; }
-
-/* Pipeline */
-.pipeline {
-  padding-top: 12px;
-  border-top: 1px solid var(--bg-300);
-}
-
-.pipeline-label {
-  font-size: 10px;
-  color: var(--text-200);
+  font-family: var(--font-title);
+  color: var(--color-text);
   letter-spacing: 0.08em;
-  margin-bottom: 8px;
-  display: block;
 }
 
-.pipeline-flow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.pipe-node {
+.panel-sub {
   font-size: 11px;
-  color: var(--primary-100);
-  font-weight: 600;
+  color: var(--color-text-muted);
 }
 
-.pipe-arrow {
-  font-size: 12px;
-  color: var(--text-200);
+.calendar-wrap {
+  height: 200px;
+  margin-bottom: 4px;
 }
 
-/* Agent 列表 */
-.agent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.agent-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--bg-100);
-  transition: background 0.15s;
-}
-
-.agent-item.clickable { cursor: pointer; }
-.agent-item.clickable:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
-
-.agent-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 0;
-  flex-shrink: 0;
-}
-
-.agent-dot.online { background: var(--primary-100); }
-.agent-dot.offline { background: var(--text-200); }
-
-.agent-id {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-100);
-  letter-spacing: 0.04em;
-  min-width: 100px;
-}
-
-.agent-label {
-  flex: 1;
-  font-size: 11px;
-  color: var(--text-200);
-}
-
-.agent-tasks {
-  font-size: 10px;
-  color: var(--text-200);
-  padding: 2px 6px;
-  background: var(--bg-300);
-}
-
-.agent-status {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-}
-
-.agent-status.online { color: var(--primary-100); background: color-mix(in srgb, var(--primary-100) 10%, transparent); }
-.agent-status.offline { color: var(--text-200); background: var(--bg-300); }
-
-/* Flow list */
-.flow-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.flow-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 11px;
-}
-
-.flow-desc {
-  color: var(--text-200);
-  min-width: 36px;
-}
-
-.flow-chain {
-  color: var(--primary-100);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.flow-result {
-  color: var(--text-100);
-}
-
-/* ===== PRIMARY ZONE ===== */
-.zone-primary {
-  position: relative;
-  padding: 28px 24px 20px;
-  border-bottom: 1px solid var(--bg-300);
-}
-
-.primary-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-}
-
-.primary-calendar,
-.primary-week {
-  background: var(--bg-200);
-  padding: 20px;
-}
-
-.calendar-box {
-  height: 280px;
-}
-
-.calendar-box :deep(.calendar-chart-container),
-.calendar-box :deep(.calendar-chart) {
+.calendar-wrap :deep(.calendar-chart-container),
+.calendar-wrap :deep(.calendar-chart) {
   width: 100% !important;
   height: 100% !important;
 }
 
-/* Section header (shared) */
-.sec-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-100);
-  font-family: var(--font-title);
-}
-
-.sec-icon {
-  color: var(--primary-100);
-  font-size: 12px;
-  font-family: var(--font-title);
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--primary-200);
-}
-
-.sec-badge {
-  margin-left: auto;
-  padding: 2px 7px;
-  font-size: 10px;
-  font-weight: 600;
-  background: var(--bg-300);
-  color: var(--text-200);
-}
-
-/* Weekly stats */
-.week-total {
+/* 本周柱图 */
+.week-summary {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  margin-bottom: 16px;
 }
 
-.week-num {
-  font-size: 36px;
+.week-big {
+  font-size: 20px;
   font-weight: 700;
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Microsoft YaHei', monospace;
   line-height: 1;
-  color: var(--primary-100);
-  font-family: var(--font-title);
 }
 
 .week-unit {
-  font-size: 16px;
-  color: var(--text-200);
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 
-.week-bars {
+.week-bars-row {
   display: flex;
-  justify-content: space-between;
   align-items: flex-end;
-  height: 100px;
   gap: 8px;
+  height: 60px;
+  margin-bottom: 4px;
 }
 
-.wbar {
+.wbar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .wbar-track {
   width: 100%;
-  height: 80px;
-  background: var(--bg-300);
+  height: 44px;
+  background: var(--color-border);
   position: relative;
+  flex-shrink: 0;
 }
 
 .wbar-fill {
@@ -1132,309 +634,418 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--primary-100);
-  transition: height 0.3s ease;
+  background: var(--color-primary);
+  opacity: 0.7;
+  transition: height 0.4s ease;
 }
 
-.wbar-label {
-  font-size: 11px;
-  color: var(--text-200);
-}
-
-/* ===== INFO ZONE ===== */
-.zone-info {
-  position: relative;
-  padding: 28px 24px 20px;
-  border-bottom: 1px solid var(--bg-300);
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.info-card {
-  background: var(--bg-200);
-  padding: 20px;
-}
-
-/* Quick access */
-.qlist { display: flex; flex-direction: column; gap: 8px; }
-
-.qitem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  background: var(--bg-100);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.qitem:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
-
-.qdot {
-  width: 6px;
-  height: 6px;
-  background: var(--primary-100);
-  border-radius: 0;
-  flex-shrink: 0;
-}
-
-.qinfo { flex: 1; }
-.qtitle { font-size: 13px; font-weight: 600; color: var(--text-100); display: block; }
-.qdesc { font-size: 11px; color: var(--text-200); display: block; margin-top: 2px; }
-
-.qarrow { color: var(--text-200); font-size: 16px; }
-.qitem:hover .qarrow { color: var(--primary-100); }
-
-/* Notices */
-.nlist { display: flex; flex-direction: column; gap: 8px; }
-
-.nitem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  background: var(--bg-100);
-}
-
-.ndot {
-  width: 6px;
-  height: 6px;
-  margin-top: 5px;
-  border-radius: 0;
-  background: var(--text-200);
-  flex-shrink: 0;
-}
-
-.nitem.warning .ndot { background: var(--accent-100); }
-.nitem.success .ndot { background: var(--primary-100); }
-
-.ncontent { flex: 1; }
-.ntitle { font-size: 13px; font-weight: 600; color: var(--text-100); display: block; }
-.ntime { font-size: 11px; color: var(--text-200); display: block; margin-top: 3px; }
-
-/* Todo */
-.tlist { display: flex; flex-direction: column; gap: 6px; }
-
-.titem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  background: var(--bg-100);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.titem:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
-
-.tcheck { font-size: 14px; color: var(--text-200); }
-.titem.done .tcheck { color: var(--primary-100); }
-
-.ttext { flex: 1; font-size: 13px; color: var(--text-100); }
-.titem.done .ttext { text-decoration: line-through; color: var(--text-200); }
-
-.ttag {
+.wbar-lbl {
   font-size: 10px;
-  padding: 2px 6px;
-  background: var(--bg-300);
-  color: var(--text-200);
+  color: var(--color-text-subtle);
 }
 
-.ttag.high {
-  background: color-mix(in srgb, var(--accent-100) 15%, transparent);
-  color: var(--accent-100);
+/* 最近访问 */
+.recent-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.ttag.medium {
-  background: color-mix(in srgb, var(--primary-100) 15%, transparent);
-  color: var(--primary-100);
-}
-
-/* ===== SECONDARY ZONE ===== */
-.zone-secondary {
-  position: relative;
-  padding: 28px 24px 20px;
-}
-
-.secondary-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.sec-card {
-  background: var(--bg-200);
-  padding: 20px;
-}
-
-/* Recent */
-.rlist { display: flex; flex-direction: column; gap: 6px; }
-
-.ritem {
+.recent-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 10px;
-  background: var(--bg-100);
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
 }
 
-.ritem:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
+.recent-item:last-child { border-bottom: none; }
+.recent-item:hover { background: color-mix(in srgb, var(--color-primary) 4%, transparent); }
+.recent-item:hover .recent-title { color: var(--color-primary); }
 
-.rtime { font-size: 11px; color: var(--text-200); min-width: 56px; }
-.rtitle { flex: 1; font-size: 13px; color: var(--text-100); }
+.recent-time {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  min-width: 64px;
+  font-family: var(--font-ui);
+  flex-shrink: 0;
+}
 
-/* Favorites */
-.flist { display: flex; flex-direction: column; gap: 8px; }
+.recent-title {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  transition: color var(--transition-fast);
+}
 
-.fitem {
+.recent-arrow {
+  font-size: 14px;
+  color: var(--color-text-subtle);
+}
+
+/* ── 右侧栏 ── */
+.dash-rail {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.dash-rail::-webkit-scrollbar { display: none; }
+
+.rail-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.rail-section:last-child { border-bottom: none; }
+
+.rail-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
-  background: var(--bg-100);
-  cursor: pointer;
-  transition: background 0.15s;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-title);
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.fitem:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
+.rail-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-family: var(--font-ui);
+}
 
-.fthumb {
-  width: 40px;
-  height: 40px;
+/* 快捷链接 */
+.rail-links { display: flex; flex-direction: column; gap: 2px; }
+
+.rail-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 6px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.rail-link:hover { background: color-mix(in srgb, var(--color-primary) 5%, transparent); }
+.rail-link:hover .rail-link__title { color: var(--color-primary); }
+
+.rail-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.rail-link__info { flex: 1; }
+.rail-link__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: block;
+  transition: color var(--transition-fast);
+}
+.rail-link__desc { font-size: 11px; color: var(--color-text-muted); display: block; margin-top: 1px; }
+.rail-arrow { font-size: 14px; color: var(--color-text-subtle); }
+
+/* 公告 */
+.rail-notices { display: flex; flex-direction: column; }
+
+.notice-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notice-row:last-child { border-bottom: none; }
+
+.notice-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--color-text-subtle);
+  flex-shrink: 0;
+}
+
+.notice-row.warning .notice-dot { background: var(--color-secondary); }
+.notice-row.success .notice-dot { background: var(--color-primary); }
+
+.notice-title { flex: 1; font-size: 12px; color: var(--color-text); }
+.notice-time { font-size: 10px; color: var(--color-text-subtle); white-space: nowrap; }
+
+/* 待办 */
+.rail-todos { display: flex; flex-direction: column; }
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.todo-row:last-child { border-bottom: none; }
+.todo-row.done { opacity: 0.45; }
+.todo-row:hover { background: color-mix(in srgb, var(--color-primary) 4%, transparent); }
+
+.todo-check { font-size: 12px; color: var(--color-primary); width: 14px; text-align: center; flex-shrink: 0; }
+.todo-text { flex: 1; font-size: 12px; color: var(--color-text); }
+.todo-row.done .todo-text { text-decoration: line-through; }
+
+.todo-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.todo-tag.high {
+  background: color-mix(in srgb, var(--color-secondary) 15%, transparent);
+  color: var(--color-secondary);
+}
+
+.todo-tag.medium {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+}
+
+/* 收藏 */
+.rail-favs { display: flex; flex-direction: column; }
+
+.fav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.fav-row:last-child { border-bottom: none; }
+.fav-row:hover .fav-name { color: var(--color-primary); }
+
+.fav-thumb {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-300);
-  font-size: 18px;
+  background: var(--color-border);
+  font-size: 12px;
   font-weight: 700;
-  color: var(--primary-100);
+  color: var(--color-primary);
+  font-family: var(--font-title);
   flex-shrink: 0;
 }
 
-.finfo { flex: 1; }
-.ftitle { font-size: 13px; font-weight: 600; color: var(--text-100); display: block; }
-.fteacher { font-size: 11px; color: var(--text-200); display: block; margin-top: 2px; }
-
-.fempty {
-  text-align: center;
-  padding: 28px;
-  font-size: 12px;
-  color: var(--text-200);
-}
-
-/* Pending (teacher) */
-.pend-row {
-  display: flex;
-  gap: 12px;
-}
-
-.pend-item {
+.fav-name {
   flex: 1;
-  text-align: center;
-  padding: 20px;
-  background: var(--bg-100);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.pend-item:hover { background: color-mix(in srgb, var(--primary-100) 5%, var(--bg-100)); }
-
-.pend-num {
-  display: block;
-  font-size: 36px;
-  font-weight: 700;
-  color: var(--primary-100);
-  font-family: var(--font-title);
-  line-height: 1;
-  margin-bottom: 8px;
-}
-
-.pend-label {
   font-size: 12px;
-  color: var(--text-200);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
 }
 
-/* System (admin) */
-.sys-row {
+/* Admin 系统统计 */
+.sys-strip {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 4px;
 }
 
 .sys-cell {
   text-align: center;
-  padding: 18px 10px;
-  background: var(--bg-100);
+  padding: 10px 4px;
+  background: var(--color-background);
 }
 
-.sys-num {
+.sys-n {
   display: block;
-  font-size: 30px;
+  font-size: 18px;
   font-weight: 700;
-  color: var(--primary-100);
-  font-family: var(--font-title);
+  color: var(--color-primary);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Microsoft YaHei', monospace;
   line-height: 1;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.sys-label {
+.sys-l { font-size: 10px; color: var(--color-text-muted); }
+
+/* ── 底部信息条 ── */
+.dash-footer {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--color-gold);
+  background: var(--color-surface);
+  min-height: 50px;
+  padding: 0 24px;
+  gap: 0;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.footer-kg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 0;
+  flex: 1;
+  min-width: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.footer-kg:hover { opacity: 0.78; }
+
+.footer-kg__icon {
+  width: 28px;
+  height: 28px;
+  background: var(--color-primary);
+  color: var(--color-surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.footer-kg__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.footer-kg__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: var(--font-title);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.footer-kg__sub {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.footer-kg__bar {
+  display: flex;
+  height: 4px;
+  width: 100px;
+  overflow: hidden;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.footer-kg__seg { min-width: 3px; }
+
+.footer-kg__cta {
   font-size: 11px;
-  color: var(--text-200);
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+  margin-left: 6px;
+  flex-shrink: 0;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1200px) {
-  .cap-grid { grid-template-columns: 1fr; }
-  .primary-grid { grid-template-columns: 1fr; }
-  .info-grid { grid-template-columns: 1fr 1fr; }
+.footer-sep {
+  width: 1px;
+  height: 30px;
+  background: var(--color-border);
+  margin: 0 20px;
+  flex-shrink: 0;
+}
+
+.footer-agents {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.footer-agents__label {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.footer-agents__list {
+  display: flex;
+  gap: 12px;
+}
+
+.footer-agent {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.footer-agent__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.footer-agent__name {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ── 响应式 ── */
+@media (max-width: 1024px) {
+  .dash-body { grid-template-columns: 1fr 260px; }
+  .footer-agents__list { display: none; }
 }
 
 @media (max-width: 768px) {
-  .dash {
-    width: calc(100% + 32px);
-    margin: -16px;
+  .dash-stats {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 6px;
   }
-
-  .dash-header {
+  .stat-divider { display: none; }
+  .stat-item { padding: 4px 0; }
+  .dash-body { grid-template-columns: 1fr; }
+  .dash-main { border-right: none; border-bottom: 1px solid var(--color-border); padding: 16px; }
+  .dash-rail { order: -1; }
+  .dash-footer {
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
     padding: 12px 16px;
+    gap: 8px;
   }
-
-  .header-right { text-align: left; }
-  .header-user { justify-content: flex-start; }
-
-  .hero-content {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .hero-divider {
-    width: 80px;
-    height: 1px;
-  }
-
-  .hero-bar { width: 120px; }
-
-  .info-grid { grid-template-columns: 1fr; }
-  .secondary-grid { grid-template-columns: 1fr; }
-  .sys-row { grid-template-columns: repeat(2, 1fr); }
-
-  .zone-hero,
-  .zone-cap,
-  .zone-primary,
-  .zone-info,
-  .zone-secondary {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
+  .footer-sep { display: none; }
+  .footer-kg__bar { display: none; }
 }
+
+/* ── 旧类已移除（故宫档案室改版完成）── */
 
 </style>
 

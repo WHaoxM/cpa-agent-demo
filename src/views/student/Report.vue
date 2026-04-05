@@ -1,4 +1,4 @@
-﻿<!-- 页面：学习报告；路由：student/report（student-report）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：能力成长报告；路由：student/report（student-report）；角色：STUDENT -->
 
 
 <script setup lang="ts">
@@ -175,12 +175,12 @@ const getChartPalette = () => {
   const style = getComputedStyle(document.documentElement)
   const pick = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback
   return {
-    primary: pick('--primary-100', '#3B82F6'),
-    primarySoft: pick('--primary-200', '#93C5FD'),
-    accent: pick('--accent-100', '#22C55E'),
-    text: pick('--text-100', '#111827'),
-    textSubtle: pick('--text-200', '#6B7280'),
-    grid: pick('--bg-300', '#E5E7EB'),
+    primary: pick('--primary-100', '#BE2A00'),
+    primarySoft: pick('--primary-200', '#F9DACE'),
+    accent: pick('--accent-100', '#1B4E79'),
+    text: pick('--text-100', '#1C1612'),
+    textSubtle: pick('--text-200', '#6B5040'),
+    grid: pick('--bg-300', '#C8B89A'),
   }
 }
 
@@ -1169,7 +1169,7 @@ onUnmounted(() => {
 
     <div class="page-header">
 
-      <h2>学习报告</h2>
+      <h2>能力成长报告</h2>
 
     </div>
 
@@ -1180,25 +1180,26 @@ onUnmounted(() => {
 
 
     <div class="kpi-strip">
+      <!-- TODO: API — GET /api/ability-report?userId=xxx -->
       <div class="kpi-item card-data">
-        <div class="kpi-item__label">课程</div>
+        <div class="kpi-item__label">技能课程</div>
         <div class="kpi-item__value">{{ statistics.totalCourses }}</div>
-        <div class="kpi-item__hint">已记录课程数</div>
+        <div class="kpi-item__hint">已完成课程数</div>
       </div>
       <div class="kpi-item card-data">
-        <div class="kpi-item__label">学习时长</div>
+        <div class="kpi-item__label">训练时长</div>
         <div class="kpi-item__value">{{ statistics.totalStudyTime }} 分</div>
-        <div class="kpi-item__hint">总学习时间</div>
+        <div class="kpi-item__hint">技能训练总时长</div>
       </div>
       <div class="kpi-item card-data">
-        <div class="kpi-item__label">完成率</div>
+        <div class="kpi-item__label">掌握率</div>
         <div class="kpi-item__value">{{ Math.round(statistics.completionRate) }}%</div>
-        <div class="kpi-item__hint">平均课程进度</div>
+        <div class="kpi-item__hint">技能项平均掌握度</div>
       </div>
       <div class="kpi-item card-data">
-        <div class="kpi-item__label">平均分</div>
+        <div class="kpi-item__label">自测均分</div>
         <div class="kpi-item__value">{{ Math.round(statistics.averageScore) }}</div>
-        <div class="kpi-item__hint">有分数记录才统计</div>
+        <div class="kpi-item__hint">技能自测平均分</div>
       </div>
     </div>
 
@@ -1216,7 +1217,7 @@ onUnmounted(() => {
         <div class="dash-grid">
           <section class="dash-panel card-base">
             <div class="dash-panel__title">
-              <span>课程完成进度</span>
+              <span>技能掌握进度</span>
               <button class="dash-link" @click="exportChart('course')">导出</button>
             </div>
             <div ref="dashboardCourseRef" class="dash-chart" />
@@ -1224,7 +1225,7 @@ onUnmounted(() => {
 
           <section class="dash-panel card-base">
             <div class="dash-panel__title">
-              <span>学习进度分布</span>
+              <span>技能成熏度分布</span>
               <button class="dash-link" @click="exportChart('progress')">导出</button>
             </div>
             <div ref="dashboardProgressRef" class="dash-chart" />
@@ -1232,7 +1233,7 @@ onUnmounted(() => {
 
           <section class="dash-panel card-base">
             <div class="dash-panel__title">
-              <span>学习时间趋势</span>
+              <span>技能训练趋势</span>
               <button class="dash-link" @click="exportChart('trend')">导出</button>
             </div>
             <div ref="dashboardTrendRef" class="dash-chart" />
@@ -1240,7 +1241,7 @@ onUnmounted(() => {
 
           <section class="dash-panel card-base">
             <div class="dash-panel__title">
-              <span>学习时间分布</span>
+              <span>训练时间分布</span>
               <button class="dash-link" @click="exportChart('distribution')">导出</button>
             </div>
             <div ref="dashboardDistRef" class="dash-chart" />
@@ -1249,7 +1250,7 @@ onUnmounted(() => {
 
         <section class="dash-panel dash-panel--wide card-base">
           <div class="dash-panel__title">
-            <span>学习历史时间轴</span>
+            <span>技能学习时间轴</span>
             <div class="dash-panel__actions">
               <div class="dash-tabs">
                 <button class="dash-tab" :class="{ active: timelineView === 'week' }" @click="timelineView = 'week'">周</button>
@@ -1269,7 +1270,7 @@ onUnmounted(() => {
         <el-card class="table-card card-base" shadow="never">
           <template #header>
             <div class="table-header">
-              <span>学习记录详情</span>
+              <span>技能训练记录</span>
               <div class="table-actions">
                 <el-button type="primary" size="small" @click="exportTable">导出表格</el-button>
                 <el-button type="default" size="small" @click="loadSampleData">加载示例数据</el-button>
@@ -1278,8 +1279,8 @@ onUnmounted(() => {
           </template>
 
           <el-table :data="paginatedData" stripe style="width: 100%" v-loading="loading">
-            <el-table-column prop="courseName" label="课程名称" width="200" />
-            <el-table-column prop="courseType" label="课程类型" width="120">
+            <el-table-column prop="courseName" label="技能课程" width="200" />
+            <el-table-column prop="courseType" label="技能方向" width="120">
               <template #default="{ row }">
                 <el-tag :type="getCourseTypeColor(row.courseType)">
                   {{ getCourseTypeName(row.courseType) }}
@@ -1340,8 +1341,8 @@ onUnmounted(() => {
     <el-card class="suggestions-card card-base" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>学习建议</span>
-          <el-tag size="small" type="info">基于当前筛选数据</el-tag>
+          <span>能力提升建议</span>
+          <el-tag size="small" type="info">AI 分析当前技能数据</el-tag>
         </div>
       </template>
 
@@ -1361,8 +1362,9 @@ onUnmounted(() => {
     <el-card class="recommend-card card-base" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>薄弱点课程推荐</span>
-          <el-tag size="small" type="warning">先写死，后续智能体推理</el-tag>
+          <span>AI 推荐：待补强技能</span>
+          <!-- TODO: API — POST /api/ai/skill-recommend -->
+          <el-tag size="small" type="warning">基于薄弱点智能分析</el-tag>
         </div>
       </template>
 
@@ -1721,7 +1723,7 @@ onUnmounted(() => {
 }
 
 .good-score {
-  color: #409eff;
+  color: var(--color-secondary);
   font-weight: 700;
 }
 

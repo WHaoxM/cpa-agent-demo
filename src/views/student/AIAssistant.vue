@@ -92,7 +92,7 @@ function clearChat() {
       <div class="chat-header">
         <div class="header-info">
           <div class="ai-avatar">
-            <el-icon :size="28" color="#409EFF"><ChatLineRound /></el-icon>
+            <el-icon :size="28" color="#fff"><ChatLineRound /></el-icon>
           </div>
           <div class="header-text">
             <h3>AI 学习助手</h3>
@@ -140,7 +140,7 @@ function clearChat() {
 
       <!-- 快捷提示 -->
       <div v-if="messages.length <= 1" class="quick-prompts">
-        <div style="grid-column: 1/-1; text-align: center; color: #999; font-size: 12px; margin-bottom: 8px;">
+        <div style="grid-column: 1/-1; text-align: center; color: var(--color-text-subtle); font-size: 12px; margin-bottom: 8px;">
           调试信息：当前消息数量 {{ messages.length }}
         </div>
         <div
@@ -209,8 +209,8 @@ function clearChat() {
 .ai-avatar {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  border-radius: var(--radius-none);
+  background: linear-gradient(135deg, var(--vermilion-700), var(--vermilion-500));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,8 +254,8 @@ function clearChat() {
 .ai-icon {
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #409EFF, #67C23A);
+  border-radius: var(--radius-none);
+  background: linear-gradient(135deg, var(--vermilion-700), var(--vermilion-500));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -273,15 +273,17 @@ function clearChat() {
 
 .message-bubble {
   padding: 12px 16px;
-  border-radius: 0;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
   line-height: 1.6;
 }
 
 .message.user .message-bubble {
-  background: #409EFF;
+  background: var(--color-primary);
   color: #fff;
+  border-color: var(--color-primary-dark);
 }
 
 .message-bubble.loading {
@@ -294,7 +296,7 @@ function clearChat() {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #409EFF;
+  background: var(--color-primary);
   animation: bounce 1.4s infinite ease-in-out;
 }
 
@@ -339,17 +341,16 @@ function clearChat() {
   align-items: center;
   gap: 6px;
   padding: 16px;
-  background: #fff;
-  border-radius: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
   cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid transparent;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .prompt-card:hover {
-  border-color: #409EFF;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .prompt-icon {
@@ -370,8 +371,8 @@ function clearChat() {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  background: #fff;
-  border-top: 1px solid var(--el-border-color-light);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }
 
 .input-area :deep(.el-textarea) {

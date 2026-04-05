@@ -39,7 +39,6 @@ watch(
 
 const userRole = computed(() => userStore.userRole)
 const isStudent = computed(() => userStore.isStudent)
-const isTeacher = computed(() => userStore.isTeacher)
 const isAdmin = computed(() => userStore.isAdmin)
 
 const activeMenu = computed(() => {
@@ -52,49 +51,45 @@ const breadcrumbs = computed(() => {
   const items = route.matched
     .map(r => String(r.meta.title ?? ''))
   .filter(Boolean)
-  if (items.length === 0) return ['课程管理系统']
+  if (items.length === 0) return ['AI职涯规划']
   if (route.path.startsWith('/app')) {
     return ['应用', ...items]
   }
   return items
 })
 
-// 学生菜单
+// 学生菜单（按 AI 职业规划闭环分层排列）
 const studentMenus = [
-  { index: '/app/student/learning', icon: ICONS.bookOpen, title: '学习中心' },
-  { index: '/app/student/knowledge-graph', icon: ICONS.network, title: '知识图谱' },
-  { index: '/app/student/skills', icon: ICONS.layers, title: '技能管理' },
-  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
-  { index: '/app/student/report', icon: ICONS.trendingUp, title: '学习报告' },
+  // ── 核心入口 ──
   { index: '/app/student/career', icon: ICONS.compass, title: '职业发展中心' },
-  { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
+  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
+  // ── 输入层 ──
+  { index: '/app/student/skills', icon: ICONS.layers, title: '技能档案' },
+  { index: '/app/exams', icon: ICONS.checkSquare, title: '技能自测' },
+  // ── 分析层 ──
   { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
+  { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
+  // ── 规划层 ──
+  { index: '/app/courses', icon: ICONS.bookOpen, title: '技能课程库' },
+  // ── 执行/追踪 ──
+  { index: '/app/student/learning', icon: ICONS.trendingUp, title: '技能提升' },
+  { index: '/app/student/wrongquestions', icon: ICONS.closeCircle, title: '薄弱点记录' },
+  { index: '/app/notes', icon: ICONS.fileText, title: '职涯笔记' },
+  { index: '/app/student/favorites', icon: ICONS.bookmark, title: '心仪岗位' },
+  { index: '/app/student/report', icon: ICONS.activity, title: '能力成长' },
+  // ── 社区/设置 ──
+  { index: '/app/student/discuss', icon: ICONS.messageSquare, title: '职业探讨' },
   { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
-]
-
-// 教师菜单
-const teacherMenus = [
-  ...studentMenus,
-  { index: '/app/teacher/courses', icon: ICONS.bookOpen, title: '课程管理' },
-  { index: '/app/teacher/students', icon: ICONS.users, title: '学生管理' },
-  { index: '/app/teacher/grading', icon: ICONS.checkSquare, title: '作业批改' },
-  { index: '/app/teacher/class-report', icon: ICONS.trendingUp, title: '班级报告' },
-  { index: '/app/teacher/monitoring', icon: ICONS.monitor, title: '学情监控' },
 ]
 
 // 管理员菜单
 const adminMenus = [
-  { index: '/app/admin/users', icon: ICONS.users, title: '用户管理' },
-  { index: '/app/admin/content-review', icon: ICONS.search, title: '内容审核' },
-  { index: '/app/admin/system-stats', icon: ICONS.activity, title: '系统监控' },
+  { index: '/app/admin/job-dataset', icon: ICONS.database, title: '岗位数据集' },
+  { index: '/app/admin/knowledge-base', icon: ICONS.bookOpen, title: '知识库维护' },
 ]
 
-// 通用菜单（兼容原有路由）
+// 通用菜单（兼容未登录或其他角色）
 const commonMenus = [
-  { index: '/app/courses', icon: ICONS.layoutGrid, title: '课程列表' },
-  { index: '/app/exams', icon: ICONS.calendar, title: '考试' },
-  { index: '/app/wrongbook', icon: ICONS.closeCircle, title: '错题本' },
-  { index: '/app/notes', icon: ICONS.fileText, title: '笔记' },
   { index: '/app/messages', icon: ICONS.inbox, title: '消息' },
   { index: '/app/profile', icon: ICONS.user, title: '个人中心' },
 ]
@@ -102,7 +97,6 @@ const commonMenus = [
 // 当前角色菜单
 const currentMenus = computed(() => {
   if (isStudent.value) return studentMenus
-  if (isTeacher.value) return teacherMenus
   if (isAdmin.value) return adminMenus
   return commonMenus
 })
@@ -119,8 +113,6 @@ void recentAccess
 const quickStats = computed(() => {
   if (isStudent.value) {
     return { label: '本周学习', value: '12小时', sub: '3门课程进行中' }
-  } else if (isTeacher.value) {
-    return { label: '待批改作业', value: '8份', sub: '来自3个班级' }
   } else {
     return { label: '待审核内容', value: '5项', sub: '2门课程+3条评论' }
   }
@@ -157,7 +149,7 @@ function switchRole(role: UserRole) {
   userStore.loginByRole(role)
   ElNotification({
     title: '切换成功',
-    message: `已切换到${role === UserRole.STUDENT ? '学生' : role === UserRole.TEACHER ? '教师' : '管理员'}角色`,
+    message: `已切换到${role === UserRole.STUDENT ? '学生' : '管理员'}角色`,
     type: 'success',
     duration: 1800,
   })
@@ -182,36 +174,8 @@ const currentChapter = computed(() => {
   return String(route.meta.title ?? '课程管理')
 })
 
-/* ===== GSAP 翻页转场 ===== */
+/* ===== 页面入场动效（CSS Transition，去掉 GSAP JS 钉子避免 done() 时序问题）===== */
 const prefersReduced = ref(false)
-
-function onBeforeEnter(el: Element) {
-  if (prefersReduced.value) return
-  const h = el as HTMLElement
-  h.style.willChange = 'transform, opacity'
-  gsap.set(h, { opacity: 0, y: 10 })
-}
-
-function onEnter(el: Element, done: () => void) {
-  if (prefersReduced.value) { done(); return }
-  const h = el as HTMLElement
-  gsap.to(h, {
-    opacity: 1, y: 0,
-    duration: 0.24, ease: 'power2.out',
-    onComplete: () => { h.style.willChange = ''; done() },
-  })
-}
-
-function onLeave(el: Element, done: () => void) {
-  if (prefersReduced.value) { done(); return }
-  const h = el as HTMLElement
-  h.style.willChange = 'transform, opacity'
-  gsap.to(h, {
-    opacity: 0, y: -6,
-    duration: 0.18, ease: 'power1.out',
-    onComplete: () => { h.style.willChange = ''; done() },
-  })
-}
 
 function onImmersiveEnter(_el: Element, done: () => void) {
   done()
@@ -247,6 +211,7 @@ onMounted(() => {
       gsap.from('.book-main-area', {
         opacity: 0, y: 10,
         duration: 0.28, ease: 'power2.out', delay: 0.04,
+        clearProps: 'opacity,transform',
       })
     }, shellRef.value)
   }
@@ -311,7 +276,7 @@ onBeforeUnmount(() => {
                 <el-avatar :size="30" :src="userStore.currentUser?.avatar" class="book-header__avatar" />
                 <div class="book-header__user-text">
                   <div class="book-header__user-name">{{ userStore.currentUser?.name }}</div>
-                  <div class="book-header__user-role">{{ userRole === 'student' ? '学生' : userRole === 'teacher' ? '教师' : '管理员' }}</div>
+                  <div class="book-header__user-role">{{ userRole === 'student' ? '学生' : '管理员' }}</div>
                 </div>
               </div>
             </template>
@@ -320,7 +285,7 @@ onBeforeUnmount(() => {
               <div class="user-pop__info">
                 <el-avatar :size="50" :src="userStore.currentUser?.avatar" />
                 <div class="user-pop__name">{{ userStore.currentUser?.name }}</div>
-                <div class="user-pop__role">{{ userRole === 'student' ? '学生用户' : userRole === 'teacher' ? '教师用户' : '系统管理员' }}</div>
+                <div class="user-pop__role">{{ userRole === 'student' ? '学生用户' : '系统管理员' }}</div>
               </div>
               <el-divider />
               <div class="user-pop__section">
@@ -328,9 +293,6 @@ onBeforeUnmount(() => {
                 <div class="user-pop__role-list">
                   <button class="user-pop__role-item" :class="{ active: userRole === UserRole.STUDENT }" @click="switchRole(UserRole.STUDENT)">
                     <Icon :icon="ICONS.graduationCap" /> 学生
-                  </button>
-                  <button class="user-pop__role-item" :class="{ active: userRole === UserRole.TEACHER }" @click="switchRole(UserRole.TEACHER)">
-                    <Icon :icon="ICONS.briefcase" /> 教师
                   </button>
                   <button class="user-pop__role-item" :class="{ active: userRole === UserRole.ADMIN }" @click="switchRole(UserRole.ADMIN)">
                     <Icon :icon="ICONS.shield" /> 管理员
@@ -356,14 +318,8 @@ onBeforeUnmount(() => {
         <BookPage :chapter-name="currentChapter" :show-corners="true" :show-footer="true">
           <div class="page-turn-perspective">
             <router-view v-slot="{ Component }">
-              <Transition
-                :css="false"
-                mode="out-in"
-                @before-enter="onBeforeEnter"
-                @enter="onEnter"
-                @leave="onLeave"
-              >
-                <component :is="Component" />
+              <Transition name="page-fade" mode="out-in">
+                <component :is="Component" :key="route.fullPath" />
               </Transition>
             </router-view>
           </div>
@@ -378,7 +334,7 @@ onBeforeUnmount(() => {
             @enter="onImmersiveEnter"
             @leave="onImmersiveLeave"
           >
-            <component :is="Component" />
+            <component :is="Component" :key="route.fullPath" />
           </Transition>
         </router-view>
       </main>
@@ -398,7 +354,7 @@ onBeforeUnmount(() => {
           <el-avatar :size="46" :src="userStore.currentUser?.avatar" />
           <div class="drawer__user-text">
             <div class="drawer__user-name">{{ userStore.currentUser?.name }}</div>
-            <div class="drawer__user-role">{{ userRole === 'student' ? '学生' : userRole === 'teacher' ? '教师' : '管理员' }}</div>
+            <div class="drawer__user-role">{{ userRole === 'student' ? '学生' : '管理员' }}</div>
           </div>
           <button class="drawer__close" @click="drawerOpen = false" aria-label="关闭菜单">
             <Icon :icon="ICONS.close" />
@@ -631,6 +587,28 @@ onBeforeUnmount(() => {
 .page-turn-perspective {
   width: 100%;
   min-height: 100%;
+}
+
+/* 路由切换过渡 */
+.page-fade-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.page-fade-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none;
+  }
 }
 
 .immersive-stage {

@@ -4,7 +4,6 @@ export type LayoutMode = 'single' | 'split' | 'workspace'
 // 用户角色枚举
 export enum UserRole {
   STUDENT = 'student',
-  TEACHER = 'teacher',
   ADMIN = 'admin'
 }
 
@@ -48,6 +47,7 @@ export interface Course {
   id: string
   title: string
   description: string
+  skillTags?: string[]  // 对应岗位画像技能维度
   cover: string
   categoryId: string
   teacherId: string
@@ -155,7 +155,6 @@ export interface LearningReport {
 export interface ClassData {
   id: string
   name: string
-  teacherId: string
   studentCount: number
   courseIds: string[]
 }
@@ -174,7 +173,6 @@ export interface StudentGrade {
 export interface SystemStats {
   totalUsers: number
   students: number
-  teachers: number
   admins: number
   totalCourses: number
   activeUsers: {
@@ -257,6 +255,20 @@ export interface KnowledgeNodeDetail {
 export type AgentRole = 'knowledge-locator' | 'protocol-analyzer' | 'fault-diagnoser' | 'learning-advisor'
 
 export type AgentStepStatus = 'waiting' | 'running' | 'done'
+
+// 心仪岗位（收藏的岗位）
+export interface SavedJob {
+  id: string
+  jobTitle: string
+  company: string
+  industry: string
+  salary: string
+  location: string
+  matchScore: number       // 0-100，人岗匹配度
+  requiredSkills: string[] // 岗位关键技能
+  savedAt: string
+  notes?: string           // 用户备注
+}
 
 export interface AgentStep {
   role: AgentRole

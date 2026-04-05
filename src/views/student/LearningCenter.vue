@@ -1,4 +1,4 @@
-﻿<!-- 页面：学习中心；路由：student/learning（student-learning）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：技能提升；路由：student/learning（student-learning）；角色：STUDENT -->
 
 
 <script setup lang="ts">
@@ -1024,7 +1024,7 @@ function formatDuration(minutes: number): string {
       <div class="career-head card-base">
         <div class="career-head__left">
 
-          <div class="career-title">职业推测与能力画像</div>
+          <div class="career-title">技能匹配与能力画像</div>
 
           <div class="career-sub">
 
@@ -1113,7 +1113,7 @@ function formatDuration(minutes: number): string {
           <div class="panel panel--chart card-base">
             <div class="panel__head">
 
-              <div class="panel__title">知识点 - 岗位匹配</div>
+              <div class="panel__title">技能点 - 岗位匹配</div>
 
               <div class="panel__meta">桑基图：展示知识点到岗位的匹配流向</div>
 
@@ -1868,6 +1868,8 @@ function formatDuration(minutes: number): string {
   display: -webkit-box;
 
   -webkit-line-clamp: 2;
+
+  line-clamp: 2;
 
   -webkit-box-orient: vertical;
 

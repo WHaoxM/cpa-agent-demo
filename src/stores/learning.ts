@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Note, WrongQuestion, QuizRecord, Question, AIMessage } from '@/types'
+import type { Note, WrongQuestion, QuizRecord, Question, AIMessage, SavedJob } from '@/types'
 import {
   mockNotes,
   mockWrongQuestions,
@@ -9,6 +9,7 @@ import {
   mockQuestions,
   mockAIMessages,
   mockAIResponses,
+  mockSavedJobs,
   CURRENT_USER_ID,
 } from '@/mock/data'
 
@@ -55,6 +56,9 @@ export const useLearningStore = defineStore(
     const quizRecords = ref<QuizRecord[]>([...mockQuizRecords])
     const aiMessages = ref<AIMessage[]>([...mockAIMessages])
     const noteFavorites = ref<string[]>([])
+
+    // TODO: API — GET /api/saved-jobs?userId=xxx
+    const savedJobs = ref<SavedJob[]>([...mockSavedJobs])
     
     // 可视化相关状态
     const learningHistory = ref<LearningRecord[]>([])
@@ -584,6 +588,27 @@ export const useLearningStore = defineStore(
       localStorage.removeItem('learning_history')
     }
 
+    // 心仪岗位 actions
+    // TODO: API — POST /api/saved-jobs (toggle)
+    function toggleSaveJob(job: SavedJob): void {
+      const idx = savedJobs.value.findIndex(j => j.id === job.id)
+      if (idx === -1) {
+        savedJobs.value.unshift({ ...job, savedAt: new Date().toISOString().slice(0, 10) })
+      } else {
+        savedJobs.value.splice(idx, 1)
+      }
+    }
+
+    // TODO: API — DELETE /api/saved-jobs/:id
+    function removeSavedJob(jobId: string): void {
+      const idx = savedJobs.value.findIndex(j => j.id === jobId)
+      if (idx !== -1) savedJobs.value.splice(idx, 1)
+    }
+
+    function isJobSaved(jobId: string): boolean {
+      return savedJobs.value.some(j => j.id === jobId)
+    }
+
     return {
       // 原有状态
       notes,
@@ -591,6 +616,7 @@ export const useLearningStore = defineStore(
       quizRecords,
       aiMessages,
       noteFavorites,
+      savedJobs,
       
       // 可视化相关状态
       learningHistory,
@@ -627,6 +653,11 @@ export const useLearningStore = defineStore(
       getAIResponse,
       clearAIMessages,
       
+      // 心仪岗位 actions
+      toggleSaveJob,
+      removeSavedJob,
+      isJobSaved,
+
       // 可视化相关actions
       addLearningRecord,
       updateLearningRecord,

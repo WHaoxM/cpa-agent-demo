@@ -54,17 +54,6 @@ export const mockUsers: User[] = [
     classId: 'class_001',
   },
   {
-    id: 'teacher_001',
-    username: 'teacher001',
-    name: '刘老师',
-    email: 'teacher001@example.com',
-    avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-    role: UserRole.TEACHER,
-    createdAt: '2023-09-01',
-    status: 'active',
-    phone: '13900139001',
-  },
-  {
     id: 'admin_001',
     username: 'admin001',
     name: '管理员',
@@ -102,6 +91,7 @@ export const mockCourses: Course[] = [
     id: 'course_001',
     title: 'Vue 3 前端开发实战',
     description: '从零开始学习 Vue 3，掌握现代前端开发技术栈，包括 Composition API、Pinia、Vue Router 等核心技术。',
+    skillTags: ['专业技能', '学习能力'],
     cover: 'https://picsum.photos/400/300?random=1',
     categoryId: 'cat_001',
     teacherId: 'teacher_001',
@@ -118,6 +108,7 @@ export const mockCourses: Course[] = [
     id: 'course_002',
     title: 'TypeScript 进阶开发',
     description: '深入学习 TypeScript 高级特性，掌握类型体操、泛型编程等进阶技术。',
+    skillTags: ['专业技能', '创新能力'],
     cover: 'https://picsum.photos/400/300?random=2',
     categoryId: 'cat_001',
     teacherId: 'teacher_001',
@@ -139,6 +130,7 @@ export const mockCourses: Course[] = [
     id: 'course_003',
     title: 'Node.js 后端开发',
     description: '学习 Node.js 服务端开发，掌握 Express、Koa 等主流框架。',
+    skillTags: ['专业技能', '实习能力'],
     cover: 'https://picsum.photos/400/300?random=3',
     categoryId: 'cat_002',
     teacherId: 'teacher_001',
@@ -160,6 +152,7 @@ export const mockCourses: Course[] = [
     id: 'course_004',
     title: 'Python 人工智能入门',
     description: '从零开始学习 Python 和人工智能基础，包括机器学习算法和深度学习框架。',
+    skillTags: ['专业技能', '创新能力', '学习能力'],
     cover: 'https://picsum.photos/400/300?random=4',
     categoryId: 'cat_003',
     teacherId: 'teacher_001',
@@ -395,16 +388,16 @@ export const mockWrongQuestions: WrongQuestion[] = [
   },
 ]
 
-// 笔记数据
+// 笔记数据（职涯笔记：记录职业探索与规划思考）
 export const mockNotes: Note[] = [
   {
     id: 'note_001',
     userId: 'student_001',
-    courseId: 'course_001',
-    chapterId: 'ch_002',
-    title: 'Composition API 要点',
-    content: '<p>Composition API 是 Vue 3 引入的新特性，主要包括：</p><ul><li><strong>ref()</strong> - 创建响应式引用</li><li><strong>reactive()</strong> - 创建响应式对象</li><li><strong>computed()</strong> - 计算属性</li><li><strong>watch()</strong> - 监听器</li></ul><p>相比 Options API，Composition API 更适合大型项目，逻辑复用更方便。</p>',
-    tags: ['Vue3', 'Composition API', '响应式'],
+    courseId: 'career',
+    chapterId: '',
+    title: '前端行业调研笔记',
+    content: '<p>调研了前端开发岗位现状：</p><ul><li>需求量大，但内卷严重，需要差异化竞争力</li><li>Vue/React 二选一，公司偏好差异明显</li><li>大厂更注重工程化能力和性能优化经验</li><li>中小厂更注重独立完成业务的能力</li></ul><p>结论：要在掌握框架基础的同时，补强工程化和系统设计能力。</p>',
+    tags: ['行业调研'],
     isFavorite: true,
     createdAt: '2024-02-10 10:30',
     updatedAt: '2024-02-10 10:30',
@@ -412,11 +405,11 @@ export const mockNotes: Note[] = [
   {
     id: 'note_002',
     userId: 'student_001',
-    courseId: 'course_001',
-    chapterId: 'ch_003',
-    title: '生命周期钩子',
-    content: '<p>Vue 3 的生命周期钩子变化：</p><ul><li>beforeCreate / created -> setup()</li><li>beforeMount -> onBeforeMount</li><li>mounted -> onMounted</li><li>beforeUpdate -> onBeforeUpdate</li><li>updated -> onUpdated</li><li>beforeUnmount -> onBeforeUnmount</li><li>unmounted -> onUnmounted</li></ul>',
-    tags: ['Vue3', '生命周期'],
+    courseId: 'career',
+    chapterId: '',
+    title: '我的职业兴趣自测',
+    content: '<p>用 MBTI + 霍兰德模型做了自我测评：</p><ul><li>偏好有创造性、有技术含量的工作</li><li>不喜欢纯重复性操作，喜欢解决问题</li><li>沟通能力一般，但逻辑思维较强</li></ul><p>适合方向：后端开发、数据分析、算法工程师。不太适合纯销售、客服类岗位。</p>',
+    tags: ['自我探索'],
     isFavorite: false,
     createdAt: '2024-02-09 16:30',
     updatedAt: '2024-02-09 16:30',
@@ -424,26 +417,38 @@ export const mockNotes: Note[] = [
   {
     id: 'note_003',
     userId: 'student_001',
-    courseId: 'course_002',
-    chapterId: 'ch_102',
-    title: 'TypeScript 高级类型',
-    content: '<p>TypeScript 高级类型包括：</p><ul><li><strong>泛型 (Generics)</strong> - 使类型具有可重用性</li><li><strong>映射类型 (Mapped Types)</strong> - 基于旧类型创建新类型</li><li><strong>条件类型 (Conditional Types)</strong> - 根据条件选择类型</li><li><strong>工具类型 (Utility Types)</strong> - Partial, Required, Pick, Record 等</li></ul>',
-    tags: ['TypeScript', '高级类型'],
+    courseId: 'career',
+    chapterId: '',
+    title: 'Python 学习路径规划',
+    content: '<p>为了进入数据分析岗位，制定了以下学习计划：</p><ol><li><strong>第1个月</strong>：Python 基础 + Pandas 操作</li><li><strong>第2个月</strong>：SQL 进阶 + 数据可视化</li><li><strong>第3个月</strong>：机器学习基础 + 实际项目</li></ol><p>目标：3个月内具备参加数据分析实习的能力。</p>',
+    tags: ['能力提升'],
     isFavorite: true,
     createdAt: '2024-02-08 14:00',
     updatedAt: '2024-02-08 14:00',
   },
   {
     id: 'note_004',
-    userId: 'student_002',
-    courseId: 'course_001',
-    chapterId: 'ch_002',
-    title: 'Vue 3 响应式原理',
-    content: '<p>Vue 3 使用 Proxy 替代 Object.defineProperty 实现响应式：</p><ul><li>更好的性能</li><li>支持数组索引和 length 监听</li><li>支持 Map、Set、WeakMap、WeakSet</li></ul>',
-    tags: ['Vue3', '响应式', 'Proxy'],
+    userId: 'student_001',
+    courseId: 'career',
+    chapterId: '',
+    title: '收到 Offer 对比记录',
+    content: '<p>目前收到两个意向：</p><ul><li><strong>A公司（互联网）</strong>：15k，技术氛围好，但加班多</li><li><strong>B公司（国企）</strong>：10k，稳定，发展较慢</li></ul><p>综合考量：优先选A，获得更多成长机会，2年后再看。</p>',
+    tags: ['offer对比'],
     isFavorite: false,
     createdAt: '2024-02-10 09:30',
     updatedAt: '2024-02-10 09:30',
+  },
+  {
+    id: 'note_005',
+    userId: 'student_001',
+    courseId: 'career',
+    chapterId: '',
+    title: '字节跳动实习面试复盘',
+    content: '<p>一面挂了，主要问题：</p><ul><li>算法题没做出来（手撕快排）</li><li>项目经验描述不够具体，STAR法则用得不好</li><li>CSS 布局基础薄弱</li></ul><p>下次改进：每天刷1道算法，用 STAR 重写项目描述，补 CSS 网格布局。</p>',
+    tags: ['求职心得'],
+    isFavorite: true,
+    createdAt: '2024-02-07 20:00',
+    updatedAt: '2024-02-07 20:00',
   },
 ]
 
@@ -452,7 +457,6 @@ export const mockClasses: ClassData[] = [
   {
     id: 'class_001',
     name: '2024 前端开发班',
-    teacherId: 'teacher_001',
     studentCount: 3,
     courseIds: ['course_001', 'course_002'],
   },
@@ -528,57 +532,10 @@ export const mockStudyStats = {
   ],
 }
 
-// 教师端统计数据
-export const mockTeacherStats = {
-  classProgress: {
-    completed: 45,
-    inProgress: 35,
-    notStarted: 20,
-  },
-  scoreDistribution: [
-    { range: '90-100', count: 12 },
-    { range: '80-89', count: 25 },
-    { range: '70-79', count: 30 },
-    { range: '60-69', count: 20 },
-    { range: '0-59', count: 13 },
-  ],
-  knowledgeErrorRate: [
-    { name: 'Vue3基础', errorRate: 15 },
-    { name: 'Composition API', errorRate: 35 },
-    { name: '生命周期', errorRate: 45 },
-    { name: 'Pinia', errorRate: 30 },
-    { name: 'Vue Router', errorRate: 25 },
-    { name: 'TypeScript', errorRate: 20 },
-  ],
-  studentRanking: [
-    { name: '李同学', score: 95, avgScore: 92 },
-    { name: '张同学', score: 88, avgScore: 85 },
-    { name: '王同学', score: 82, avgScore: 78 },
-  ],
-  classKnowledgePoints: [
-    { name: 'Vue3基础', score: 82 },
-    { name: 'Composition API', score: 68 },
-    { name: '生命周期', score: 62 },
-    { name: 'Pinia', score: 72 },
-    { name: 'Vue Router', score: 78 },
-    { name: 'TypeScript', score: 85 },
-  ],
-  dailyStudyTime: [
-    { date: '周一', hours: 2.5 },
-    { date: '周二', hours: 2.2 },
-    { date: '周三', hours: 3.0 },
-    { date: '周四', hours: 1.8 },
-    { date: '周五', hours: 2.8 },
-    { date: '周六', hours: 3.5 },
-    { date: '周日', hours: 3.2 },
-  ],
-}
-
 // 管理员统计数据
 export const mockAdminStats = {
   userDistribution: [
     { name: '学生', value: 320 },
-    { name: '教师', value: 28 },
     { name: '管理员', value: 5 },
   ],
   activityStats: {
@@ -617,6 +574,80 @@ export function getCourseById(id: string): Course | undefined {
 export function getUserProgress(userId: string): LearningProgress[] {
   return mockLearningProgress.filter(p => p.userId === userId)
 }
+
+// 心仪岗位数据（学生收藏的目标岗位）
+// TODO: API — GET /api/saved-jobs?userId=xxx
+export const mockSavedJobs: import('@/types').SavedJob[] = [
+  {
+    id: 'sj_001',
+    jobTitle: '前端开发工程师',
+    company: '字节跳动',
+    industry: '互联网',
+    salary: '15k-25k',
+    location: '北京',
+    matchScore: 78,
+    requiredSkills: ['Vue/React', 'TypeScript', '工程化', '性能优化'],
+    savedAt: '2024-02-10',
+    notes: '技术氛围好，面试难度高，需加强算法',
+  },
+  {
+    id: 'sj_002',
+    jobTitle: '后端开发工程师',
+    company: '腾讯',
+    industry: '互联网',
+    salary: '15k-22k',
+    location: '深圳',
+    matchScore: 65,
+    requiredSkills: ['Java/Go', '分布式系统', 'MySQL', 'Redis'],
+    savedAt: '2024-02-09',
+  },
+  {
+    id: 'sj_003',
+    jobTitle: '数据分析师',
+    company: '阿里巴巴',
+    industry: '电子商务',
+    salary: '12k-20k',
+    location: '杭州',
+    matchScore: 82,
+    requiredSkills: ['Python', 'SQL', '数据可视化', '统计分析'],
+    savedAt: '2024-02-08',
+    notes: '匹配度较高，优先投递',
+  },
+  {
+    id: 'sj_004',
+    jobTitle: '产品经理（技术方向）',
+    company: '美团',
+    industry: '本地生活',
+    salary: '15k-22k',
+    location: '北京',
+    matchScore: 54,
+    requiredSkills: ['需求分析', '用户研究', '数据分析', '项目管理'],
+    savedAt: '2024-02-07',
+  },
+  {
+    id: 'sj_005',
+    jobTitle: '测试开发工程师',
+    company: '华为',
+    industry: '硬件/通信',
+    salary: '12k-18k',
+    location: '深圳',
+    matchScore: 71,
+    requiredSkills: ['Python自动化', '测试框架', 'Linux', 'CI/CD'],
+    savedAt: '2024-02-06',
+  },
+  {
+    id: 'sj_006',
+    jobTitle: 'AI算法工程师（应届）',
+    company: '百度',
+    industry: '人工智能',
+    salary: '18k-28k',
+    location: '北京',
+    matchScore: 43,
+    requiredSkills: ['深度学习', 'PyTorch', '机器学习', '数学基础'],
+    savedAt: '2024-02-05',
+    notes: '当前匹配度低，需要1年提升',
+  },
+]
 
 // 获取用户笔记
 export function getUserNotes(userId: string): Note[] {

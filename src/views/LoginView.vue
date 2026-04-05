@@ -23,14 +23,10 @@ const showPassword = ref(false)
 
 const roleTabs = [
   { role: UserRole.STUDENT, icon: ICONS.graduationCap, label: '学生', color: '#10B981' },
-  { role: UserRole.TEACHER, icon: ICONS.bookOpen, label: '教师', color: '#F59E0B' },
-  { role: UserRole.ADMIN, icon: ICONS.shield, label: '管理', color: '#EF4444' },
 ]
 
 const quickLogins = [
   { role: UserRole.STUDENT, account: 'student001', name: '学生体验' },
-  { role: UserRole.TEACHER, account: 'teacher001', name: '教师体验' },
-  { role: UserRole.ADMIN, account: 'admin001', name: '管理体验' },
 ]
 
 async function handleLogin() {
@@ -121,36 +117,48 @@ onBeforeUnmount(() => {
         <div class="login-brand-side">
           <div class="brand-content">
             <div class="brand-animate brand-badge">
-              <SealStamp text="课" :size="36" shape="square" :delay="0.9" />
-              <span>课程管理系统</span>
+              <SealStamp text="职" :size="36" shape="square" :delay="0.9" />
+              <span>AI 职涯规划</span>
             </div>
 
-            <BrushText text="读书之法" tag="h1" class="brand-animate brand-title" :delay="1.0" :stagger="0.14" :duration="0.6" />
+            <BrushText text="识途" tag="h1" class="brand-animate brand-title" :delay="1.0" :stagger="0.14" :duration="0.6" />
 
-            <p class="brand-animate brand-desc">
-              博学之，审问之，<br />
-              慎思之，明辨之，<br />
-              笃行之。
-            </p>
+            <p class="brand-animate brand-subtitle">大学生职业规划智能体</p>
 
-            <div class="brand-animate feature-list">
-              <div class="feature-item">
-                <Icon :icon="ICONS.trendingUp" class="feature-icon" />
-                <span>学习数据一目了然</span>
+            <div class="brand-animate entry-list">
+              <div class="entry-item">
+                <span class="entry-tag"></span>
+                <div class="entry-body">
+                  <span class="entry-name">能力图谱</span>
+                  <span class="entry-desc">量化 6 维度职业能力，定位真实短板</span>
+                </div>
               </div>
-              <div class="feature-item">
-                <Icon :icon="ICONS.bot" class="feature-icon" />
-                <span>AI 答疑随时在线</span>
+              <div class="entry-item">
+                <span class="entry-tag"></span>
+                <div class="entry-body">
+                  <span class="entry-name">岗位匹配</span>
+                  <span class="entry-desc">解析简历，精准推荐目标岗位</span>
+                </div>
               </div>
-              <div class="feature-item">
-                <Icon :icon="ICONS.smartphone" class="feature-icon" />
-                <span>多端同步随时学</span>
+              <div class="entry-item">
+                <span class="entry-tag"></span>
+                <div class="entry-body">
+                  <span class="entry-name">路径规划</span>
+                  <span class="entry-desc">课程 → 实践 → 求职的可执行时间线</span>
+                </div>
+              </div>
+              <div class="entry-item">
+                <span class="entry-tag"></span>
+                <div class="entry-body">
+                  <span class="entry-name">简历诊断</span>
+                  <span class="entry-desc">对标具体岗位，给出差距与补足建议</span>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 竖排装饰 -->
-          <div class="brand-vertical">知行合一</div>
+          <div class="brand-vertical">知行</div>
         </div>
 
         <!-- 装订线 -->
@@ -163,7 +171,7 @@ onBeforeUnmount(() => {
             <span class="form-corner form-corner--tl"></span>
             <span class="form-corner form-corner--br"></span>
 
-            <h2 class="form-animate form-title">欢迎回来</h2>
+            <h2 class="form-animate form-title">进入系统</h2>
 
             <!-- 角色切换 -->
             <div class="form-animate role-tabs">
@@ -205,7 +213,7 @@ onBeforeUnmount(() => {
               <div class="quick-divider"><span>或快速体验</span></div>
               <div class="quick-buttons">
                 <button v-for="item in quickLogins" :key="item.role" class="quick-btn" @click="quickLogin(item.role, item.account)">
-                  {{ item.name }}
+                  演示账号
                 </button>
               </div>
             </div>
@@ -213,7 +221,7 @@ onBeforeUnmount(() => {
             <!-- 提示 -->
             <div class="form-animate login-hint">
               <Icon :icon="ICONS.lightbulb" class="hint-icon" />
-              <span>默认密码都是 123456</span>
+              <span>演示账号密码均为 123456</span>
             </div>
           </div>
         </div>
@@ -236,12 +244,15 @@ onBeforeUnmount(() => {
 
 /* 卷轴式主容器 */
 .login-scroll {
-  width: min(960px, 100%);
-  border: 2px solid color-mix(in srgb, var(--primary-100) 35%, var(--bg-300) 65%);
-  background: var(--bg-100);
+  width: min(1040px, 100%);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  background: var(--color-surface-raised);
   position: relative;
   z-index: 1;
   transform-origin: center center;
+  box-shadow: var(--shadow-lg);
 }
 
 /* 卷轴上下轴 */
@@ -249,17 +260,19 @@ onBeforeUnmount(() => {
 .login-scroll::after {
   content: '';
   display: block;
-  height: 10px;
+  height: 8px;
   background: linear-gradient(to right,
-    color-mix(in srgb, var(--primary-100) 30%, var(--bg-300) 70%),
-    color-mix(in srgb, var(--primary-100) 55%, var(--bg-300) 45%) 50%,
-    color-mix(in srgb, var(--primary-100) 30%, var(--bg-300) 70%)
+    var(--vermilion-700),
+    var(--vermilion-500) 30%,
+    var(--gold-500) 50%,
+    var(--vermilion-500) 70%,
+    var(--vermilion-700)
   );
 }
 
 .login-inner {
   display: grid;
-  grid-template-columns: 1.1fr 3px 0.9fr;
+  grid-template-columns: 1fr 3px 1fr;
   min-height: 520px;
 }
 
@@ -267,10 +280,11 @@ onBeforeUnmount(() => {
 .login-brand-side {
   position: relative;
   padding: 40px 36px;
-  background: color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%);
+  background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface) 96%);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  border-right: 1px solid var(--color-border);
 }
 
 .brand-content {
@@ -298,31 +312,59 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
 }
 
-.brand-desc {
-  font-size: 16px;
-  font-family: var(--font-body);
-  color: var(--text-200);
-  line-height: 2.2;
-  margin: 0 0 32px;
+.brand-subtitle {
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--color-text-muted);
+  letter-spacing: 0.12em;
+  margin: 0 0 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.feature-list {
+.entry-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
 }
 
-.feature-item {
+.entry-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  color: var(--text-200);
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
 }
 
-.feature-icon {
-  font-size: 18px;
-  color: var(--primary-200);
+.entry-item:last-child { border-bottom: none; }
+
+.entry-tag {
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.entry-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entry-name {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-title);
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+.entry-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  line-height: 1.5;
 }
 
 /* 竖排装饰文字 */
@@ -344,11 +386,13 @@ onBeforeUnmount(() => {
 .login-binding {
   background: linear-gradient(to bottom,
     transparent 0%,
-    color-mix(in srgb, var(--primary-100) 40%, transparent 60%) 10%,
-    color-mix(in srgb, var(--primary-100) 60%, transparent 40%) 50%,
-    color-mix(in srgb, var(--primary-100) 40%, transparent 60%) 90%,
+    var(--color-gold) 20%,
+    var(--color-primary) 50%,
+    var(--color-gold) 80%,
     transparent 100%
   );
+  opacity: 0.5;
+  width: 1px !important;
 }
 
 /* ===== 右侧表单区 ===== */
@@ -368,12 +412,12 @@ onBeforeUnmount(() => {
 /* 四角花纹 */
 .form-corner {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  border-color: var(--primary-200);
+  width: 14px;
+  height: 14px;
+  border-color: var(--color-gold);
   border-style: solid;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 .form-corner--tl { top: -8px; left: -8px; border-width: 2px 0 0 2px; }
 .form-corner--br { bottom: -8px; right: -8px; border-width: 0 2px 2px 0; }
@@ -446,19 +490,21 @@ onBeforeUnmount(() => {
 
 .custom-input {
   width: 100%;
-  padding: 12px 14px 12px 44px;
-  background: var(--bg-200);
-  border: 1px solid var(--bg-300);
-  font-size: 14px;
-  font-family: var(--font-body);
-  color: var(--text-100);
-  transition: border-color 0.2s ease;
+  padding: 11px 14px 11px 44px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--color-text);
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .custom-input:focus {
   outline: none;
-  border-color: var(--primary-100);
-  background: var(--bg-100);
+  border-color: var(--color-primary);
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 15%, transparent 85%);
 }
 
 .custom-input::placeholder { color: var(--text-300); }
@@ -572,13 +618,7 @@ onBeforeUnmount(() => {
 
   .brand-vertical { display: none; }
 
-  .brand-desc { margin-bottom: 20px; }
-
-  .feature-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+  .entry-list { gap: 0; }
 
   .login-form-side {
     padding: 28px 24px;
@@ -589,7 +629,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 480px) {
   .brand-title { font-size: 32px; }
-  .feature-item span { font-size: 13px; }
+  .entry-desc { font-size: 10px; }
 }
 </style>
 

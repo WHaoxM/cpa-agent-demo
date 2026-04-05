@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程列表；路由：courses（courses） -->
+﻿<!-- 页面：技能课程库；路由：courses（courses）；角色：全部 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
@@ -12,7 +12,8 @@ type Course = {
   duration: string
 }
 
-const category = ref<'全部' | '前端' | '产品' | 'AI'>('全部')
+// TODO: API — GET /api/skill-courses
+const category = ref<'全部' | '专业技能' | '通用素质' | '实践能力'>('全部')
 const keyword = ref('')
 const page = ref(1)
 const pageSize = ref(8)
@@ -22,82 +23,82 @@ const allCourses = ref<Course[]>([
     id: 'c_01',
     name: 'Vue3 + TypeScript 工程化实战',
     cover: '',
-    desc: '从组件设计到性能优化，打造可维护的中大型前端项目。',
-    progress: 100,
-    category: '前端',
-    duration: '0',
+    desc: '从组件设计到性能优化，打造可维护的中大型前端项目。对应岗位技能：前端工程师、全栈开发。',
+    progress: 72,
+    category: '专业技能',
+    duration: '38小时',
   },
   {
     id: 'c_02',
-    name: '交互设计与信息架构',
+    name: 'Python 数据分析与可视化',
     cover: '',
-    desc: '建立一致的视觉层级与动线，让产品更易用更克制。',
-    progress: 100,
-    category: '产品',
-    duration: '0',
+    desc: 'Pandas + ECharts，掌握从数据清洗到可视化表达的全流程。对应岗位：数据分析师、业务分析。',
+    progress: 45,
+    category: '专业技能',
+    duration: '24小时',
   },
   {
     id: 'c_03',
-    name: 'AI 辅助学习：提示词与工作流',
+    name: 'AI 大模型应用与 Prompt 工程',
     cover: '',
-    desc: '用可复用的 prompt 模版提升学习效率与输出质量。',
-    progress: 100,
-    category: 'AI',
-    duration: '0',
+    desc: '用可复用的 Prompt 模式提升工作效率与输出质量。对应岗位：AI 应用开发、算法工程师。',
+    progress: 20,
+    category: '专业技能',
+    duration: '16小时',
   },
   {
     id: 'c_04',
-    name: '前端性能与体验 Pro Max',
+    name: 'STAR 法调研与面试表达',
     cover: '',
-    desc: 'LCP/CLS/INP 全链路优化，兼顾可访问性与体验。',
-    progress: 100,
-    category: '前端',
-    duration: '0',
+    desc: '学会用结构化语言表达历经与想法，提升面试通过率。对应岗位：所有求职岗位。',
+    progress: 88,
+    category: '通用素质',
+    duration: '8小时',
   },
   {
     id: 'c_05',
-    name: '设计系统：Token 到组件库',
+    name: '差异化简历撰写与优化',
     cover: '',
-    desc: '基于 8px 网格与主题 token，构建一致的 UI 语言。',
-    progress: 100,
-    category: '产品',
-    duration: '0',
+    desc: '采用成果导向的表达方式，让简历与岗位需求高度匹配。对应岗位：全岗位。',
+    progress: 60,
+    category: '通用素质',
+    duration: '6小时',
   },
   {
     id: 'c_06',
-    name: 'AI 数据可视化与叙事',
+    name: '数据库与 SQL 进阶实战',
     cover: '',
-    desc: '用图表讲故事：指标、结构、洞察与表达。',
-    progress: 100,
-    category: 'AI',
-    duration: '0',
+    desc: '深入掌握复杂查询、索引优化与事务处理。对应岗位：后端开发、数据工程师。',
+    progress: 30,
+    category: '专业技能',
+    duration: '20小时',
   },
   {
     id: 'c_07',
-    name: '组件设计：从 API 到交互细节',
+    name: '开源项目贡献实战',
     cover: '',
-    desc: '在一致性与灵活性之间找到平衡点。',
-    progress: 100,
-    category: '前端',
-    duration: '0',
+    desc: '从 Issue 到 PR，在真实项目中积累实想经验。对应岗位：开发工程师。',
+    progress: 0,
+    category: '实践能力',
+    duration: '自主',
   },
   {
     id: 'c_08',
-    name: '产品增长：指标体系与实验设计',
+    name: '计算机网络与分布式系统',
     cover: '',
-    desc: '用数据驱动决策，用实验驱动迭代。',
-    progress: 100,
-    category: '产品',
-    duration: '0',
+    desc: 'TCP/IP、分布式对象存储与 CAP，面试常考背景知识。对应岗位：后端开发。',
+    progress: 15,
+    category: '专业技能',
+    duration: '18小时',
   },
   {
     id: 'c_09',
-    name: 'AI 学习路径：从 0 到 1',
+    name: '实习申请与求职节奏管理',
     cover: '',
-    desc: '学习目标拆解 + 复盘机制，建立可持续的成长飞轮。',
-    progress: 100,
-    category: 'AI',
-    duration: '0',
+    desc: '制定求职时间表，掌握实习平台筛选技巧与快速响应策略。对应岗位：应届生。',
+    progress: 0,
+    category: '实践能力',
+    duration: '5小时',
   },
 ])
 
@@ -105,6 +106,7 @@ const filtered = computed(() => {
   const k = keyword.value.trim().toLowerCase()
   return allCourses.value.filter((c) => {
     const okCategory = category.value === '全部' ? true : c.category === category.value
+    // TODO: API — GET /api/skill-courses?category=xxx
     const okKeyword = k ? c.name.toLowerCase().includes(k) || c.desc.toLowerCase().includes(k) : true
     return okCategory && okKeyword
   })
@@ -124,11 +126,11 @@ const paged = computed(() => {
       <div class="toolbar__left">
         <el-select v-model="category" size="large" class="toolbar__select">
           <el-option label="全部" value="全部" />
-          <el-option label="前端" value="前端" />
-          <el-option label="产品" value="产品" />
-          <el-option label="AI" value="AI" />
+          <el-option label="专业技能" value="专业技能" />
+          <el-option label="通用素质" value="通用素质" />
+          <el-option label="实践能力" value="实践能力" />
         </el-select>
-        <el-input v-model="keyword" size="large" placeholder="搜索课程 / 简介" clearable class="toolbar__input" />
+        <el-input v-model="keyword" size="large" placeholder="搜索技能课程名称或岗位" clearable class="toolbar__input" />
       </div>
 
       <div class="toolbar__right">

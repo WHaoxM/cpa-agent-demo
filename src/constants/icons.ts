@@ -56,6 +56,8 @@ export const ICONS = {
   codesandbox: 'lucide:box',
   folderArchive: 'lucide:folder-archive',
   route: 'lucide:route',
+  messageSquare: 'lucide:message-square',
+  bookmark: 'lucide:bookmark',
 } as const
 
 export type IconName = typeof ICONS[keyof typeof ICONS]

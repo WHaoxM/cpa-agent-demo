@@ -1,41 +1,39 @@
-﻿<!-- 页面：我的收藏；路由：student/favorites（student-favorites）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { Star, Notebook, ArrowRight, Delete, Refresh } from '@element-plus/icons-vue'
-import { useUserStore, useCourseStore, useLearningStore } from '@/stores'
+import { Delete, Sort } from '@element-plus/icons-vue'
+import { useLearningStore } from '@/stores'
+import type { SavedJob } from '@/types'
 
 const router = useRouter()
-const userStore = useUserStore()
-const courseStore = useCourseStore()
 const learningStore = useLearningStore()
 
-const favoriteCourses = computed(() => courseStore.userFavorites)
-const favoriteNotes = computed(() => 
-  learningStore.getFavoriteNotes(userStore.currentUser?.id || '')
-)
+// TODO: API — GET /api/saved-jobs?userId=xxx
+const savedJobs = computed(() => learningStore.savedJobs)
 
-function viewCourse(courseId: string) {
-  router.push(`/app/student/course/${courseId}`)
+const sortKey = ref<'matchScore' | 'savedAt'>('matchScore')
+const sortedJobs = computed(() => {
+  return [...savedJobs.value].sort((a, b) => {
+    if (sortKey.value === 'matchScore') return b.matchScore - a.matchScore
+    return b.savedAt.localeCompare(a.savedAt)
+  })
+})
+
+function removeJob(jobId: string) {
+  learningStore.removeSavedJob(jobId)
+  ElMessage.success('已移出心仪岗位')
 }
 
-function viewNote(noteId: string) {
-  router.push('/app/student/notes')
+function goToMatch() {
+  router.push('/app/student/career-analysis')
 }
 
-function removeFavorite(courseId: string) {
-  courseStore.toggleFavorite(courseId)
-  ElMessage.success('已取消收藏')
-}
-
-function removeNoteFavorite(noteId: string) {
-  learningStore.toggleNoteFavorite(noteId)
-  ElMessage.success('已取消笔记收藏')
-}
-
-function refreshData() {
-  ElMessage.success('收藏数据已刷新')
+function scoreColor(score: number) {
+  if (score >= 80) return 'var(--color-primary)'
+  if (score >= 60) return 'var(--color-gold)'
+  return 'var(--color-text-muted)'
 }
 </script>
 
@@ -44,265 +42,184 @@ function refreshData() {
 <template>
   <div class="favorites-page page">
     <div class="page-header">
-      <h2>我的收藏</h2>
-      <p class="subtitle">管理你收藏的课程和笔记</p>
+      <div>
+        <h2>心仪岗位</h2>
+        <p class="subtitle">收藏感兴趣的岗位，随时对比匹配度</p>
+      </div>
+      <div class="header-actions">
+        <el-button :icon="Sort" text @click="sortKey = sortKey === 'matchScore' ? 'savedAt' : 'matchScore'">
+          {{ sortKey === 'matchScore' ? '按匹配度排序' : '按收藏时间排序' }}
+        </el-button>
+        <el-button type="primary" @click="goToMatch">进行人岗匹配</el-button>
+      </div>
     </div>
 
-    <div class="favorites-content grid-gap-md">
-      <!-- 课程收藏 -->
-      <div class="section content-card">
-        <div class="section-header">
-          <div class="section-title">
-            <el-icon :size="20"><Star /></el-icon>
-            <span>收藏的课程</span>
-            <el-tag size="small" type="info">{{ favoriteCourses.length }}</el-tag>
+    <div v-if="sortedJobs.length > 0" class="jobs-list">
+      <div v-for="job in sortedJobs" :key="job.id" class="job-card content-card">
+        <!-- 左侧主信息 -->
+        <div class="job-main">
+          <div class="job-top">
+            <div>
+              <h3 class="job-title">{{ job.jobTitle }}</h3>
+              <div class="job-meta">
+                <span class="job-company">{{ job.company }}</span>
+                <span class="job-sep">·</span>
+                <span class="job-industry">{{ job.industry }}</span>
+                <span class="job-sep">·</span>
+                <span class="job-location">{{ job.location }}</span>
+              </div>
+            </div>
+            <div class="job-salary">{{ job.salary }}</div>
           </div>
-          <el-tooltip content="刷新数据">
-            <el-button :icon="Refresh" circle text @click="refreshData" />
-          </el-tooltip>
-        </div>
 
-        <div v-if="favoriteCourses.length > 0" class="courses-grid">
-          <el-card
-            v-for="course in favoriteCourses"
-            :key="course.id"
-            class="course-card card-base"
-            shadow="never"
-          >
-            <div class="course-cover-wrapper" @click="viewCourse(course.id)">
-              <el-image :src="course.cover" class="course-cover" fit="cover" />
-              <div class="course-overlay">
-                <el-button type="primary">查看课程</el-button>
-              </div>
-            </div>
-            <div class="course-info">
-              <h4 class="course-title">{{ course.title }}</h4>
-              <p class="course-teacher">{{ course.teacherName }}</p>
-              <div class="course-actions">
-                <el-button
-                  text
-                  type="danger"
-                  :icon="Delete"
-                  @click="removeFavorite(course.id)"
-                >
-                  取消收藏
-                </el-button>
-              </div>
-            </div>
-          </el-card>
-        </div>
-        <el-empty v-else description="暂无收藏课程">
-          <template #default>
-            <el-button type="primary" @click="router.push('/app/student/learning')">
-              去发现课程
-            </el-button>
-          </template>
-        </el-empty>
-      </div>
+          <div class="job-skills">
+            <el-tag
+              v-for="skill in job.requiredSkills"
+              :key="skill"
+              size="small"
+              effect="plain"
+              class="skill-tag"
+            >{{ skill }}</el-tag>
+          </div>
 
-      <!-- 笔记收藏 -->
-      <div class="section content-card">
-        <div class="section-header">
-          <div class="section-title">
-            <el-icon :size="20"><Notebook /></el-icon>
-            <span>收藏的笔记</span>
-            <el-tag size="small" type="info">{{ favoriteNotes.length }}</el-tag>
+          <div v-if="job.notes" class="job-notes">
+            <span class="notes-label">备注：</span>{{ job.notes }}
           </div>
         </div>
 
-        <div v-if="favoriteNotes.length > 0" class="notes-list">
-          <el-card
-            v-for="note in favoriteNotes"
-            :key="note.id"
-            class="note-card card-base"
-            shadow="never"
-          >
-            <div class="note-content" @click="viewNote(note.id)">
-              <h4 class="note-title">
-                <el-icon color="#E6A23C"><Star /></el-icon>
-                {{ note.title }}
-              </h4>
-              <p class="note-preview" v-html="note.content.slice(0, 100) + '...'" />
-              <div class="note-tags">
-                <el-tag
-                  v-for="tag in note.tags"
-                  :key="tag"
-                  size="small"
-                  effect="plain"
-                >
-                  {{ tag }}
-                </el-tag>
-              </div>
-            </div>
-            <div class="note-actions">
-              <el-button
-                text
-                :icon="ArrowRight"
-                @click="viewNote(note.id)"
-              >
-                查看
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                :icon="Delete"
-                @click="removeNoteFavorite(note.id)"
-              >
-                取消收藏
-              </el-button>
-            </div>
-          </el-card>
+        <!-- 右侧匹配度 -->
+        <div class="job-right">
+          <div class="match-score" :style="{ color: scoreColor(job.matchScore) }">
+            <span class="score-num">{{ job.matchScore }}</span>
+            <span class="score-unit">%</span>
+          </div>
+          <div class="score-label">匹配度</div>
+          <div class="score-bar">
+            <div class="score-fill" :style="{ width: job.matchScore + '%', background: scoreColor(job.matchScore) }"></div>
+          </div>
+          <div class="job-saved-at">收藏于 {{ job.savedAt }}</div>
+          <el-button
+            text
+            type="danger"
+            :icon="Delete"
+            size="small"
+            @click="removeJob(job.id)"
+          >移出</el-button>
         </div>
-        <el-empty v-else description="暂无收藏笔记">
-          <template #default>
-            <el-button type="primary" @click="router.push('/app/student/notes')">
-              去记笔记
-            </el-button>
-          </template>
-        </el-empty>
       </div>
     </div>
+
+    <el-empty v-else description="暂无收藏的岗位">
+      <template #default>
+        <el-button type="primary" @click="router.push('/app/student/career-navigation')">
+          去浏览岗位图谱
+        </el-button>
+      </template>
+    </el-empty>
   </div>
 </template>
 
 <style scoped>
-.favorites-page {
-}
-
 .page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
-.page-header h2 {
-  margin: 0 0 8px;
-  font-size: 24px;
+.page-header h2 { margin: 0 0 6px; font-size: 22px; }
+.subtitle { color: var(--color-text-muted); margin: 0; font-size: 13px; }
+.header-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+
+.jobs-list { display: flex; flex-direction: column; gap: 14px; }
+
+.job-card {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  padding: 18px 20px;
 }
 
-.subtitle {
-  color: var(--text-200);
-  margin: 0;
-}
+.job-main { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 
-.section {
-  margin-bottom: 32px;
-  padding: 16px;
-}
-
-.section-header {
+.job-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
+.job-title {
+  font-size: 16px;
   font-weight: 600;
+  margin: 0 0 5px;
+  color: var(--color-text);
+  font-family: var(--font-title);
 }
 
-.courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.course-card :deep(.el-card__body) {
-  padding: 0;
-}
-
-.course-cover-wrapper {
-  position: relative;
-  height: 140px;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.course-cover {
-  width: 100%;
-  height: 100%;
-}
-
-.course-overlay {
-  display: none;
-}
-
-.course-cover-wrapper:hover .course-overlay {
-  opacity: 0;
-}
-
-.course-info {
-  padding: 16px;
-}
-
-.course-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.course-teacher {
-  font-size: 13px;
-  color: var(--text-200);
-  margin: 0 0 12px;
-}
-
-.course-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.notes-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 16px;
-}
-
-.note-card :deep(.el-card__body) {
-  padding: 16px;
-}
-
-.note-content {
-  cursor: pointer;
-}
-
-.note-title {
+.job-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-
-.note-preview {
-  font-size: 13px;
-  color: var(--text-200);
-  line-height: 1.6;
-  margin: 0 0 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.note-tags {
-  display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
 }
 
-.note-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-light);
+.job-sep { opacity: 0.4; }
+
+.job-salary {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary);
+  white-space: nowrap;
+  font-family: var(--font-ui);
 }
+
+.job-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.skill-tag { font-size: 11px; }
+
+.job-notes {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--color-gold) 8%, transparent);
+  border-left: 2px solid var(--color-gold);
+}
+
+.notes-label { font-weight: 600; }
+
+.job-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 84px;
+  padding-left: 20px;
+  border-left: 1px solid var(--color-border);
+}
+
+.match-score {
+  line-height: 1;
+  font-family: var(--font-ui);
+}
+
+.score-num { font-size: 28px; font-weight: 700; }
+.score-unit { font-size: 13px; }
+.score-label { font-size: 11px; color: var(--color-text-muted); }
+
+.score-bar {
+  width: 64px;
+  height: 4px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+.score-fill { height: 100%; transition: width 0.4s ease; }
+
+.job-saved-at { font-size: 10px; color: var(--color-text-subtle); margin-top: 2px; }
 </style>
 
 

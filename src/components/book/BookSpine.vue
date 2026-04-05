@@ -65,16 +65,16 @@ watch(() => props.collapsed, (val) => {
     <!-- 书脊标题 -->
     <div class="spine-brand" @click="emit('toggle')">
       <div class="spine-title-vertical" v-if="collapsed">
-        <span class="spine-char">课</span>
-        <span class="spine-char">程</span>
-        <span class="spine-char">系</span>
-        <span class="spine-char">统</span>
+        <span class="spine-char">职</span>
+        <span class="spine-char">涯</span>
+        <span class="spine-char">规</span>
+        <span class="spine-char">划</span>
       </div>
       <div class="spine-title-horizontal" v-else>
-        <span class="spine-seal">学</span>
+        <span class="spine-seal">职</span>
         <div class="spine-name">
-          <div class="spine-name-main">课程管理系统</div>
-          <div class="spine-name-sub">知行合一</div>
+          <div class="spine-name-main">AI职涯规划</div>
+          <div class="spine-name-sub">知行</div>
         </div>
       </div>
     </div>
@@ -106,29 +106,40 @@ watch(() => props.collapsed, (val) => {
 </template>
 
 <style scoped>
+/* ══ 故宫侧边栏 · Palace Museum Sidebar ══
+   深朱底色 #8B1A00 + 御金线 #C9A227 + 宣纸文字
+   ════════════════════════════════════════ */
+
 .book-spine {
   width: var(--book-spine-expanded);
   height: 100%;
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(135deg, rgba(139, 37, 0, 0.03) 0%, transparent 40%),
-    var(--bg-200);
-  border-right: var(--book-binding-width) solid var(--book-binding-color);
+  background: var(--vermilion-700);    /* #8B1A00 深朱 */
+  border-right: 1px solid var(--gold-700);
   position: relative;
   overflow: hidden;
-  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
 }
 
-.book-spine::before {
+/* 右侧金线装饰光 */
+.book-spine::after {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 12px;
-  background: linear-gradient(to left, rgba(26, 20, 16, 0.04), transparent);
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--gold-500) 20%,
+    var(--gold-300) 50%,
+    var(--gold-500) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -136,15 +147,28 @@ watch(() => props.collapsed, (val) => {
   width: var(--book-spine-width);
 }
 
-/* 书脊标题区 */
+/* ── 品牌标题区 ── */
 .spine-brand {
-  padding: 16px 12px;
-  border-bottom: 1px solid var(--bg-300);
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.3);
   cursor: pointer;
-  min-height: 72px;
+  min-height: 68px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+/* 品牌区顶部金线 */
+.spine-brand::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-500), transparent);
+  opacity: 0.5;
 }
 
 .spine-title-vertical {
@@ -154,7 +178,7 @@ watch(() => props.collapsed, (val) => {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3em;
-  color: var(--primary-100);
+  color: var(--vermilion-100);   /* 宣纸浅色 */
   line-height: 1;
 }
 
@@ -170,41 +194,44 @@ watch(() => props.collapsed, (val) => {
   padding: 0 4px;
 }
 
+/* 印章 */
 .spine-seal {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border: 2px solid var(--primary-100);
-  color: var(--primary-100);
+  border: 2px solid var(--gold-500);
+  color: var(--gold-500);
   font-family: var(--font-title);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
+  border-radius: 0;
 }
 
 .spine-name-main {
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: #2f241c;
+  color: var(--vermilion-100);
   letter-spacing: 0.06em;
 }
 
 .spine-name-sub {
   font-family: var(--font-accent);
   font-size: 11px;
-  color: #7b6856;
-  letter-spacing: 0.1em;
+  color: var(--gold-300);
+  letter-spacing: 0.12em;
   margin-top: 2px;
+  opacity: 0.85;
 }
 
-/* 书签列表 */
+/* ── 导航列表 ── */
 .spine-tabs {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 0;
+  padding: 6px 0;
   scrollbar-width: none;
 }
 
@@ -220,17 +247,15 @@ watch(() => props.collapsed, (val) => {
   padding: 10px 16px;
   border: none;
   background: transparent;
-  color: #3d3228;
-  font-family: var(--font-title);
-  font-size: 14px;
-  font-weight: 600;
+  color: rgba(249, 218, 206, 0.75);  /* 宣纸浅色，略透明 */
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
   letter-spacing: 0.04em;
   cursor: pointer;
   position: relative;
-  transition: all 0.25s ease;
+  transition: background 0.2s ease, color 0.2s ease;
   text-align: left;
-  opacity: 1;
-  visibility: visible;
 }
 
 .is-collapsed .spine-tab {
@@ -238,6 +263,7 @@ watch(() => props.collapsed, (val) => {
   padding: 10px 8px;
 }
 
+/* 金色左边激活指示条 */
 .spine-tab::before {
   content: '';
   position: absolute;
@@ -245,47 +271,38 @@ watch(() => props.collapsed, (val) => {
   top: 50%;
   transform: translateY(-50%);
   width: 0;
-  height: 60%;
-  background: var(--primary-100);
-  transition: width 0.25s ease;
+  height: 55%;
+  background: var(--gold-500);
+  transition: width 0.2s ease;
+  border-radius: 0 1px 1px 0;
 }
 
 .spine-tab:hover {
-  background: color-mix(in srgb, var(--primary-100) 5%, transparent 95%);
-  color: #3f3126;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--vermilion-100);
 }
 
 .spine-tab.is-active {
-  background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-100) 92%);
-  color: #8b2500;
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--gold-300);
+  font-weight: 600;
 }
 
 .spine-tab.is-active::before {
   width: 3px;
 }
 
-.spine-tab.is-active .spine-tab-icon,
-.spine-tab:hover .spine-tab-icon {
-  opacity: 1;
-  color: inherit;
-}
-
 .spine-tab-icon {
-  font-size: 18px;
+  font-size: 17px;
   flex-shrink: 0;
-  opacity: 1;
   color: inherit;
 }
 
 .spine-tab :deep(.iconify) {
-  opacity: 1;
   color: inherit;
 }
 
 .spine-tab-label {
-  text-shadow: 0 0 0.01px currentColor;
-  opacity: 1;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -294,32 +311,34 @@ watch(() => props.collapsed, (val) => {
 }
 
 .spine-tab-marker {
-  font-size: 16px;
-  color: var(--primary-100);
+  font-size: 14px;
+  color: var(--gold-500);
   flex-shrink: 0;
+  opacity: 0.8;
 }
 
-/* 底部 */
+/* ── 底部折叠按钮 ── */
 .spine-foot {
   padding: 8px 12px;
-  border-top: 1px solid var(--bg-300);
+  border-top: 1px solid rgba(201, 162, 39, 0.25);
 }
 
 .spine-toggle {
   width: 100%;
   padding: 6px;
-  border: 1px solid var(--bg-300);
+  border: 1px solid rgba(201, 162, 39, 0.3);
   background: transparent;
-  color: color-mix(in srgb, var(--text-100) 76%, var(--bg-300) 24%);
-  font-family: var(--font-title);
-  font-size: 12px;
-  letter-spacing: 0.1em;
+  color: rgba(249, 218, 206, 0.6);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.12em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  border-radius: 0;
 }
 
 .spine-toggle:hover {
-  border-color: var(--primary-200);
-  color: var(--primary-100);
+  border-color: var(--gold-500);
+  color: var(--gold-300);
 }
 </style>

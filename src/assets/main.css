@@ -2,54 +2,66 @@
 @import './theme.css';
 @import './book-texture.css';
 
+/* ══════════════════════════════════════
+   故宫博物院 · 全局布局与组件样式
+   ══════════════════════════════════════ */
+
 #app {
   min-height: 100vh;
 }
 
+/* ── 页面容器 ── */
 .page {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 28px 32px;
+  padding: 24px 28px;
 }
 
 .page.page--compact {
   max-width: none;
   margin: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
+/* ── 旧版页头（兼容保留） ── */
 .page-header {
-  margin-bottom: 18px;
-  padding: 18px 18px;
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  border-top: 2px solid var(--primary-100);
-  background: var(--card-bg);
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius-none);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  background: var(--color-surface);
 }
 
 .page-header .subtitle {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
+/* ── 工具栏卡片 ── */
 .toolbar-card {
-  padding: 14px;
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
+  padding: 12px 14px;
+  border-radius: var(--radius-none);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
+/* ── 内容卡片 ── */
 .content-card {
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
+  border-radius: var(--radius-none);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
+/* ── 基础卡片 ── */
 .card-base {
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .card-base.is-interactive,
@@ -61,31 +73,38 @@ a.card-base {
 .card-base.is-interactive:hover,
 button.card-base:hover,
 a.card-base:hover {
-  border-color: var(--card-hover-border);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
 }
 
+/* ── 强调卡片：朱砂左边 ── */
 .card-emphasis {
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  border-left: 3px solid var(--primary-100);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-emphasis-border);
+  border-left: 3px solid var(--color-primary);
   background: var(--card-emphasis-bg);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ── 数据卡片：宣纸底 ── */
 .card-data {
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-data-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ── 表面卡片 ── */
 .card-surface {
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
+/* ── 网格 ── */
 .grid-gap-md {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 a {
@@ -93,23 +112,12 @@ a {
   text-decoration: none;
 }
 
-.font-body {
-  font-family: var(--font-body);
-}
-
-.font-cjk {
-  font-family: var(--font-cjk), var(--font-body);
-}
-
-.font-latin {
-  font-family: var(--font-latin), var(--font-body);
-}
-
+/* ── Element Plus 卡片覆盖 ── */
 .el-card {
-  --el-card-border-radius: 0;
-  border: 1px solid var(--card-border);
-  background: var(--card-bg);
-  box-shadow: none;
+  --el-card-border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .el-card :is(.el-card__header, .el-card__body) {
@@ -118,69 +126,108 @@ a {
 
 .el-card.is-hover-shadow:hover {
   transform: none;
-  box-shadow: none;
-  border-color: var(--card-hover-border);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
 }
 
-/* ═══ Form Section System ═══ */
+/* ── Element Plus 对话框覆盖 ── */
+.el-dialog {
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  border-top: 2px solid var(--color-gold) !important;
+  background: var(--color-surface-raised) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-border);
+  padding: 16px 20px;
+}
+
+.el-dialog__title {
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+/* ── Element Plus 表格覆盖 ── */
+.el-table {
+  background: var(--color-surface) !important;
+  --el-table-border-color: var(--color-border);
+  --el-table-header-bg-color: var(--color-background);
+  --el-table-row-hover-bg-color: var(--parchment-300);
+  --el-table-current-row-bg-color: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface) 94%);
+}
+
+.el-table th.el-table__cell {
+  font-family: var(--font-title);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── 表单区块 ── */
 .form-section {
   padding: 16px 0;
 }
 
 .form-section + .form-section {
-  border-top: 1px solid var(--card-divider);
+  border-top: 1px solid var(--color-border);
 }
 
 .form-section__head {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .form-section__title {
   font-size: 13px;
   font-weight: 600;
   font-family: var(--font-title);
-  color: var(--text-100);
-  letter-spacing: 0.08em;
+  color: var(--color-text);
+  letter-spacing: 0.06em;
 }
 
 .form-section__desc {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--text-200);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
-/* ═══ KV Row (key-value info rows) ═══ */
+/* ── KV行（键值对） ── */
 .kv-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0;
+  padding: 9px 0;
 }
 
 .kv-row + .kv-row {
-  border-top: 1px solid var(--card-divider);
+  border-top: 1px solid var(--color-border);
 }
 
 .kv-row__k {
   font-size: 12px;
   font-family: var(--font-accent);
-  color: var(--text-200);
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
 .kv-row__v {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--text-100);
+  font-weight: 600;
+  color: var(--color-text);
   text-align: right;
 }
 
-/* ═══ Stat Strip (inline stat indicators) ═══ */
+/* ── 统计条 ── */
 .stat-strip {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -189,36 +236,36 @@ a {
   flex-direction: column;
   gap: 2px;
   padding: 10px 14px;
-  border: 1px solid var(--card-border);
-  border-radius: 0;
-  background: var(--card-data-bg);
-  min-width: 100px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  min-width: 96px;
 }
 
 .stat-strip__value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   font-family: var(--font-title);
-  color: var(--text-100);
+  color: var(--color-text);
   line-height: 1.1;
 }
 
 .stat-strip__label {
   font-size: 11px;
-  color: var(--text-200);
+  color: var(--color-text-muted);
   letter-spacing: 0.04em;
 }
 
-/* ═══ Dialog Enrichment ═══ */
+/* ── 对话框摘要区 ── */
 .dialog-summary {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 14px;
   margin-bottom: 16px;
-  border-radius: 0;
-  background: var(--card-data-bg);
-  border: 1px solid var(--card-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
 }
 
 .dialog-summary__avatar {
@@ -234,7 +281,7 @@ a {
   font-size: 14px;
   font-weight: 600;
   font-family: var(--font-title);
-  color: var(--text-100);
+  color: var(--color-text);
 }
 
 .dialog-summary__meta {
@@ -242,7 +289,7 @@ a {
   gap: 12px;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--text-200);
+  color: var(--color-text-muted);
   flex-wrap: wrap;
 }
 
@@ -256,29 +303,30 @@ a {
 }
 
 .dialog-section + .dialog-section {
-  border-top: 1px solid var(--card-divider);
+  border-top: 1px solid var(--color-border);
 }
 
 .dialog-section__title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--text-200);
-  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
   margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
-/* ═══ Page Header Enhanced ═══ */
+/* ── 新式页头 ── */
 .page-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: 0;
-  border: 1px solid var(--card-border);
-  border-top: 2px solid var(--primary-100);
-  background: var(--card-bg);
+  padding: 14px 18px;
+  border-radius: var(--radius-none);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  background: var(--color-surface);
   flex-wrap: wrap;
 }
 
@@ -290,28 +338,29 @@ a {
 }
 
 .page-head__title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   font-family: var(--font-title);
   letter-spacing: 0.06em;
+  color: var(--color-text);
   margin: 0;
   line-height: 1.3;
 }
 
 .page-head__desc {
   font-size: 12px;
-  color: var(--text-200);
+  color: var(--color-text-muted);
   margin-top: 2px;
 }
 
 .page-head__right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-/* ═══ Two-col Form Layout ═══ */
+/* ── 双列表单 ── */
 .form-2col {
   display: grid;
   gap: 0 20px;
@@ -326,10 +375,10 @@ a {
   }
 }
 
-/* ═══ Responsive ═══ */
+/* ── 响应式 ── */
 @media (max-width: 768px) {
   .page {
-    padding: 16px;
+    padding: 14px 16px;
   }
 
   .page.page--compact {
@@ -337,11 +386,11 @@ a {
   }
 
   .page-header {
-    padding: 14px;
+    padding: 12px 14px;
   }
 
   .page-head {
-    padding: 12px;
+    padding: 12px 14px;
   }
 
   .stat-strip {
@@ -359,23 +408,47 @@ a {
   }
 }
 
-/* ═══ 古籍装饰工具类 ═══ */
+/* ══════════════════════════════════════
+   故宫装饰工具类 Palace Decorative Utils
+   ══════════════════════════════════════ */
 
+/* 金线分隔符 */
+.gold-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-gold);
+  margin: 16px 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.gold-divider::before,
+.gold-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-gold);
+  opacity: 0.5;
+}
+
+/* 墨色分隔符 */
 .classical-divider {
   display: flex;
   align-items: center;
   gap: 16px;
-  color: var(--bg-400);
+  color: var(--color-text-subtle);
   margin: 16px 0;
+  font-size: 12px;
 }
 .classical-divider::before,
 .classical-divider::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--bg-300);
+  background: var(--color-border);
 }
 
+/* 角落装饰（方正风格） */
 .corner-ornament {
   position: relative;
 }
@@ -383,37 +456,41 @@ a {
 .corner-ornament::after {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 12px;
-  border-color: var(--primary-200);
+  width: 10px;
+  height: 10px;
+  border-color: var(--color-gold);
   border-style: solid;
   pointer-events: none;
+  opacity: 0.7;
 }
 .corner-ornament::before {
-  top: -1px;
-  left: -1px;
+  top: 0;
+  left: 0;
   border-width: 2px 0 0 2px;
 }
 .corner-ornament::after {
-  bottom: -1px;
-  right: -1px;
+  bottom: 0;
+  right: 0;
   border-width: 0 2px 2px 0;
 }
 
+/* 印章徽章 */
 .seal-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid var(--primary-100);
-  color: var(--primary-100);
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
   font-family: var(--font-title);
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.08em;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-none);
 }
 
+/* 竖向文字 */
 .vertical-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -421,22 +498,25 @@ a {
   font-family: var(--font-title);
 }
 
+/* 朱砂顶边 */
 .top-vermillion {
-  border-top: 2px solid var(--primary-100);
+  border-top: 2px solid var(--color-primary) !important;
 }
 
+/* 朱砂左边 */
 .left-vermillion {
-  border-left: 3px solid var(--primary-100);
+  border-left: 3px solid var(--color-primary) !important;
 }
 
-.font-title {
-  font-family: var(--font-title);
+/* 金线顶边 */
+.top-gold {
+  border-top: 1px solid var(--color-gold) !important;
 }
 
-.font-accent {
-  font-family: var(--font-accent);
-}
-
-.font-ui {
-  font-family: var(--font-ui);
-}
+/* ── 字体工具类 ── */
+.font-title  { font-family: var(--font-title); }
+.font-body   { font-family: var(--font-body); }
+.font-accent { font-family: var(--font-accent); }
+.font-ui     { font-family: var(--font-ui); }
+.font-cjk    { font-family: var(--font-cjk), var(--font-body); }
+.font-latin  { font-family: var(--font-latin), var(--font-body); }

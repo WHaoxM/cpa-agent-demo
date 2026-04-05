@@ -1,4 +1,4 @@
-﻿<!-- 页面：笔记管理；路由：student/notes（student-notes）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：职涯笔记；路由：notes（notes）；角色：STUDENT -->
 <script setup lang="ts">
 // @ts-nocheck
 import { ref, computed, onMounted } from 'vue'
@@ -29,8 +29,10 @@ const noteTitle = ref('')
 const noteContent = ref('')
 const noteTags = ref<string[]>([])
 
-// 可用标签
-const availableTags = computed(() => learningStore.getKnowledgePoints(userStore.currentUser?.id || ''))
+// 职涯笔记分类标签
+// TODO: API — GET /api/career-note-tags
+const careerTagOptions = ['行业调研', '自我探索', '能力提升', '求职心得', 'offer对比']
+const availableTags = computed(() => careerTagOptions)
 
 const filteredNotes = computed(() => {
   let result = notes.value
@@ -66,7 +68,7 @@ const toolbarConfig = {
 }
 
 const editorConfig = {
-  placeholder: '请输入笔记内容...',
+  placeholder: '记录你的职业探索思考...',
   MENU_CONF: {},
 }
 
@@ -76,7 +78,6 @@ function handleCreated(editor: any) {
 
 function createNote() {
   editingNote.value = null
-  noteCourseId.value = ''
   noteTitle.value = ''
   noteContent.value = ''
   noteTags.value = []
@@ -85,7 +86,6 @@ function createNote() {
 
 function editNote(note: Note) {
   editingNote.value = note
-  noteCourseId.value = note.courseId || ''
   noteTitle.value = note.title
   noteContent.value = note.content
   noteTags.value = [...note.tags]
@@ -94,7 +94,6 @@ function editNote(note: Note) {
 
 function onEditorClosed() {
   editingNote.value = null
-  noteCourseId.value = ''
   noteTitle.value = ''
   noteContent.value = ''
   noteTags.value = []
@@ -112,7 +111,6 @@ function saveNote() {
   
   if (editingNote.value) {
     learningStore.updateNote(editingNote.value.id, {
-      courseId: noteCourseId.value,
       title: noteTitle.value,
       content: noteContent.value,
       tags: noteTags.value,
@@ -121,7 +119,6 @@ function saveNote() {
   } else {
     learningStore.addNote({
       userId: userStore.currentUser?.id || '',
-      courseId: noteCourseId.value,
       title: noteTitle.value,
       content: noteContent.value,
       tags: noteTags.value,
@@ -144,11 +141,6 @@ function deleteNote(note: Note) {
 
 function toggleFavorite(note: Note) {
   learningStore.toggleNoteFavorite(note.id)
-}
-
-function getCourseName(courseId: string): string {
-  const course = courseStore.getCourseById(courseId)
-  return course?.title || '未分类'
 }
 
 onMounted(() => {
@@ -192,7 +184,7 @@ onMounted(() => {
         </el-select>
       </div>
       <el-button type="primary" :icon="Plus" @click="createNote">
-        新建笔记
+        新建职涯笔记
       </el-button>
     </div>
 
@@ -213,10 +205,6 @@ onMounted(() => {
             </div>
 
             <div class="note-row__meta">
-              <span class="note-course">
-                <el-icon><Document /></el-icon>
-                {{ note.courseId ? getCourseName(note.courseId) : '未分类' }}
-              </span>
               <span class="note-date">{{ note.updatedAt }}</span>
             </div>
 
@@ -245,7 +233,7 @@ onMounted(() => {
         </button>
       </div>
       
-      <el-empty v-else description="暂无笔记，点击右上角按钮创建" />
+      <el-empty v-else description="暂无职涯笔记，点击右上角按钮创建" />
     </div>
 
     <!-- 笔记编辑器弹窗 -->
@@ -258,8 +246,8 @@ onMounted(() => {
       @closed="onEditorClosed"
     >
       <div class="editor-wrapper">
-        <el-select v-model="noteCourseId" placeholder="选择课程（可选）" clearable class="course-select">
-          <el-option v-for="c in courseStore.courses" :key="c.id" :label="c.title" :value="c.id" />
+        <el-select v-model="noteCourseId" placeholder="选择分类（可选）" clearable class="course-select">
+          <el-option v-for="tag in careerTagOptions" :key="tag" :label="tag" :value="tag" />
         </el-select>
 
         <el-input
@@ -307,9 +295,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.notes-page {
-}
-
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -427,6 +412,7 @@ onMounted(() => {
   color: var(--text-200);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-top: 8px;
@@ -451,7 +437,7 @@ onMounted(() => {
 
 .note-tag--more {
   color: var(--text-200);
-  background: color-mix(in srgb, var(--bg-100) 88%, #ffffff 12%);
+  background: var(--color-surface-raised);
   border-color: color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
 }
 

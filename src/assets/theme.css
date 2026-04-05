@@ -1,93 +1,198 @@
-/* ═══ 古籍统一色板 ═══ */
+/* ═══════════════════════════════════════════
+   故宫博物院 · Palace Museum Theme
+   宣纸米白 + 朱砂红 + 御金点缀 + 墨色文字
+   ═══════════════════════════════════════════ */
+
+/* ── 原始色板 Base Tokens ── */
 :root {
-  --primary-100: #8B2500;
-  --primary-200: #E8CEBF;
-  --primary-300: #5C1A00;
-  --accent-100: #2B4C6F;
-  --accent-200: #C5D4E3;
-  --text-100: #1A1410;
-  --text-200: #6B5D4F;
-  --text-300: #9C8B78;
-  --bg-100: #F7F2E8;
-  --bg-200: #EDE5D6;
-  --bg-300: #D4C9B5;
-  --bg-400: #C2B59E;
+  /* 朱砂红 Vermilion */
+  --vermilion-100: #F9DACE;
+  --vermilion-300: #E87055;
+  --vermilion-500: #BE2A00;
+  --vermilion-700: #8B1A00;
+  --vermilion-900: #5C0E00;
+
+  /* 御金 Imperial Gold */
+  --gold-100: #FBF3D5;
+  --gold-300: #E8C96A;
+  --gold-500: #C9A227;
+  --gold-700: #8B6A00;
+
+  /* 靛青 Indigo */
+  --indigo-100: #C5D9EC;
+  --indigo-300: #4A7FA8;
+  --indigo-500: #1B4E79;
+  --indigo-700: #0F3352;
+
+  /* 墨色 Ink */
+  --ink-100: #C8B8A8;
+  --ink-300: #9C8B78;
+  --ink-500: #6B5040;
+  --ink-700: #3D2E24;
+  --ink-900: #1C1612;
+
+  /* 宣纸 Parchment */
+  --parchment-100: #F5EFE0;
+  --parchment-200: #EDE0CB;
+  --parchment-300: #E0CEB4;
+  --parchment-400: #C8B89A;
+  --parchment-500: #B0A085;
 }
 
-/* ═══ 古籍形状系统 ═══ */
+/* ── 语义 Token Semantic Layer ── */
 :root {
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 4px;
+  /* 旧变量别名（兼容存量代码，逐步迁移） */
+  --primary-100: var(--vermilion-500);
+  --primary-200: var(--vermilion-100);
+  --primary-300: var(--vermilion-700);
+  --accent-100: var(--indigo-500);
+  --accent-200: var(--indigo-100);
+  --text-100: var(--ink-900);
+  --text-200: var(--ink-500);
+  --text-300: var(--ink-300);
+  --bg-100: var(--parchment-100);
+  --bg-200: var(--parchment-200);
+  --bg-300: var(--parchment-400);
+  --bg-400: var(--parchment-500);
 
-  /* 书籍布局 */
-  --book-spine-width: 56px;
+  /* 新语义 Token（新页面请使用这套） */
+  --color-primary:       var(--vermilion-500);
+  --color-primary-dark:  var(--vermilion-700);
+  --color-primary-light: var(--vermilion-100);
+  --color-gold:          var(--gold-500);
+  --color-gold-dark:     var(--gold-700);
+  --color-secondary:     var(--indigo-500);
+  --color-background:    var(--parchment-100);
+  --color-surface:       var(--parchment-200);
+  --color-surface-raised: var(--parchment-100);
+  --color-border:        var(--parchment-400);
+  --color-border-strong: var(--parchment-500);
+  --color-text:          var(--ink-900);
+  --color-text-muted:    var(--ink-500);
+  --color-text-subtle:   var(--ink-300);
+  --color-cta:           var(--vermilion-500);
+
+  /* 间距 */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+}
+
+/* ── 形状系统 Shape System ── */
+:root {
+  /* 圆角：严控，趋向方正 */
+  --radius-none: 0px;
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   6px;
+
+  /* 书籍布局（侧边栏） */
+  --book-spine-width:    56px;
   --book-spine-expanded: 220px;
-  --book-page-shadow: inset 6px 0 18px -8px rgba(26, 20, 16, 0.07);
-  --book-binding-color: var(--primary-100);
-  --book-binding-width: 3px;
+  --book-page-shadow:    inset 6px 0 18px -8px rgba(28, 22, 18, 0.08);
+  --book-binding-color:  var(--color-primary);
+  --book-binding-width:  3px;
 
-  /* 墨迹 & 印章 */
-  --ink-wash-color: rgba(26, 20, 16, 0.04);
-  --seal-red: #C23B22;
-  --bamboo-green: #5B7744;
-  --shadow-sm: 0 1px 3px rgba(26, 20, 16, 0.06);
-  --shadow-md: 0 2px 8px rgba(26, 20, 16, 0.08);
-  --transition-fast: 200ms;
-  --transition-base: 300ms;
-  --noise-opacity: 0.06;
-  --card-bg: var(--bg-200);
-  --card-border: var(--bg-300);
-  --card-hover-border: var(--primary-200);
-  --card-shadow: none;
-  --card-emphasis-bg: color-mix(in srgb, var(--primary-100) 4%, var(--bg-100) 96%);
-  --card-emphasis-border: color-mix(in srgb, var(--primary-100) 18%, var(--bg-300) 82%);
-  --card-data-bg: var(--bg-100);
-  --card-subtle: color-mix(in srgb, var(--bg-200) 90%, transparent 10%);
-  --card-divider: var(--bg-300);
-  --card-icon-bg: color-mix(in srgb, var(--primary-100) 6%, var(--bg-200) 94%);
-  --card-icon-color: var(--primary-100);
-  --card-emphasis-icon-color: var(--primary-100);
+  /* 装饰 */
+  --seal-red:      var(--vermilion-500);
+  --bamboo-green:  #4A6741;
+  --ink-wash-color: rgba(28, 22, 18, 0.04);
+  --noise-opacity: 0.05;
 }
 
-/* ═══ Element Plus 古籍覆盖 ═══ */
+/* ── 阴影 Shadow System ── */
 :root {
-  --el-color-primary: var(--primary-100);
-  --el-color-primary-light-3: color-mix(in srgb, var(--primary-100) 70%, var(--bg-100) 30%);
-  --el-color-primary-light-5: color-mix(in srgb, var(--primary-100) 55%, var(--bg-100) 45%);
-  --el-color-primary-light-7: color-mix(in srgb, var(--primary-100) 40%, var(--bg-100) 60%);
-  --el-color-primary-light-9: color-mix(in srgb, var(--primary-100) 22%, var(--bg-100) 78%);
-  --el-color-primary-dark-2: var(--primary-300);
-
-  --el-border-radius-base: var(--radius-sm);
-  --el-border-radius-round: var(--radius-sm);
-
-  --el-bg-color: var(--bg-100);
-  --el-bg-color-page: var(--bg-100);
-  --el-bg-color-overlay: var(--bg-100);
-
-  --el-text-color-primary: var(--text-100);
-  --el-text-color-regular: var(--text-200);
-
-  --el-fill-color-blank: var(--bg-100);
-  --el-fill-color-light: var(--bg-200);
-  --el-border-color: var(--bg-300);
-  --el-border-color-light: var(--bg-300);
-
-  --el-box-shadow: var(--shadow-sm);
-  --el-box-shadow-light: var(--shadow-sm);
-  --el-box-shadow-lighter: 0 1px 4px rgba(26, 20, 16, 0.04);
-
-  --el-font-family: var(--font-ui);
-
-  --el-font-size-extra-large: 22px;
-  --el-font-size-large: 20px;
-  --el-font-size-medium: 18px;
-  --el-font-size-base: 18px;
-  --el-font-size-small: 16px;
-  --el-font-size-extra-small: 14px;
+  --shadow-sm:    0 1px 3px rgba(28, 22, 18, 0.08);
+  --shadow-md:    0 3px 10px rgba(28, 22, 18, 0.10);
+  --shadow-lg:    0 8px 20px rgba(28, 22, 18, 0.12);
+  --shadow-xl:    0 20px 40px rgba(28, 22, 18, 0.16);
+  --shadow-inset: inset 0 1px 3px rgba(28, 22, 18, 0.06);
 }
 
+/* ── 动效 Motion ── */
+:root {
+  --transition-fast: 150ms;
+  --transition-base: 250ms;
+}
+
+/* ── 卡片语义 Card Tokens ── */
+:root {
+  --card-bg:                   var(--color-surface);
+  --card-border:               var(--color-border);
+  --card-hover-border:         var(--color-primary);
+  --card-shadow:               var(--shadow-sm);
+  --card-emphasis-bg:          color-mix(in srgb, var(--color-primary) 3%, var(--color-surface) 97%);
+  --card-emphasis-border:      color-mix(in srgb, var(--color-primary) 20%, var(--color-border) 80%);
+  --card-data-bg:              var(--color-background);
+  --card-subtle:               color-mix(in srgb, var(--color-surface) 85%, transparent 15%);
+  --card-divider:              var(--color-border);
+  --card-icon-bg:              color-mix(in srgb, var(--color-primary) 6%, var(--color-surface) 94%);
+  --card-icon-color:           var(--color-primary);
+  --card-emphasis-icon-color:  var(--color-primary);
+}
+
+/* ── Element Plus 覆盖 El Plus Override ── */
+:root {
+  --el-color-primary:          var(--color-primary);
+  --el-color-primary-light-3:  color-mix(in srgb, var(--color-primary) 70%, var(--color-background) 30%);
+  --el-color-primary-light-5:  color-mix(in srgb, var(--color-primary) 50%, var(--color-background) 50%);
+  --el-color-primary-light-7:  color-mix(in srgb, var(--color-primary) 35%, var(--color-background) 65%);
+  --el-color-primary-light-9:  color-mix(in srgb, var(--color-primary) 18%, var(--color-background) 82%);
+  --el-color-primary-dark-2:   var(--color-primary-dark);
+
+  --el-border-radius-base:     var(--radius-sm);
+  --el-border-radius-round:    var(--radius-md);
+  --el-border-radius-circle:   50%;
+
+  --el-bg-color:               var(--color-surface);
+  --el-bg-color-page:          var(--color-background);
+  --el-bg-color-overlay:       var(--color-surface-raised);
+
+  --el-text-color-primary:     var(--color-text);
+  --el-text-color-regular:     var(--color-text-muted);
+  --el-text-color-secondary:   var(--color-text-subtle);
+  --el-text-color-placeholder: var(--color-text-subtle);
+  --el-text-color-disabled:    var(--ink-300);
+
+  --el-fill-color-blank:       var(--color-surface-raised);
+  --el-fill-color:             var(--color-surface);
+  --el-fill-color-light:       var(--color-surface);
+  --el-fill-color-lighter:     color-mix(in srgb, var(--color-surface) 60%, var(--color-background) 40%);
+
+  --el-border-color:           var(--color-border);
+  --el-border-color-light:     color-mix(in srgb, var(--color-border) 70%, transparent 30%);
+  --el-border-color-lighter:   color-mix(in srgb, var(--color-border) 50%, transparent 50%);
+  --el-border-color-extra-light: color-mix(in srgb, var(--color-border) 30%, transparent 70%);
+
+  --el-box-shadow:             var(--shadow-md);
+  --el-box-shadow-light:       var(--shadow-sm);
+  --el-box-shadow-lighter:     0 1px 4px rgba(28, 22, 18, 0.05);
+  --el-box-shadow-dark:        var(--shadow-lg);
+
+  --el-font-family:            var(--font-ui);
+  --el-font-size-extra-large:  20px;
+  --el-font-size-large:        18px;
+  --el-font-size-medium:       16px;
+  --el-font-size-base:         14px;
+  --el-font-size-small:        13px;
+  --el-font-size-extra-small:  12px;
+
+  --el-disabled-bg-color:      var(--parchment-300);
+  --el-disabled-border-color:  var(--parchment-400);
+  --el-disabled-text-color:    var(--ink-300);
+
+  --el-overlay-color:          rgba(28, 22, 18, 0.55);
+  --el-overlay-color-light:    rgba(28, 22, 18, 0.35);
+  --el-overlay-color-lighter:  rgba(28, 22, 18, 0.20);
+
+  --el-mask-color:             rgba(28, 22, 18, 0.55);
+}
+
+/* ── 全局基础样式 ── */
 html,
 body {
   height: 100%;
@@ -95,8 +200,8 @@ body {
 
 body {
   position: relative;
-  background: var(--bg-100);
-  color: var(--text-100);
+  background: var(--color-background);
+  color: var(--color-text);
   overflow-x: hidden;
 }
 
@@ -120,16 +225,19 @@ body::before {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ── 通用卡片交互 ── */
 .ui-card {
   border-radius: var(--radius-md);
   border: 1px solid var(--card-border);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .ui-card:hover {
   border-color: var(--card-hover-border);
+  box-shadow: var(--shadow-md);
 }
 
+/* ── 页面过渡 ── */
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition: opacity var(--transition-base);
