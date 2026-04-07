@@ -19,12 +19,18 @@ export function useOnboardingState() {
 
   const hasAssessed = computed(() => resumeStore.isParsed || hasQuizRecords.value)
 
+  const hasStartedLearning = computed(() => {
+    if (!currentUserId.value) return false
+    return learningStore.learningHistory.some(item => item.userId === currentUserId.value)
+  })
+
   const onboardingDone = computed(() => hasExplored.value && hasAssessed.value)
 
   return {
     hasExplored,
     hasQuizRecords,
     hasAssessed,
+    hasStartedLearning,
     onboardingDone,
   }
 }
