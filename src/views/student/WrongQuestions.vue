@@ -434,9 +434,6 @@ function goToCourse(analysis: AgentAnalysisResult) {
   router.push(`/app/student/course/${cid}`)
 }
 
-function goToNotes(refItem: AgentNoteRef) {
-  router.push(refItem.path || '/app/student/notes')
-}
 
 function pushChat(role: ChatMessage['role'], content: string, meta?: ChatMessage['meta']) {
   chatMessages.value.push({
@@ -808,19 +805,17 @@ onMounted(() => {
                       <div class="wb-section__meta">{{ selectedAnalysis.noteRefs.length }} 条</div>
                     </div>
                     <div class="note-list">
-                      <button
+                      <div
                         v-for="n in selectedAnalysis.noteRefs"
                         :key="n.noteId"
-                        type="button"
                         class="note-row"
-                        @click="goToNotes(n)"
                       >
                         <div class="note-row__main">
                           <div class="note-title">{{ n.noteTitle }}</div>
                           <div class="note-snippet">{{ n.snippet }}</div>
                         </div>
                         <div class="note-score">{{ Math.round(n.confidence * 100) }}%</div>
-                      </button>
+                      </div>
                     </div>
                   </section>
                 </div>

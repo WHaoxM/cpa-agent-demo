@@ -301,7 +301,6 @@ function fmtH(min: number): string {
       <!-- ── 区域3：快捷工具 ── -->
       <nav class="hc-shelf" aria-label="快捷工具">
         <button class="bookmark-tab" type="button" @click="nav('/app/student/wrongquestions')">薄弱点记录</button>
-        <button class="bookmark-tab" type="button" @click="nav('/app/notes')">学习笔记</button>
         <button class="bookmark-tab" type="button" @click="nav('/app/student/ai-assistant')">AI 助手</button>
         <button class="bookmark-tab" type="button" @click="nav('/app/student/favorites')">心仪岗位</button>
         <button class="bookmark-tab" type="button" @click="nav('/app/student/my-reports')">我的报告</button>

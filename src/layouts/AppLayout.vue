@@ -112,14 +112,6 @@ const currentMenus = computed(() => {
   return commonMenus
 })
 
-// 最近访问数据
-const recentAccess = [
-  { name: 'Vue3入门', path: '/app/student/course/1', icon: ICONS.bookOpen },
-  { name: '我的笔记', path: '/app/student/notes', icon: ICONS.fileText },
-  { name: '错题复习', path: '/app/student/wrong-questions', icon: ICONS.closeCircle },
-]
-void recentAccess
-
 // 学习进度（学生）或待办统计（教师/管理员）
 const quickStats = computed(() => {
   if (isStudent.value) {

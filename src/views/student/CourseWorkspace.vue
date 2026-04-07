@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程工作台；路由：student/course/:id（student-course-detail）；角色：STUDENT -->
+﻿<!-- 页面：课程工作台；路由：student/course/:id（student-course-detail）；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -35,12 +35,10 @@ onBeforeUnmount(() => {
 const tabItems: TabItem[] = [
   { label: '学习内容', name: 'student-course-chapters' },
   { label: '任务', name: 'student-course-tasks' },
-  { label: '讨论', name: 'student-course-discuss' },
   { label: '作业', name: 'student-course-homework' },
   { label: '考试', name: 'student-course-exam' },
   { label: '资料', name: 'student-course-resources' },
   { label: '错题集', name: 'student-course-wrongbook' },
-  { label: '学习记录', name: 'student-course-records' },
   { label: '课程回顾', name: 'student-course-review' },
 ]
 
