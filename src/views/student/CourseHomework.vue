@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程作业；路由：homework（student-course-homework）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程作业；路由：homework（student-course-homework）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

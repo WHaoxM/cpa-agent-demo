@@ -1,26 +1,56 @@
-﻿<!-- 页面：AI助手；路由：student/ai-assistant（student-ai-assistant）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：AI助手；路由：student/ai-assistant（student-ai-assistant）；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { Promotion, ChatLineRound, User } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { useUserStore, useLearningStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
 import IntegrationHint from '@/components/IntegrationHint.vue'
 import { usePageEntrance } from '@/composables/usePageEntrance'
 
 const { pageRef } = usePageEntrance()
+const router = useRouter()
 const userStore = useUserStore()
 const learningStore = useLearningStore()
+const resumeStore = useResumeStore()
 
 const messages = computed(() => learningStore.aiMessages)
 const inputMessage = ref('')
 const messagesContainer = ref<HTMLDivElement>()
 const loading = ref(false)
 
-const quickPrompts = [
-  { icon: '💡', text: '课程答疑', desc: '询问课程相关问题' },
-  { icon: '📝', text: '解题指导', desc: '获取解题思路' },
-  { icon: '📊', text: '学习建议', desc: '获得个性化建议' },
-  { icon: '⚠️', text: '薄弱点提醒', desc: '分析薄弱知识点' },
-]
+/* 动态快捷提示：基于 resumeStore 状态生成 */
+const quickPrompts = computed(() => {
+  if (!resumeStore.isParsed) {
+    return [
+      { icon: '🎯', text: '探索职业方向', desc: '去职业分析了解市场' },
+      { icon: '📄', text: '上传简历', desc: '去职途导航获取能力画像' },
+      { icon: '�', text: '解题指导', desc: '获取解题思路' },
+      { icon: '�', text: '课程答疑', desc: '询问课程相关问题' },
+    ]
+  }
+  const role = resumeStore.insights?.predictedRole ?? '前端开发'
+  return [
+    { icon: '🎯', text: `我适合做${role}吗？`, desc: '基于简历分析回答' },
+    { icon: '�', text: '我还缺哪些技能？', desc: '列出技能差距节点' },
+    { icon: '�', text: '推荐我学什么课程？', desc: '基于差距推荐课程' },
+    { icon: '⚠️', text: '薄弱点提醒', desc: '分析薄弱知识点' },
+  ]
+})
+
+/* 将职业上下文注入到用户消息前缀 */
+function buildContextPrefix(): string {
+  if (!resumeStore.isParsed) return ''
+  const role = resumeStore.insights?.predictedRole ?? ''
+  const topSkills = resumeStore.parsedSkills.slice(0, 5).map(s => s.name).join('、')
+  const targets = learningStore.targetRoles.map(r => r.role).join('、')
+  const parts: string[] = []
+  if (role) parts.push(`预测方向：${role}`)
+  if (topSkills) parts.push(`已掌握技能：${topSkills}`)
+  if (targets) parts.push(`关注方向：${targets}`)
+  if (!parts.length) return ''
+  return `[用户概况] ${parts.join('；')} | 询问：`
+}
 
 async function sendMessage() {
   console.log('发送消息开始')
@@ -49,8 +79,9 @@ async function sendMessage() {
   await new Promise(resolve => setTimeout(resolve, 1000))
   console.log('AI回复延迟结束')
   
-  // 获取AI回复
-  const aiResponse = learningStore.getAIResponse(userMsg)
+  // 获取AI回复（注入职业上下文）
+  const contextMsg = buildContextPrefix() + userMsg
+  const aiResponse = learningStore.getAIResponse(contextMsg)
   console.log('AI回复:', aiResponse)
   
   learningStore.addAIMessage({

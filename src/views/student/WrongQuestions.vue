@@ -14,9 +14,12 @@ import {
   Setting,
 } from '@element-plus/icons-vue'
 import { useUserStore, useLearningStore, useCourseStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
 import { mockQuestions } from '@/mock/data'
 import type { WrongQuestion } from '@/types'
 import IntegrationHint from '@/components/IntegrationHint.vue'
+import D3ErrorMatrix from '@/components/charts/D3ErrorMatrix.vue'
+import D3ChordDiagram from '@/components/charts/D3ChordDiagram.vue'
 
 type DifficultyKey = 'easy' | 'medium' | 'hard'
 type MasteryStatusKey = 'todo' | 'weak' | 'ok' | 'mastered' | 'archived'
@@ -70,10 +73,41 @@ const router = useRouter()
 const userStore = useUserStore()
 const learningStore = useLearningStore()
 const courseStore = useCourseStore()
+const resumeStore = useResumeStore()
 
 const wrongQuestions = computed(() =>
   learningStore.getUserWrongQuestions(userStore.currentUser?.id || ''),
 )
+
+/* 计算未掌握错题的知识点标签（wrongQuestions 必须先声明） */
+const unmasteredKnowledgePoints = computed(() => {
+  const userWQ = wrongQuestions.value
+  const tags: string[] = []
+  for (const wq of userWQ) {
+    const status = getMockStatus(wq)
+    if (status === 'mastered' || status === 'archived') continue
+    const kp = String((wq.question as Record<string, unknown>)?.knowledgePoint || '')
+    if (kp && !tags.includes(kp)) tags.push(kp)
+  }
+  return tags
+})
+
+/* 识别哪些弱点对职业影响较大（与 skillGraph 高热度节点重叠） */
+const careerImpactSummary = computed(() => {
+  if (!resumeStore.isParsed) return null
+  const predictedRole = resumeStore.insights?.predictedRole ?? ''
+  const skillNodes = resumeStore.insights?.skillGraph?.nodes ?? []
+  const highHeatNodes = skillNodes.filter((n: Record<string, unknown>) => Number(n.heat) >= 75).map((n: Record<string, unknown>) => String(n.name).toLowerCase())
+  const kps = unmasteredKnowledgePoints.value.map((k: string) => k.toLowerCase())
+  const affected = kps.filter((k: string) => highHeatNodes.some((h: string) => k.includes(h) || h.includes(k)))
+  if (!affected.length) return null
+  return { predictedRole, affected: affected.slice(0, 3) }
+})
+
+/* 输出高优先弱技能标签到 learningStore（供 LearningCenter 使用） */
+watch(unmasteredKnowledgePoints, (tags) => {
+  learningStore.weakSkillTags = tags.slice(0, 10)
+}, { immediate: true })
 
 const selectedId = ref<string>('')
 const activeRightTab = ref<'locate' | 'analysis' | 'chat' | 'path'>('locate')
@@ -150,6 +184,111 @@ const filteredQuestions = computed(() => {
       return content.includes(kw) || kp.includes(kw)
     })
 })
+
+// TODO: API — GET /api/wrong-questions/matrix?userId=xxx
+// 替换目标：将本地聚合矩阵数据替换为后端聚合响应
+const errorMatrixData = computed(() => {
+  const highHeatNames = new Set(
+    (resumeStore.insights?.skillGraph?.nodes ?? [])
+      .filter((n: Record<string, unknown>) => Number(n.heat) >= 75)
+      .map((n: Record<string, unknown>) => String(n.name).toLowerCase())
+  )
+
+  return filteredQuestions.value.map(wq => {
+    const knowledgePoint = String((wq.question as Record<string, unknown>)?.knowledgePoint || '未标注知识点')
+    const difficulty = getDifficultyKey(wq)
+    const kpLower = knowledgePoint.toLowerCase()
+    const impact = highHeatNames.size > 0 && [...highHeatNames].some(h => kpLower.includes(h) || h.includes(kpLower))
+      ? 'high'
+      : (wq.times || 0) >= 3
+        ? 'medium'
+        : 'low'
+    return {
+      knowledgePoint,
+      difficulty,
+      times: wq.times || 0,
+      lastWrongAt: wq.lastWrongAt,
+      careerImpact: impact,
+    }
+  })
+})
+
+const chordData = computed(() => {
+  const grouped = new Map<string, number>()
+  filteredQuestions.value.forEach(wq => {
+    const source = String((wq.question as Record<string, unknown>)?.knowledgePoint || '未标注知识点')
+    const target = getDifficultyKey(wq) === 'hard' ? '困难题群' : getDifficultyKey(wq) === 'medium' ? '中等题群' : '简单题群'
+    const key = `${source}__${target}`
+    grouped.set(key, (grouped.get(key) ?? 0) + (wq.times || 1))
+  })
+
+  return [...grouped.entries()].map(([key, value]) => {
+    const [source, target] = key.split('__')
+    return { source: source || '未知', target: target || '未知', value }
+  })
+})
+
+/* ═══ 按技能点聚合（手风琴视图） ═══ */
+const expandedSkills = ref<Set<string>>(new Set())
+const expandedItems = ref<Set<string>>(new Set())
+const diagnosticVizTab = ref<'matrix' | 'chord'>('matrix')
+
+interface SkillGroup {
+  skillName: string
+  items: typeof wrongQuestions.value
+  pendingCount: number
+  masteredCount: number
+  careerImpact: 'high' | 'medium' | 'low'
+}
+
+const skillGroups = computed((): SkillGroup[] => {
+  const groups = new Map<string, typeof wrongQuestions.value>()
+  for (const wq of filteredQuestions.value) {
+    const kp = String((wq.question as Record<string, unknown>)?.knowledgePoint || '未标注知识点')
+    if (!groups.has(kp)) groups.set(kp, [])
+    groups.get(kp)!.push(wq)
+  }
+
+  const highHeatNames = new Set(
+    (resumeStore.insights?.skillGraph?.nodes ?? [])
+      .filter((n: Record<string, unknown>) => Number(n.heat) >= 75)
+      .map((n: Record<string, unknown>) => String(n.name).toLowerCase())
+  )
+
+  return [...groups.entries()].map(([skillName, items]) => {
+    const pendingCount = items.filter(w => {
+      const st = getMockStatus(w)
+      return st !== 'mastered' && st !== 'archived'
+    }).length
+    const masteredCount = items.length - pendingCount
+    const kpLower = skillName.toLowerCase()
+    const impact = highHeatNames.size > 0 && [...highHeatNames].some(h => kpLower.includes(h) || h.includes(kpLower))
+      ? 'high'
+      : pendingCount >= 2 ? 'medium' : 'low'
+    return { skillName, items, pendingCount, masteredCount, careerImpact: impact as 'high' | 'medium' | 'low' }
+  }).sort((a, b) => {
+    const order = { high: 0, medium: 1, low: 2 }
+    return order[a.careerImpact] - order[b.careerImpact] || b.pendingCount - a.pendingCount
+  })
+})
+
+function toggleSkillGroup(name: string) {
+  if (expandedSkills.value.has(name)) expandedSkills.value.delete(name)
+  else expandedSkills.value.add(name)
+}
+
+function toggleItem(id: string) {
+  if (expandedItems.value.has(id)) expandedItems.value.delete(id)
+  else expandedItems.value.add(id)
+}
+
+function impactLabel(impact: 'high' | 'medium' | 'low') {
+  return { high: '高影响', medium: '中影响', low: '低影响' }[impact]
+}
+
+function impactColor(impact: 'high' | 'medium' | 'low') {
+  return { high: 'var(--color-primary)', medium: 'var(--color-gold)', low: 'var(--color-text-subtle)' }[impact]
+}
 
 const selectedQuestion = computed(() => {
   return filteredQuestions.value.find(q => q.id === selectedId.value) || null
@@ -395,6 +534,51 @@ onMounted(() => {
 
 <template>
   <div class="wrongbook page page--compact">
+    <!-- 职业影响摘要（已解析简历时显示） -->
+    <div v-if="careerImpactSummary" class="wq-career-banner">
+      <Icon icon="lucide:alert-triangle" :width="14" class="wq-career-banner__icon" />
+      <span>
+        你在
+        <strong>{{ careerImpactSummary.affected.join('、') }}</strong>
+        上的薄弱点对你的目标岗位
+        <strong>（{{ careerImpactSummary.predictedRole }}）</strong>
+        影响较大
+      </span>
+      <button class="wq-career-banner__btn" @click="router.push('/app/student/career-analysis')">
+        查看市场需求 →
+      </button>
+    </div>
+
+    <div v-if="filteredQuestions.length > 0" class="wq-diagnostic card-base">
+      <div class="wq-diagnostic__head">
+        <div class="wq-diagnostic__title">
+          <Icon icon="lucide:activity" :width="14" />
+          <span>能力诊断可视化</span>
+        </div>
+        <div class="wq-diagnostic__tabs">
+          <button
+            class="wq-tab-btn"
+            :class="{ 'wq-tab-btn--active': diagnosticVizTab === 'matrix' }"
+            @click="diagnosticVizTab = 'matrix'"
+          >
+            错题矩阵
+          </button>
+          <button
+            class="wq-tab-btn"
+            :class="{ 'wq-tab-btn--active': diagnosticVizTab === 'chord' }"
+            @click="diagnosticVizTab = 'chord'"
+          >
+            知识弦图
+          </button>
+        </div>
+      </div>
+
+      <div class="wq-diagnostic__body">
+        <D3ErrorMatrix v-if="diagnosticVizTab === 'matrix'" :data="errorMatrixData" />
+        <D3ChordDiagram v-else :data="chordData" />
+      </div>
+    </div>
+
     <div v-if="filteredQuestions.length > 0" class="wb-topbar" aria-label="薄弱点工具条">
       <div class="wb-toolbar">
         <div class="toolbar__left">
@@ -427,7 +611,89 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="filteredQuestions.length > 0" class="wb-workspace card-base" aria-label="薄弱点工作台">
+    <!-- ── 新手风琴视图 ── -->
+    <div v-if="skillGroups.length > 0" class="wq-accordion" aria-label="技能薄弱诊断">
+      <div v-for="group in skillGroups" :key="group.skillName" class="wq-group">
+        <!-- 技能组标题行 -->
+        <button
+          class="wq-group__header"
+          :class="{ 'wq-group__header--open': expandedSkills.has(group.skillName) }"
+          @click="toggleSkillGroup(group.skillName)"
+        >
+          <div class="wq-group__left">
+            <Icon
+              :icon="expandedSkills.has(group.skillName) ? 'lucide:chevron-down' : 'lucide:chevron-right'"
+              :width="14" class="wq-group__chevron"
+            />
+            <span class="wq-group__name">{{ group.skillName }}</span>
+            <span
+              v-if="group.pendingCount > 0"
+              class="wq-impact-badge"
+              :style="{ color: impactColor(group.careerImpact), borderColor: impactColor(group.careerImpact) }"
+            >{{ impactLabel(group.careerImpact) }}</span>
+          </div>
+          <div class="wq-group__right">
+            <span class="wq-group__stat">
+              <span :style="{ color: group.pendingCount > 0 ? 'var(--color-primary)' : 'inherit' }">{{ group.pendingCount }}</span>
+              /{{ group.items.length }} 待解决
+            </span>
+            <span v-if="group.masteredCount" class="wq-group__mastered">{{ group.masteredCount }} 已掌握</span>
+          </div>
+        </button>
+
+        <!-- 题目列表（展开时） -->
+        <div v-if="expandedSkills.has(group.skillName)" class="wq-group__body">
+          <div v-for="wq in group.items" :key="wq.id" class="wq-item">
+            <!-- 题目摘要行 -->
+            <div class="wq-item__row" @click="toggleItem(wq.id)">
+              <el-tag :type="statusTagType(getMockStatus(wq))" size="small" effect="plain">
+                {{ statusLabelMap[getMockStatus(wq)] }}
+              </el-tag>
+              <span class="wq-item__content">
+                {{ String(wq.question?.content || '').slice(0, 56) }}{{ String(wq.question?.content || '').length > 56 ? '…' : '' }}
+              </span>
+              <span class="wq-item__times">×{{ wq.times }}</span>
+              <el-tag :type="diffTagType(getDifficultyKey(wq))" size="small" effect="plain">
+                {{ difficultyLabelMap[getDifficultyKey(wq)] }}
+              </el-tag>
+              <span class="wq-item__date">{{ formatDate(wq.lastWrongAt) }}</span>
+              <Icon
+                :icon="expandedItems.has(wq.id) ? 'lucide:chevron-up' : 'lucide:chevron-down'"
+                :width="13" class="wq-item__toggle"
+              />
+            </div>
+
+            <!-- 详情展开 -->
+            <div v-if="expandedItems.has(wq.id)" class="wq-item__detail">
+              <div class="wq-detail-block">
+                <span class="wq-detail-label">题目：</span>
+                <span class="wq-detail-text">{{ wq.question?.content }}</span>
+              </div>
+              <div v-if="wq.question?.answer" class="wq-detail-block">
+                <span class="wq-detail-label">答案：</span>
+                <span class="wq-detail-text wq-detail-text--answer">{{ wq.question.answer }}</span>
+              </div>
+              <div class="wq-detail-actions">
+                <button class="wq-action-btn wq-action-btn--primary" @click="router.push('/app/student/learning')">
+                  <Icon icon="lucide:book-open" :width="12" /> 去学课程
+                </button>
+                <button
+                  class="wq-action-btn"
+                  @click="() => { learningStore.updateWrongQuestionStatus?.(wq.id, 'mastered'); ElMessage.success('已标记为掌握') }"
+                >
+                  <Icon icon="lucide:check" :width="12" /> 标为掌握
+                </button>
+                <button class="wq-action-btn wq-action-btn--danger" @click="removeWrongQuestion(wq)">
+                  <Icon icon="lucide:trash-2" :width="12" /> 移除
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="filteredQuestions.length > 0 && false" class="wb-workspace card-base" aria-label="薄弱点工作台（旧版已隐藏）">
       <div class="wb-body">
         <aside class="wb-list" aria-label="薄弱点列表">
           <div class="wb-list__head">
@@ -681,6 +947,172 @@ onMounted(() => {
   margin: 0;
   padding: 0;
 }
+
+.wq-career-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--color-text, #1a202c);
+  flex-wrap: wrap;
+}
+.wq-career-banner__icon { color: #f59e0b; flex-shrink: 0; }
+.wq-career-banner strong { color: #d97706; }
+.wq-career-banner__btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(245,158,11,0.4);
+  color: #d97706;
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wq-career-banner__btn:hover { background: rgba(245,158,11,0.15); }
+
+.wq-diagnostic {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
+
+.wq-diagnostic__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.wq-diagnostic__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.wq-diagnostic__tabs {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.wq-tab-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.wq-tab-btn--active {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border) 55%);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface) 93%);
+}
+
+.wq-diagnostic__body {
+  width: 100%;
+}
+
+/* ── 手风琴视图 ── */
+.wq-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wq-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.wq-group__header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  transition: background var(--transition-fast);
+  gap: 10px;
+}
+.wq-group__header:hover { background: var(--color-background); }
+.wq-group__header--open { background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface) 97%); }
+
+.wq-group__left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.wq-group__chevron { color: var(--color-text-subtle); flex-shrink: 0; }
+.wq-group__name { font-size: 13px; font-weight: 600; color: var(--color-text); }
+.wq-impact-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: var(--radius-sm); border: 1px solid;
+  flex-shrink: 0;
+}
+.wq-group__right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.wq-group__stat { font-size: 11px; color: var(--color-text-muted); }
+.wq-group__mastered { font-size: 11px; color: var(--bamboo-green, #4A6741); }
+
+.wq-group__body {
+  border-top: 1px solid var(--color-border);
+  display: flex; flex-direction: column;
+}
+
+.wq-item { border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent 40%); }
+.wq-item:last-child { border-bottom: none; }
+
+.wq-item__row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.wq-item__row:hover { background: var(--color-background); }
+
+.wq-item__content {
+  flex: 1; font-size: 12px; color: var(--color-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wq-item__times { font-size: 10px; color: var(--color-primary); font-weight: 600; flex-shrink: 0; }
+.wq-item__date { font-size: 10px; color: var(--color-text-subtle); flex-shrink: 0; }
+.wq-item__toggle { color: var(--color-text-subtle); flex-shrink: 0; }
+
+.wq-item__detail {
+  padding: 12px 14px;
+  background: var(--color-background);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent 40%);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.wq-detail-block { display: flex; flex-direction: column; gap: 3px; }
+.wq-detail-label { font-size: 10px; color: var(--color-text-subtle); font-weight: 600; }
+.wq-detail-text { font-size: 12px; color: var(--color-text); line-height: 1.5; }
+.wq-detail-text--answer {
+  color: var(--bamboo-green, #4A6741);
+  background: rgba(74,103,65,0.06);
+  padding: 6px 10px; border-radius: var(--radius-sm); border-left: 2px solid var(--bamboo-green, #4A6741);
+}
+
+.wq-detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.wq-action-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text-muted);
+  font-size: 11px; cursor: pointer; transition: all var(--transition-fast);
+}
+.wq-action-btn:hover { border-color: var(--color-secondary); color: var(--color-secondary); }
+.wq-action-btn--primary {
+  background: var(--color-secondary); color: var(--parchment-100, #F5EFE0);
+  border-color: var(--color-secondary);
+}
+.wq-action-btn--primary:hover { opacity: 0.88; }
+.wq-action-btn--danger:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
 .wb-topbar {
   margin-bottom: 12px;

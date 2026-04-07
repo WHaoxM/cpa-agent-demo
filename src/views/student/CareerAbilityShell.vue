@@ -1,9 +1,10 @@
-<!-- 页面：职业能力图谱 Shell；路由：student/career-ability；角色：STUDENT/TEACHER -->
+<!-- 页面：职业能力图谱 Shell；路由：student/career-ability；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onBeforeUnmount, watch, nextTick, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
 import { init as echartsInit } from 'echarts/core'
 import {
   getAbilityGraphData, computeOrbitalLayout,
@@ -21,6 +22,12 @@ defineOptions({ name: 'CareerAbilityShell' })
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const resumeStore = useResumeStore()
+
+/* 已掌握技能集合（供子组件高亮用） */
+const masteredSkillNames = computed(() =>
+  new Set(resumeStore.parsedSkills.map(s => s.name.toLowerCase()))
+)
 
 const roleName = computed(() => (route.query.role as string) || '前端开发')
 
@@ -279,6 +286,7 @@ provide('shared-graph', {
   allNodes, allEdges, visibleNodes, visibleEdges, roleName,
   showEdgeLabels, collapsedBoards,
   refreshLayout, layoutMode, toggleLayout,
+  masteredSkillNames,
 })
 
 /* ═══ useResizeObserver：监听图容器尺寸变化 → chart.resize() ═══ */

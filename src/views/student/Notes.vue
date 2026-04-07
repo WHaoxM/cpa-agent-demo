@@ -1,4 +1,4 @@
-﻿<!-- 页面：职涯笔记；路由：notes（notes）；角色：STUDENT -->
+﻿<!-- 页面：职涯笔记；路由：/app/notes（notes）；角色：STUDENT -->
 <script setup lang="ts">
 // @ts-nocheck
 import { ref, computed, onMounted } from 'vue'

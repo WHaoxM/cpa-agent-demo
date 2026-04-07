@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程错题集；路由：wrongbook（student-course-wrongbook）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程错题集；路由：wrongbook（student-course-wrongbook）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

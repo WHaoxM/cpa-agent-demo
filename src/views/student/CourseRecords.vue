@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程学习记录；路由：records（student-course-records）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程学习记录；路由：records（student-course-records）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

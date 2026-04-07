@@ -1,4 +1,4 @@
-﻿<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { forceSimulation, forceCenter, forceCollide, forceManyBody, forceX, forceY, type SimulationNodeDatum } from 'd3'
@@ -6,6 +6,8 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useResumeStore } from '@/stores/resume'
 import { useUserStore } from '@/stores'
+import { useLearningStore } from '@/stores/learning'
+import { useReportStore } from '@/stores/report'
 import {
   JOB_PORTRAITS, CAREER_PATH_EDGES,
   deriveStudentSevenDim, getGrowthPlan,
@@ -23,6 +25,36 @@ echarts.use([RadarChart, TooltipComponent, LegendComponent, SVGRenderer])
 const router = useRouter()
 const resumeStore = useResumeStore()
 const userStore = useUserStore()
+const learningStore = useLearningStore()
+const reportStore = useReportStore()
+
+const reportSaved = ref(false)
+
+/* 关注方向：targetRoles 优先，如果为空则 fallback 到 predictedRole 或默认 */
+const effectiveTargetRoles = computed<string[]>(() => {
+  if (learningStore.targetRoles.length > 0) return learningStore.targetRoles.map(r => r.role)
+  const predicted = resumeStore.insights?.predictedRole
+  if (predicted) return [predicted]
+  return ['前端开发']
+})
+
+function saveCareerReport() {
+  const today = new Date().toISOString().slice(0, 10)
+  const roles = effectiveTargetRoles.value
+  const topJob = selectedJob.value
+  reportStore.addRecord({
+    type: 'career',
+    title: `${today} · ${roles.join(' / ')}方向分析`,
+    snapshot: {
+      targetRoles: roles,
+      selectedJobId: selectedJobId.value,
+      selectedJobTitle: topJob?.title ?? '',
+      topMatchScore: topJob?.matchScore ?? 0,
+      studentDimSnapshot: studentDim.value,
+    },
+  })
+  reportSaved.value = true
+}
 
 /* ══ 界面状态 ══ */
 const activeMode = ref<'analysis' | 'report'>('analysis')
@@ -53,7 +85,7 @@ const LEVEL_ORDER: Record<JobLevel, number> = {
   intern: 0, junior: 1, mid: 2, senior: 3, lead: 4, expert: 5,
 }
 
-/* ══ 推荐岗位 ══ */
+/* ══ 推荐岗位：优先展示 targetRoles 对应岗位 ══ */
 const recommendedIds = computed<Set<string>>(() => {
   const matched = resumeStore.matchedCareers
   const roleToIds: Record<string, string[]> = {
@@ -64,12 +96,16 @@ const recommendedIds = computed<Set<string>>(() => {
     '机器学习工程师': ['ml-engineer', 'da-mid'],
   }
   const ids = new Set<string>()
-  if (!matched.length) {
+  // 少优先展示 targetRoles 关注方向的岗位
+  for (const role of effectiveTargetRoles.value) {
+    ;(roleToIds[role] ?? []).forEach(id => ids.add(id))
+  }
+  // 再补充 resumeStore 匹配到的其他岗位
+  for (const c of matched.slice(0, 3)) {
+    ;(roleToIds[c.role] ?? []).slice(0, 2).forEach(id => ids.add(id))
+  }
+  if (ids.size === 0) {
     ;['fe-mid', 'fe-junior', 'da-junior', 'qa-junior', 'fullstack'].forEach(id => ids.add(id))
-  } else {
-    for (const c of matched.slice(0, 3)) {
-      ;(roleToIds[c.role] ?? []).slice(0, 2).forEach(id => ids.add(id))
-    }
   }
   return ids
 })
@@ -688,6 +724,15 @@ onBeforeUnmount(() => {
         </button>
       </div>
       <div class="cr-header__right">
+        <button
+          class="cr-save-btn"
+          :disabled="reportSaved"
+          @click="saveCareerReport"
+          title="保存本次报告到我的报告"
+        >
+          <Icon :icon="reportSaved ? 'lucide:check' : 'lucide:save'" :width="12"/>
+          <span>{{ reportSaved ? '已保存' : '保存报告' }}</span>
+        </button>
         <span class="cr-username">{{ userStore.currentUser?.name ?? '同学' }}</span>
         <!-- 导出按钮（仅报告模式） -->
         <div v-if="activeMode === 'report'" class="cr-export-wrap">
@@ -1112,6 +1157,16 @@ onBeforeUnmount(() => {
   font-size: 11px; padding: 5px 12px; font-family: var(--font-ui);
   transition: background 200ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
+.cr-save-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 5px; font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  background: rgba(139,105,20,0.15); border: 1px solid rgba(196,150,30,0.4);
+  color: rgba(139,105,20,1);
+}
+.cr-save-btn:hover:not(:disabled) { background: rgba(139,105,20,0.3); }
+.cr-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .cr-export-btn:hover { background: color-mix(in srgb, var(--primary-100) 15%, var(--bg-200) 85%); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(139,37,0,0.12); }
 .cr-export-menu {
   position: absolute; top: 100%; right: 0; margin-top: 4px;

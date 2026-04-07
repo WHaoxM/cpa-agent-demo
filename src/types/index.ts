@@ -268,6 +268,22 @@ export interface SavedJob {
   requiredSkills: string[] // 岗位关键技能
   savedAt: string
   notes?: string           // 用户备注
+  role?: string            // 对应的 CareerRole 方向
+}
+
+// 从职业分析收藏的职业方向（与 savedJobs 的具体职位严格区分）
+export interface TargetRole {
+  role: string   // CareerRole 值，如 '前端开发'
+  savedAt: string
+}
+
+// 报告记录（存入 reportStore）
+export interface ReportRecord {
+  id: string
+  type: 'portrait' | 'career'
+  createdAt: string
+  title: string
+  snapshot: Record<string, unknown>
 }
 
 export interface AgentStep {

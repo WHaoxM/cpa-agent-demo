@@ -1,4 +1,4 @@
-﻿<!-- 页面：个人设置；路由：student/settings（student-settings）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：个人设置；路由：student/settings（student-settings）；角色：STUDENT -->
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'

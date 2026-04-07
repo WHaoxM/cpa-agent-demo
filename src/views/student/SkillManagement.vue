@@ -1,4 +1,4 @@
-<!-- 页面：技能管理；路由：student/skills（student-skills）；角色：STUDENT/TEACHER -->
+<!-- 页面：技能管理；路由：student/skills（student-skills）；角色：STUDENT -->
 <script setup lang="ts">
 // @ts-nocheck
 import { ref, computed, onMounted } from 'vue'

@@ -1,4 +1,4 @@
-<!-- 页面：工作台（图谱构建管线）；路由：student/career-ability；角色：STUDENT/TEACHER -->
+<!-- 组件：图谱构建工作台；由 CareerAbilityShell.vue 引入使用，非路由直接渲染；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'

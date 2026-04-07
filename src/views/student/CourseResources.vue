@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程资料；路由：resources（student-course-resources）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程资料；路由：resources（student-course-resources）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

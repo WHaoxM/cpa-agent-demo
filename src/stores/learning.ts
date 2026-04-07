@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Note, WrongQuestion, QuizRecord, Question, AIMessage, SavedJob } from '@/types'
+import type { Note, WrongQuestion, QuizRecord, Question, AIMessage, SavedJob, TargetRole } from '@/types'
 import {
   mockNotes,
   mockWrongQuestions,
@@ -59,7 +59,13 @@ export const useLearningStore = defineStore(
 
     // TODO: API — GET /api/saved-jobs?userId=xxx
     const savedJobs = ref<SavedJob[]>([...mockSavedJobs])
-    
+
+    // 职业分析中关注的职业方向（与 savedJobs 具体职位区分）
+    const targetRoles = ref<TargetRole[]>([])
+
+    // 蒱弱点记录页输出的高优先弱技能标签（供技能提升页读取）
+    const weakSkillTags = ref<string[]>([])
+
     // 可视化相关状态
     const learningHistory = ref<LearningRecord[]>([])
     const filters = ref<DataFilters>({
@@ -609,6 +615,20 @@ export const useLearningStore = defineStore(
       return savedJobs.value.some(j => j.id === jobId)
     }
 
+    // targetRoles actions
+    function toggleTargetRole(role: string): void {
+      const idx = targetRoles.value.findIndex(r => r.role === role)
+      if (idx === -1) {
+        targetRoles.value.push({ role, savedAt: new Date().toISOString().slice(0, 10) })
+      } else {
+        targetRoles.value.splice(idx, 1)
+      }
+    }
+
+    function isTargetRole(role: string): boolean {
+      return targetRoles.value.some(r => r.role === role)
+    }
+
     return {
       // 原有状态
       notes,
@@ -617,6 +637,8 @@ export const useLearningStore = defineStore(
       aiMessages,
       noteFavorites,
       savedJobs,
+      targetRoles,
+      weakSkillTags,
       
       // 可视化相关状态
       learningHistory,
@@ -658,6 +680,10 @@ export const useLearningStore = defineStore(
       removeSavedJob,
       isJobSaved,
 
+      // 职业方向 actions
+      toggleTargetRole,
+      isTargetRole,
+
       // 可视化相关actions
       addLearningRecord,
       updateLearningRecord,
@@ -674,7 +700,7 @@ export const useLearningStore = defineStore(
     persist: {
       key: 'learning-store',
       storage: localStorage,
-      pick: ['notes', 'wrongQuestions', 'quizRecords', 'aiMessages', 'noteFavorites', 'learningHistory'],
+      pick: ['notes', 'wrongQuestions', 'quizRecords', 'aiMessages', 'noteFavorites', 'learningHistory', 'targetRoles'],
     },
   },
 )

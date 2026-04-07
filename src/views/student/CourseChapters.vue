@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程章节；路由：chapters（student-course-chapters）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程章节；路由：chapters（student-course-chapters）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

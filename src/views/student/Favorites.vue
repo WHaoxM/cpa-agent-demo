@@ -5,10 +5,31 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { Delete, Sort } from '@element-plus/icons-vue'
 import { useLearningStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
 import type { SavedJob } from '@/types'
 
 const router = useRouter()
 const learningStore = useLearningStore()
+const resumeStore = useResumeStore()
+
+/* 动态计算匹配度：parsedSkills 与 requiredSkills 的交集占比 */
+function computeMatchScore(job: SavedJob): number {
+  if (!resumeStore.isParsed || !resumeStore.parsedSkills.length) return job.matchScore
+  const userSkills = new Set(resumeStore.parsedSkills.map(s => s.name.toLowerCase()))
+  const required = job.requiredSkills.map(s => s.toLowerCase())
+  if (!required.length) return job.matchScore
+  const matched = required.filter(s => userSkills.has(s)).length
+  return Math.round((matched / required.length) * 100)
+}
+
+function goToAnalysis(job: SavedJob) {
+  const role = job.role
+  if (role) {
+    router.push({ path: '/app/student/career-analysis', query: { role } })
+  } else {
+    router.push('/app/student/career-analysis')
+  }
+}
 
 // TODO: API — GET /api/saved-jobs?userId=xxx
 const savedJobs = computed(() => learningStore.savedJobs)
@@ -29,6 +50,8 @@ function removeJob(jobId: string) {
 function goToMatch() {
   router.push('/app/student/career-analysis')
 }
+
+const isParsed = computed(() => resumeStore.isParsed)
 
 function scoreColor(score: number) {
   if (score >= 80) return 'var(--color-primary)'
@@ -89,15 +112,20 @@ function scoreColor(score: number) {
 
         <!-- 右侧匹配度 -->
         <div class="job-right">
-          <div class="match-score" :style="{ color: scoreColor(job.matchScore) }">
-            <span class="score-num">{{ job.matchScore }}</span>
+          <div class="match-score" :style="{ color: scoreColor(computeMatchScore(job)) }">
+            <span class="score-num">{{ computeMatchScore(job) }}</span>
             <span class="score-unit">%</span>
           </div>
-          <div class="score-label">匹配度</div>
+          <div class="score-label">{{ isParsed ? '真实匹配度' : '参考匹配度' }}</div>
           <div class="score-bar">
-            <div class="score-fill" :style="{ width: job.matchScore + '%', background: scoreColor(job.matchScore) }"></div>
+            <div class="score-fill" :style="{ width: computeMatchScore(job) + '%', background: scoreColor(computeMatchScore(job)) }"></div>
           </div>
-          <div class="job-saved-at">收藏于 {{ job.savedAt }}</div>
+          <div v-if="!isParsed" class="score-tip">上传简历后获取真实匹配度</div>
+          <el-button
+            text
+            size="small"
+            @click="goToAnalysis(job)"
+          >查看市场</el-button>
           <el-button
             text
             type="danger"

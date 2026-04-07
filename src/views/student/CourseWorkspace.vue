@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程工作台；路由：student/course/:id（student-course-detail）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程工作台；路由：student/course/:id（student-course-detail）；角色：STUDENT -->
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

@@ -1,9 +1,10 @@
-<!-- 页面：职业分析 · 羊皮卷舆图；路由：student/career-analysis；角色：STUDENT/TEACHER -->
+<!-- 页面：职业分析 · 羊皮卷舆图；路由：student/career-analysis；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores'
+import { useLearningStore } from '@/stores/learning'
 import { gsap } from '@/plugins/gsap'
 import { useCareerInsights } from '@/composables/useCareerInsights'
 import VChart from 'vue-echarts'
@@ -144,6 +145,17 @@ const kpiDemandDetails = {
 /* ═══ 核心状态 ═══ */
 const router = useRouter()
 const userStore = useUserStore()
+const learningStore = useLearningStore()
+
+const isCurrentRoleFollowed = computed(() => learningStore.isTargetRole(targetRole.value))
+
+function toggleFollowRole() {
+  learningStore.toggleTargetRole(targetRole.value)
+}
+
+function goToNavigation() {
+  router.push('/app/student/career-navigation')
+}
 const pageRef = ref<HTMLElement | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
 const roleSearch = ref('前端开发')
@@ -1165,6 +1177,19 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
             </button>
             <p class="da-link-hint">基于当前搜索岗位，查看所需技能和学习路径</p>
           </div>
+
+          <!-- 关注此方向 -->
+          <div class="da-section">
+            <button
+              class="da-follow-btn"
+              :class="{ 'da-follow-btn--active': isCurrentRoleFollowed }"
+              @click="toggleFollowRole"
+            >
+              <Icon :icon="isCurrentRoleFollowed ? 'lucide:bookmark-check' : 'lucide:bookmark'" :width="14" />
+              <span>{{ isCurrentRoleFollowed ? '已关注 · 取消' : '关注此方向' }}</span>
+            </button>
+            <p class="da-link-hint">关注后可在职途导航中进行人岗匹配分析</p>
+          </div>
         </div>
 
         <!-- 未选中提示 -->
@@ -1175,6 +1200,22 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
         </div>
       </aside>
     </div>
+
+    <!-- 底部 CTA：已关注方向时出现 -->
+    <Transition name="cta-slide">
+      <div v-if="learningStore.targetRoles.length > 0" class="da-bottom-cta">
+        <span class="da-bottom-cta__text">
+          已关注
+          <strong>{{ learningStore.targetRoles.map(r => r.role).join(' / ') }}</strong>
+          ，去看看自己能否匹配
+        </span>
+        <button class="da-bottom-cta__btn" @click="goToNavigation">
+          <Icon icon="lucide:route" :width="14" />
+          前往职途导航
+          <Icon icon="lucide:arrow-right" :width="14" />
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 <style scoped>
@@ -1769,6 +1810,54 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   margin: 6px 0 0; font-size: 12px; color: var(--text-300);
   text-align: center; line-height: 1.5;
 }
+
+.da-follow-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px 0;
+  background: var(--bg-200); border: 1.5px solid var(--bg-300);
+  color: var(--text-200); font-family: inherit; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;
+  border-radius: var(--radius-sm);
+}
+.da-follow-btn:hover { border-color: var(--primary-100); color: var(--primary-100); }
+.da-follow-btn--active {
+  background: rgba(187,52,24,0.1);
+  border-color: var(--primary-100);
+  color: var(--primary-100);
+}
+
+/* 底部 CTA */
+.da-bottom-cta {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(26, 20, 16, 0.92);
+  backdrop-filter: blur(10px);
+  color: #f7f2e8;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 150, 30, 0.4);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  z-index: 200;
+  white-space: nowrap;
+}
+.da-bottom-cta__text { font-size: 13px; }
+.da-bottom-cta__text strong { color: #C4961E; }
+.da-bottom-cta__btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--primary-100, #BB3418); color: #fff;
+  border: none; border-radius: 999px;
+  padding: 0.4rem 1rem; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.da-bottom-cta__btn:hover { opacity: 0.88; }
+
+.cta-slide-enter-active, .cta-slide-leave-active { transition: all 0.3s ease; }
+.cta-slide-enter-from, .cta-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(1rem); }
 
 /* ═══ 响应式 ═══ */
 @media (max-width: 1199px) {

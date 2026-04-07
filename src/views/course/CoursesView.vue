@@ -1,4 +1,4 @@
-﻿<!-- 页面：技能课程库；路由：courses（courses）；角色：全部 -->
+﻿<!-- 页面：技能课程库；路由：courses 已重定向至 student/learning，此组件当前未被路由渲染；角色：全部 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 

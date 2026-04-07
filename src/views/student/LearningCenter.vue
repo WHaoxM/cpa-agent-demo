@@ -32,7 +32,9 @@ import {
 
 import { CanvasRenderer } from 'echarts/renderers'
 
-import { useUserStore, useCourseStore } from '@/stores'
+import { useUserStore, useCourseStore, useLearningStore } from '@/stores'
+import { useResumeStore } from '@/stores/resume'
+import { skillToCourseMap } from '@/mock/courseSkillMap'
 
 import type { Course } from '@/types'
 
@@ -70,8 +72,103 @@ const router = useRouter()
 const { pageRef } = usePageEntrance()
 
 const userStore = useUserStore()
-
 const courseStore = useCourseStore()
+const resumeStore = useResumeStore()
+const learningStore = useLearningStore()
+
+/* ═══ 三 Tab 导航 ═══ */
+type LcTab = 'recommend' | 'all' | 'mine'
+const activeTab = ref<LcTab>('recommend')
+
+/* ═══ 全部课程 Tab 数据 ═══ */
+const lcCategory = ref<string>('全部')
+const lcKeyword = ref<string>('')
+const lcPage = ref(1)
+const lcPageSize = 12
+
+const lcCourseCategories = ['全部', '专业技能', '通用素质', '实践能力']
+
+const lcFilteredCourses = computed(() => {
+  const k = lcKeyword.value.trim().toLowerCase()
+  return courseStore.courses.filter(c => {
+    const catOk = lcCategory.value === '全部' || (c.skillTags ?? []).join('').includes(lcCategory.value) || c.categoryId === lcCategory.value
+    const kOk = !k || c.title.toLowerCase().includes(k) || c.description.toLowerCase().includes(k)
+    return catOk && kOk
+  })
+})
+
+const lcPagedCourses = computed(() => {
+  const start = (lcPage.value - 1) * lcPageSize
+  return lcFilteredCourses.value.slice(start, start + lcPageSize)
+})
+
+/* ═══ 我的课程 Tab 数据 ═══ */
+const myCourses = computed(() => {
+  const progressList = courseStore.progress as unknown as Array<{ courseId: string; progress: number }>
+  const progressMap = new Map<string, number>()
+  for (const p of progressList) {
+    const cur = progressMap.get(p.courseId) ?? 0
+    progressMap.set(p.courseId, Math.max(cur, p.progress ?? 0))
+  }
+  return courseStore.courses
+    .filter(c => progressMap.has(c.id))
+    .map(c => ({ ...c, maxProgress: progressMap.get(c.id) ?? 0 }))
+    .sort((a, b) => (b.maxProgress === 100 ? -1 : 1) - (a.maxProgress === 100 ? -1 : 1))
+})
+
+/* 技能差距驱动的课程推荐 */
+const gapBasedRecommendations = computed(() => {
+  const courses = courseStore.courses
+  const weakTags = learningStore.weakSkillTags
+  const skillNodes = resumeStore.isParsed
+    ? resumeStore.insights?.skillGraph?.nodes ?? []
+    : []
+
+  // 找出热度高且用户未掌握的技能节点
+  const userSkillNames = new Set(resumeStore.parsedSkills.map(s => s.name.toLowerCase()))
+  const gapNodes = skillNodes
+    .filter(n => n.heat >= 70 && !userSkillNames.has(n.name.toLowerCase()))
+    .sort((a, b) => b.heat - a.heat)
+    .slice(0, 6)
+
+  const result: { skillName: string; heat: number; courses: typeof courses; isWeak: boolean }[] = []
+
+  for (const node of gapNodes) {
+    const courseIds = skillToCourseMap[node.id] ?? []
+    const matchedCourses = courses.filter(c => courseIds.includes(c.id))
+    if (matchedCourses.length) {
+      result.push({
+        skillName: node.name,
+        heat: node.heat,
+        courses: matchedCourses,
+        isWeak: weakTags.some(t => t.toLowerCase().includes(node.name.toLowerCase())),
+      })
+    }
+  }
+
+  // 如果没有第 - 返回全量课程
+  if (!result.length) {
+    return courses.slice(0, 3).map(c => ({ skillName: c.title, heat: 70, courses: [c], isWeak: false }))
+  }
+  return result
+})
+
+const overallCoverage = computed(() => {
+  const skillNodes = resumeStore.insights?.skillGraph?.nodes ?? []
+  if (!skillNodes.length) return 0
+  const progressList = courseStore.progress as unknown as Array<{ courseId: string; progress: number }>
+  const completedCourseIds = new Set(
+    progressList.filter(p => p.progress >= 100).map(p => p.courseId)
+  )
+  const coveredNodeIds = new Set<string>()
+  for (const [courseId, skillIds] of Object.entries(skillToCourseMap)) {
+    if (completedCourseIds.has(courseId)) {
+      skillIds.forEach(s => coveredNodeIds.add(s))
+    }
+  }
+  const covered = skillNodes.filter((n: { id: string }) => coveredNodeIds.has(n.id)).length
+  return Math.round((covered / skillNodes.length) * 100)
+})
 
 const { palette: themePalette } = useThemePalette()
 
@@ -1019,6 +1116,80 @@ function formatDuration(minutes: number): string {
 
   <div ref="pageRef" class="learning-center page page--compact">
 
+    <!-- ── Tab 导航栏 ── -->
+    <nav class="lc-tabs">
+      <button
+        v-for="tab in ([
+          { key: 'recommend', label: '推荐路径', icon: 'lucide:trending-up' },
+          { key: 'all',       label: '全部课程', icon: 'lucide:layout-grid' },
+          { key: 'mine',      label: '我的课程', icon: 'lucide:book-open' },
+        ] as const)"
+        :key="tab.key"
+        class="lc-tabs__item"
+        :class="{ 'lc-tabs__item--active': activeTab === tab.key }"
+        @click="activeTab = tab.key"
+      >
+        <Icon :icon="tab.icon" :width="13" />
+        {{ tab.label }}
+      </button>
+    </nav>
+
+    <!-- ── Tab 1：推荐路径 ── -->
+    <div v-show="activeTab === 'recommend'">
+
+    <!-- 技能差距推荐课程区块 -->
+    <section class="lc-rec-section">
+      <div class="lc-rec-header">
+        <div class="lc-rec-title">
+          <Icon icon="lucide:trending-up" :width="14" />
+          推荐学习路径
+        </div>
+        <div class="lc-rec-meta" v-if="resumeStore.isParsed">
+          目标方向：{{ resumeStore.insights?.predictedRole ?? '未知' }}
+          &nbsp;·&nbsp;
+          技能覆盖率：{{ overallCoverage }}%
+          &nbsp;
+          <button class="lc-link" @click="router.push('/app/student/career-analysis')">进入职业分析 →</button>
+        </div>
+        <div class="lc-rec-meta" v-else>
+          <span class="lc-muted">上传简历后获取个性化推荐</span>
+          &nbsp;
+          <button class="lc-link" @click="router.push('/app/student/career-navigation')">路径一：自评技能</button>
+        </div>
+      </div>
+
+      <div class="lc-rec-list">
+        <div v-for="rec in gapBasedRecommendations" :key="rec.skillName" class="lc-rec-card">
+          <div class="lc-rec-card__head">
+            <span class="lc-rec-skill">{{ rec.skillName }}</span>
+            <span v-if="rec.isWeak" class="lc-rec-weak-tag">⚠️ 薄弱点</span>
+            <span class="lc-rec-heat">热度 {{ rec.heat }}</span>
+          </div>
+          <div class="lc-rec-courses">
+            <button
+              v-for="c in rec.courses.slice(0,2)"
+              :key="c.id"
+              class="lc-rec-course-btn"
+              @click="router.push(`/app/student/course/${c.id}`)"
+            >
+              {{ c.title }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lc-rec-footer">
+        <button class="lc-footer-link" @click="router.push({ name: 'career-ability', query: { role: targetRole } })">
+          <Icon icon="lucide:cpu" :width="12" />
+          查看完整职业能力图谱
+        </button>
+        <button class="lc-footer-link" @click="router.push({ name: 'course-system' })">
+          <Icon icon="lucide:network" :width="12" />
+          查看课程体系图谱
+        </button>
+      </div>
+    </section>
+
     <section class="career">
 
       <div class="career-head card-base">
@@ -1302,10 +1473,259 @@ function formatDuration(minutes: number): string {
         <button class="btn-text" @click="searchQuery = ''; selectedCategory = ''">清除筛选</button>
       </div>
     </section>
+
+    </div><!-- /Tab1 推荐路径 end -->
+
+    <!-- ── Tab 2：全部课程 ── -->
+    <div v-show="activeTab === 'all'" class="lc-all-courses">
+      <div class="lc-all-toolbar">
+        <div class="lc-all-cats">
+          <button
+            v-for="cat in lcCourseCategories" :key="cat"
+            class="lc-cat-btn"
+            :class="{ 'lc-cat-btn--active': lcCategory === cat }"
+            @click="lcCategory = cat; lcPage = 1"
+          >{{ cat }}</button>
+        </div>
+        <el-input
+          v-model="lcKeyword"
+          placeholder="搜索课程名称"
+          clearable
+          size="small"
+          style="width: 200px"
+          @input="lcPage = 1"
+        />
+        <span class="lc-all-count">共 {{ lcFilteredCourses.length }} 门</span>
+      </div>
+
+      <div class="lc-all-grid">
+        <div
+          v-for="c in lcPagedCourses" :key="c.id"
+          class="lc-course-card card-base is-interactive"
+          @click="router.push(`/app/student/course/${c.id}`)"
+        >
+          <div class="lc-course-card__top">
+            <span class="lc-course-card__title">{{ c.title }}</span>
+            <el-tag size="small" effect="plain" style="flex-shrink:0">{{ c.categoryId }}</el-tag>
+          </div>
+          <p class="lc-course-card__desc">{{ c.description }}</p>
+          <div class="lc-course-card__meta">
+            <span>{{ c.teacherName }}</span>
+            <span class="lc-dot">·</span>
+            <span>{{ c.chapters?.length ?? 0 }} 章</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="lcFilteredCourses.length === 0" class="lc-empty">
+        <Icon icon="lucide:inbox" :width="28" />
+        <p>暂无课程，换个关键词试试</p>
+      </div>
+
+      <el-pagination
+        v-if="lcFilteredCourses.length > lcPageSize"
+        v-model:current-page="lcPage"
+        :page-size="lcPageSize"
+        :total="lcFilteredCourses.length"
+        layout="prev, pager, next"
+        background
+        style="margin-top: 12px; justify-content: flex-end; display: flex"
+      />
+    </div>
+
+    <!-- ── Tab 3：我的课程 ── -->
+    <div v-show="activeTab === 'mine'" class="lc-mine-courses">
+      <div v-if="myCourses.length === 0" class="lc-empty">
+        <Icon icon="lucide:book-open" :width="28" />
+        <p>还没有报名课程，去<button class="lc-link" @click="activeTab = 'all'">全部课程</button>开始学习</p>
+      </div>
+      <div v-else class="lc-mine-list">
+        <div
+          v-for="c in myCourses" :key="c.id"
+          class="lc-mine-item card-base"
+          @click="router.push(`/app/student/course/${c.id}`)"
+        >
+          <div class="lc-mine-item__info">
+            <span class="lc-mine-item__title">{{ c.title }}</span>
+            <span class="lc-mine-item__teacher">{{ c.teacherName }}</span>
+          </div>
+          <div class="lc-mine-item__progress">
+            <div class="lc-mine-progress-bar">
+              <div
+                class="lc-mine-progress-fill"
+                :style="{ width: c.maxProgress + '%', background: c.maxProgress >= 100 ? 'var(--bamboo-green, #4A6741)' : 'var(--color-primary)' }"
+              />
+            </div>
+            <span class="lc-mine-pct" :style="{ color: c.maxProgress >= 100 ? 'var(--bamboo-green, #4A6741)' : 'var(--color-text-muted)' }">
+              {{ c.maxProgress >= 100 ? '已完成' : c.maxProgress + '%' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
+/* ── Tab 导航栏 ── */
+.lc-tabs {
+  display: flex; gap: 2px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 14px;
+  background: var(--color-surface);
+  padding: 0;
+}
+.lc-tabs__item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px;
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: all var(--transition-fast);
+}
+.lc-tabs__item:hover { color: var(--color-text); }
+.lc-tabs__item--active {
+  color: var(--color-primary); font-weight: 600;
+  border-bottom-color: var(--color-primary);
+}
+
+/* ── 全部课程 Tab ── */
+.lc-all-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.lc-all-cats { display: flex; gap: 6px; flex-wrap: wrap; }
+.lc-cat-btn {
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: none; cursor: pointer; font-size: 12px;
+  color: var(--color-text-muted); transition: all var(--transition-fast);
+}
+.lc-cat-btn:hover, .lc-cat-btn--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.lc-all-count { font-size: 12px; color: var(--color-text-subtle); margin-left: auto; }
+
+.lc-all-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.lc-course-card {
+  padding: 14px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lc-course-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.lc-course-card__title { font-size: 13px; font-weight: 600; color: var(--color-text); line-height: 1.3; }
+.lc-course-card__desc { font-size: 11px; color: var(--color-text-muted); line-height: 1.5; margin: 0; }
+.lc-course-card__meta { font-size: 11px; color: var(--color-text-subtle); display: flex; gap: 4px; }
+.lc-dot { opacity: 0.5; }
+
+/* ── 我的课程 Tab ── */
+.lc-mine-list { display: flex; flex-direction: column; gap: 8px; }
+.lc-mine-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 14px; cursor: pointer;
+}
+.lc-mine-item__info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.lc-mine-item__title { font-size: 13px; font-weight: 500; color: var(--color-text); }
+.lc-mine-item__teacher { font-size: 11px; color: var(--color-text-subtle); }
+.lc-mine-item__progress { display: flex; align-items: center; gap: 8px; width: 180px; flex-shrink: 0; }
+.lc-mine-progress-bar { flex: 1; height: 4px; background: var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+.lc-mine-progress-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.4s ease; }
+.lc-mine-pct { font-size: 11px; font-weight: 500; width: 44px; text-align: right; white-space: nowrap; }
+
+/* ── 共用空状态 ── */
+.lc-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 40px 20px;
+  color: var(--color-text-subtle); font-size: 13px; text-align: center;
+}
+.lc-empty .lc-link { background: none; border: none; color: var(--color-secondary); cursor: pointer; text-decoration: underline; }
+
+/* ── 推荐学习路径区块 ── */
+.lc-rec-section {
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  padding: 14px 16px;
+}
+.lc-rec-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.lc-rec-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary, #1a202c);
+}
+.lc-rec-meta {
+  font-size: 11px; color: var(--text-secondary, #718096);
+  margin-left: auto;
+}
+.lc-muted { color: var(--text-muted, #a0aec0); }
+.lc-link {
+  background: none; border: none; cursor: pointer;
+  color: var(--color-primary, #4f46e5); font-size: 11px;
+  text-decoration: underline; padding: 0;
+}
+.lc-rec-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.lc-rec-card {
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 8px; padding: 10px 12px;
+  background: var(--bg-secondary, #f7fafc);
+}
+.lc-rec-card__head {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.lc-rec-skill {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-primary, #1a202c);
+}
+.lc-rec-weak-tag {
+  font-size: 10px; background: rgba(245,158,11,0.15);
+  color: #d97706; border-radius: 4px; padding: 1px 5px;
+}
+.lc-rec-heat {
+  margin-left: auto; font-size: 10px;
+  color: var(--text-muted, #a0aec0);
+}
+.lc-rec-courses { display: flex; flex-direction: column; gap: 5px; }
+.lc-rec-course-btn {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--card-border, #e2e8f0);
+  border-radius: 5px; padding: 4px 8px;
+  font-size: 11px; cursor: pointer; text-align: left;
+  color: var(--text-primary, #1a202c); transition: background 0.15s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lc-rec-course-btn:hover { background: var(--color-primary-light, #ede9fe); }
+.lc-rec-footer {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--card-border, #e2e8f0);
+}
+.lc-footer-link {
+  display: flex; align-items: center; gap: 5px;
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; color: var(--text-secondary, #718096);
+  padding: 0;
+}
+.lc-footer-link:hover { color: var(--color-primary, #4f46e5); }
+
 .learning-center {
   padding-bottom: 40px;
 }

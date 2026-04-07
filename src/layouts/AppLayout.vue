@@ -7,7 +7,7 @@ import { Icon } from '@iconify/vue'
 import { ICONS } from '@/constants/icons'
 import { useUserStore, useThemeStore } from '@/stores'
 import { UserRole } from '@/types'
-import BookSpine from '@/components/book/BookSpine.vue'
+import CloudTabNav from '@/components/book/CloudTabNav.vue'
 import BookPage from '@/components/book/BookPage.vue'
 import { gsap } from '@/plugins/gsap'
 
@@ -17,23 +17,16 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 
 const isMobile = ref(false)
-const sidebarCollapsed = ref(false)
 const drawerOpen = ref(false)
 
 function calcIsMobile() {
   isMobile.value = window.matchMedia('(max-width: 767px)').matches
-  if (isMobile.value) {
-    sidebarCollapsed.value = true
-  }
 }
 
 watch(
   () => route.fullPath,
   () => {
     drawerOpen.value = false
-    if (isImmersiveRoute.value) {
-      sidebarCollapsed.value = true
-    }
   },
 )
 
@@ -45,7 +38,29 @@ const activeMenu = computed(() => {
   return route.path
 })
 
+const activeTabKey = computed({
+  get: () => route.path,
+  set: (val: string) => {
+    if (val && val !== route.path) {
+      router.push(val)
+    }
+  },
+})
+
 const isImmersiveRoute = computed(() => Boolean(route.meta.immersive))
+
+const hiddenBookHeaderRoutes = new Set([
+  '/app/dashboard',
+  '/app/exams',
+  '/app/student/favorites',
+  '/app/student/learning',
+  '/app/student/wrongquestions',
+  '/app/student/my-reports',
+  '/app/student/ai-assistant',
+  '/app/student/settings',
+])
+
+const hideBookHeader = computed(() => hiddenBookHeaderRoutes.has(route.path))
 
 const breadcrumbs = computed(() => {
   const items = route.matched
@@ -58,32 +73,28 @@ const breadcrumbs = computed(() => {
   return items
 })
 
-// 学生菜单（按 AI 职业规划闭环分层排列）
+// 学生菜单（按职业规划主路径顺序排列）
 const studentMenus = [
-  // ── 核心入口 ──
-  { index: '/app/student/career', icon: ICONS.compass, title: '职业发展中心' },
-  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
-  // ── 输入层 ──
-  { index: '/app/student/skills', icon: ICONS.layers, title: '技能档案' },
-  { index: '/app/exams', icon: ICONS.checkSquare, title: '技能自测' },
-  // ── 分析层 ──
-  { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
+  { index: '/app/dashboard', icon: ICONS.home, title: '首页' },
+  // ── 职业探索 ──
   { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
-  // ── 规划层 ──
-  { index: '/app/courses', icon: ICONS.bookOpen, title: '技能课程库' },
-  // ── 执行/追踪 ──
+  { index: '/app/exams', icon: ICONS.checkSquare, title: '技能自评' },
+  { index: '/app/student/favorites', icon: ICONS.bookmark, title: '心仪岗位' },
+  // ── 能力匹配 ──
+  { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
+  // ── 学习执行 ──
   { index: '/app/student/learning', icon: ICONS.trendingUp, title: '技能提升' },
   { index: '/app/student/wrongquestions', icon: ICONS.closeCircle, title: '薄弱点记录' },
-  { index: '/app/notes', icon: ICONS.fileText, title: '职涯笔记' },
-  { index: '/app/student/favorites', icon: ICONS.bookmark, title: '心仪岗位' },
-  { index: '/app/student/report', icon: ICONS.activity, title: '能力成长' },
-  // ── 社区/设置 ──
-  { index: '/app/student/discuss', icon: ICONS.messageSquare, title: '职业探讨' },
+  // ── 成果追踪 ──
+  { index: '/app/student/my-reports', icon: ICONS.fileText, title: '我的报告' },
+  // ── 工具 ──
+  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
   { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
 ]
 
 // 管理员菜单
 const adminMenus = [
+  { index: '/app/dashboard', icon: ICONS.home, title: '首页' },
   { index: '/app/admin/job-dataset', icon: ICONS.database, title: '岗位数据集' },
   { index: '/app/admin/knowledge-base', icon: ICONS.bookOpen, title: '知识库维护' },
 ]
@@ -122,11 +133,7 @@ void quickStats
 void 0 /* theme switcher removed — single classical theme */
 
 function toggleCollapse() {
-  if (isMobile.value) {
-    drawerOpen.value = true
-    return
-  }
-  sidebarCollapsed.value = !sidebarCollapsed.value
+  drawerOpen.value = true
 }
 
 async function onLogout() {
@@ -156,18 +163,12 @@ function switchRole(role: UserRole) {
   router.push('/app/dashboard')
 }
 
-/* ===== 书脊菜单数据 ===== */
-const spineMenus = computed(() => {
+const cloudTabs = computed(() => {
   return currentMenus.value.map(m => ({
-    index: m.index,
-    icon: m.icon,
-    title: m.title,
+    key: m.index,
+    label: m.title,
   }))
 })
-
-function onSpineSelect(index: string) {
-  router.push(index)
-}
 
 /* ===== 书页章节名 ===== */
 const currentChapter = computed(() => {
@@ -202,10 +203,6 @@ onMounted(() => {
   window.addEventListener('resize', calcIsMobile)
   prefersReduced.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  if (isImmersiveRoute.value) {
-    sidebarCollapsed.value = true
-  }
-
   if (shellRef.value && !prefersReduced.value) {
     gsapCtx = gsap.context(() => {
       gsap.from('.book-main-area', {
@@ -225,27 +222,73 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="shellRef" class="book-shell" :class="{ 'book-shell--immersive': isImmersiveRoute }">
-    <!-- ===== 桌面端：书脊 + 书页 ===== -->
-    <BookSpine
-      v-if="!isMobile && !isImmersiveRoute"
-      :menus="spineMenus"
-      :active-index="activeMenu"
-      :collapsed="sidebarCollapsed"
-      @toggle="toggleCollapse"
-      @select="onSpineSelect"
-    />
+    <div v-if="!isImmersiveRoute" class="top-row">
+      <CloudTabNav
+        class="top-row__nav"
+        v-model="activeTabKey"
+        :tabs="cloudTabs"
+      />
+
+      <div class="top-row__user">
+        <button class="top-row__icon-btn" @click="router.push('/app/messages')" title="消息">
+          <Icon :icon="ICONS.inbox" />
+        </button>
+
+        <el-popover
+          placement="bottom-end"
+          width="280"
+          :trigger="isMobile ? 'click' : 'hover'"
+          :show-after="isMobile ? 0 : 120"
+          :hide-after="isMobile ? 0 : 120"
+          popper-class="user-popover"
+        >
+          <template #reference>
+            <div class="top-row__user-card">
+              <el-avatar :size="30" :src="userStore.currentUser?.avatar" class="top-row__avatar" />
+              <div class="top-row__user-text">
+                <div class="top-row__user-name">{{ userStore.currentUser?.name }}</div>
+                <div class="top-row__user-role">{{ userRole === 'student' ? '学生' : '管理员' }}</div>
+              </div>
+            </div>
+          </template>
+
+          <div class="user-pop">
+            <div class="user-pop__info">
+              <el-avatar :size="50" :src="userStore.currentUser?.avatar" />
+              <div class="user-pop__name">{{ userStore.currentUser?.name }}</div>
+              <div class="user-pop__role">{{ userRole === 'student' ? '学生用户' : '系统管理员' }}</div>
+            </div>
+            <el-divider />
+            <div class="user-pop__section">
+              <div class="user-pop__section-title">切换角色</div>
+              <div class="user-pop__role-list">
+                <button class="user-pop__role-item" :class="{ active: userRole === UserRole.STUDENT }" @click="switchRole(UserRole.STUDENT)">
+                  <Icon :icon="ICONS.graduationCap" /> 学生
+                </button>
+                <button class="user-pop__role-item" :class="{ active: userRole === UserRole.ADMIN }" @click="switchRole(UserRole.ADMIN)">
+                  <Icon :icon="ICONS.shield" /> 管理员
+                </button>
+              </div>
+            </div>
+            <el-divider />
+            <div class="user-pop__actions">
+              <button class="user-pop__btn" @click="router.push('/app/profile')">
+                <Icon :icon="ICONS.user" /> 个人中心
+              </button>
+              <button class="user-pop__btn" @click="onLogout">
+                <Icon :icon="ICONS.logOut" /> 退出登录
+              </button>
+            </div>
+          </div>
+        </el-popover>
+      </div>
+    </div>
 
     <!-- ===== 书页主区域 ===== -->
-    <div class="book-main-area" :class="{ 'book-main-area--full': isMobile || isImmersiveRoute, 'book-main-area--immersive': isImmersiveRoute }">
-      <!-- 装订线阴影 -->
-      <div v-if="!isMobile && !isImmersiveRoute" class="book-binding-line"></div>
-
+    <div class="book-main-area" :class="{ 'book-main-area--immersive': isImmersiveRoute }">
       <!-- 页眉栏 -->
-      <header v-if="!isImmersiveRoute" class="book-header">
+      <header v-if="!isImmersiveRoute && !hideBookHeader" class="book-header">
         <div class="book-header__left">
-          <button v-if="isMobile" class="book-header__menu-btn" @click="toggleCollapse">
-            <Icon icon="lucide:menu" />
-          </button>
           <div class="book-header__chapter">
             <span class="book-header__ornament">◆</span>
             <span class="book-header__breadcrumb">
@@ -256,60 +299,6 @@ onBeforeUnmount(() => {
             </span>
             <span class="book-header__ornament">◆</span>
           </div>
-        </div>
-
-        <div class="book-header__right">
-          <button class="book-header__icon-btn" @click="router.push('/app/messages')" title="消息">
-            <Icon :icon="ICONS.inbox" />
-          </button>
-
-          <el-popover
-            placement="bottom-end"
-            width="280"
-            :trigger="isMobile ? 'click' : 'hover'"
-            :show-after="isMobile ? 0 : 120"
-            :hide-after="isMobile ? 0 : 120"
-            popper-class="user-popover"
-          >
-            <template #reference>
-              <div class="book-header__user">
-                <el-avatar :size="30" :src="userStore.currentUser?.avatar" class="book-header__avatar" />
-                <div class="book-header__user-text">
-                  <div class="book-header__user-name">{{ userStore.currentUser?.name }}</div>
-                  <div class="book-header__user-role">{{ userRole === 'student' ? '学生' : '管理员' }}</div>
-                </div>
-              </div>
-            </template>
-
-            <div class="user-pop">
-              <div class="user-pop__info">
-                <el-avatar :size="50" :src="userStore.currentUser?.avatar" />
-                <div class="user-pop__name">{{ userStore.currentUser?.name }}</div>
-                <div class="user-pop__role">{{ userRole === 'student' ? '学生用户' : '系统管理员' }}</div>
-              </div>
-              <el-divider />
-              <div class="user-pop__section">
-                <div class="user-pop__section-title">切换角色</div>
-                <div class="user-pop__role-list">
-                  <button class="user-pop__role-item" :class="{ active: userRole === UserRole.STUDENT }" @click="switchRole(UserRole.STUDENT)">
-                    <Icon :icon="ICONS.graduationCap" /> 学生
-                  </button>
-                  <button class="user-pop__role-item" :class="{ active: userRole === UserRole.ADMIN }" @click="switchRole(UserRole.ADMIN)">
-                    <Icon :icon="ICONS.shield" /> 管理员
-                  </button>
-                </div>
-              </div>
-              <el-divider />
-              <div class="user-pop__actions">
-                <button class="user-pop__btn" @click="router.push('/app/profile')">
-                  <Icon :icon="ICONS.user" /> 个人中心
-                </button>
-                <button class="user-pop__btn" @click="onLogout">
-                  <Icon :icon="ICONS.logOut" /> 退出登录
-                </button>
-              </div>
-            </div>
-          </el-popover>
         </div>
       </header>
 
@@ -376,14 +365,85 @@ onBeforeUnmount(() => {
 /* ═══ 古籍册页布局 ═══ */
 .book-shell {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   background: var(--bg-100);
   overflow: hidden;
   position: relative;
 }
 
-.book-shell--immersive {
-  background: var(--bg-200);
+.top-row {
+  height: 46px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+  overflow: visible;
+  background: #1a2f4a;
+}
+
+.top-row__nav {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: min(80vw, 1080px);
+  margin-right: auto;
+}
+
+.top-row__user {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-left: 1px solid rgba(201, 162, 39, 0.20);
+  background: rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.top-row__icon-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  color: rgba(225, 215, 195, 0.85);
+}
+
+.top-row__icon-btn:hover {
+  color: var(--gold-300, #e0c060);
+}
+
+.top-row__user-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.top-row__avatar :deep(.el-avatar) {
+  border-radius: 0;
+}
+
+.top-row__user-text {
+  display: none;
+}
+
+.top-row__user-name {
+  font-family: var(--font-title);
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(235, 225, 200, 0.9);
+}
+
+.top-row__user-role {
+  font-size: 11px;
+  color: rgba(200, 188, 165, 0.75);
 }
 
 /* 宣纸纹理叠加 */
@@ -404,56 +464,21 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100vh;
+  min-height: 0;
   position: relative;
   z-index: 1;
-}
-
-.book-main-area--full {
-  width: 100%;
 }
 
 .book-main-area--immersive {
   background: var(--bg-200);
 }
 
-/* 装订线 */
-.book-binding-line {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--book-binding-width, 3px);
-  z-index: 5;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    color-mix(in srgb, var(--primary-100) 30%, transparent 70%) 5%,
-    color-mix(in srgb, var(--primary-100) 50%, transparent 50%) 50%,
-    color-mix(in srgb, var(--primary-100) 30%, transparent 70%) 95%,
-    transparent 100%
-  );
-  pointer-events: none;
-}
-
-.book-binding-line::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 3px;
-  bottom: 0;
-  width: 12px;
-  background: linear-gradient(to right, rgba(26, 20, 16, 0.05), transparent);
-  pointer-events: none;
-}
-
 /* ═══ 页眉栏 ═══ */
 .book-header {
-  height: 50px;
+  height: 40px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 20px 0 24px;
+  padding: 0 18px;
   border-bottom: 1px solid color-mix(in srgb, var(--bg-300) 60%, transparent 40%);
   background: color-mix(in srgb, var(--bg-100) 95%, var(--bg-200) 5%);
   flex-shrink: 0;
@@ -464,20 +489,7 @@ onBeforeUnmount(() => {
 .book-header__left {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
-}
-
-.book-header__menu-btn {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--bg-300);
-  background: transparent;
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--text-200);
 }
 
 .book-header__chapter {
@@ -512,63 +524,6 @@ onBeforeUnmount(() => {
   margin: 0 2px;
 }
 
-.book-header__right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.book-header__icon-btn {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 17px;
-  color: var(--text-200);
-  transition: color 0.2s ease;
-}
-
-.book-header__icon-btn:hover {
-  color: var(--primary-100);
-}
-
-.book-header__user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 60%, transparent 40%);
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.book-header__user:hover {
-  border-color: var(--primary-200);
-}
-
-.book-header__avatar :deep(.el-avatar) {
-  border-radius: 0;
-}
-
-.book-header__user-text {
-  display: none;
-}
-
-.book-header__user-name {
-  font-family: var(--font-title);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.book-header__user-role {
-  font-size: 11px;
-  color: var(--text-300);
-}
-
 /* ═══ 书页内容区 ═══ */
 .book-content {
   flex: 1;
@@ -586,7 +541,7 @@ onBeforeUnmount(() => {
 
 .page-turn-perspective {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
 }
 
 /* 路由切换过渡 */
@@ -811,21 +766,80 @@ onBeforeUnmount(() => {
 
 /* ═══ 响应式 ═══ */
 @media (min-width: 1024px) {
+  .top-row__user-text {
+    display: block;
+  }
+
   .book-content :deep(.book-page__body) {
     padding: 18px 24px;
-  }
-  .book-header__user-text {
-    display: block;
   }
 }
 
 @media (max-width: 767px) {
+  .top-row {
+    min-height: 64px;
+  }
+
+  .top-row__user {
+    margin-left: auto;
+    height: 40px;
+    padding: 0 6px;
+    gap: 6px;
+    margin-top: 20px;
+  }
+
   .book-header {
     padding: 0 12px;
-    height: 46px;
+    height: 36px;
   }
   .book-content :deep(.book-page__body) {
     padding: 12px 14px;
+  }
+}
+
+/* ═══ 打印覆盖：解除父容器高度/溢出裁剪，让子页面完整输出 ═══ */
+@media print {
+  .book-shell {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .book-shell::before { display: none !important; }
+  .top-row,
+  .book-header { display: none !important; }
+  .book-main-area {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .book-content {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .book-content :deep(.book-page),
+  .book-content :deep(.book-page__body),
+  .book-content :deep(.book-page__spine),
+  .book-content :deep(.book-page__footer) {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .page-turn-perspective {
+    display: block !important;
+    height: auto !important;
+  }
+  .immersive-stage {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 }
 </style>

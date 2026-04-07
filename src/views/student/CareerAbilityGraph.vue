@@ -1,4 +1,4 @@
-<!-- 页面：职业能力图谱（子路由 overlay）；路由：student/career-ability/graph；角色：STUDENT/TEACHER -->
+<!-- 组件：职业能力图谱工具栏叠加层；由 CareerAbilityShell.vue 引入使用，非路由直接渲染；角色：STUDENT -->
 <script setup lang="ts">
 import { inject } from 'vue'
 import { Icon } from '@iconify/vue'

@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .book-page {
   position: relative;
-  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding: 0;

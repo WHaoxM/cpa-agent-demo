@@ -1,39 +1,21 @@
 ﻿<!-- 页面：职途导航 · 简历导入；路由：student/career-navigation；角色：STUDENT/TEACHER -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
 import { useUserStore } from '@/stores'
 import { useResumeStore } from '@/stores/resume'
+import { useLearningStore } from '@/stores/learning'
 import { getCareerInsightsMock, roleOptions } from '@/composables/useCareerInsights'
 import type { CareerRole } from '@/composables/useCareerInsights'
-import { callAgentPortrait } from '@/composables/useAgentPortrait'
-import type { AgentPortraitResult } from '@/composables/useAgentPortrait'
-import * as echarts from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { TooltipComponent, LegendComponent } from 'echarts/components'
-import { SVGRenderer } from 'echarts/renderers'
-echarts.use([RadarChart, TooltipComponent, LegendComponent, SVGRenderer])
 
 const router = useRouter()
 const userStore = useUserStore()
 const resumeStore = useResumeStore()
+const learningStore = useLearningStore()
 
-/* ═══ 主题色（与 CareerAnalysis 统一） ═══ */
-const C = {
-  bg: '#F7F2E8',
-  panel: '#EDE5D6',
-  panelBorder: '#D4C9B5',
-  zhusha: '#8B2500',
-  gold: '#8B6914',
-  textPrimary: '#1A1410',
-  textSecondary: '#6B5D4F',
-  textMuted: '#9C8B78',
-}
-void C
-
-type ParsePhase = 'idle' | 'parsing' | 'done' | 'portrait'
+type ParsePhase = 'idle' | 'parsing' | 'done'
 
 const pageRef = ref<HTMLElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -45,40 +27,6 @@ const parseProgress = ref(0)
 const parseMsg = ref('')
 const selectedDirection = ref<CareerRole | ''>('')
 
-/* ═══ 能力画像状态 ═══ */
-const portraitData = ref<AgentPortraitResult | null>(null)
-const portraitAgentLoading = ref(false)
-const radarEl = ref<HTMLDivElement | null>(null)
-let radarChart: echarts.ECharts | null = null
-const displaySummary = ref('')
-const summaryDone = ref(false)
-let typingTimer: ReturnType<typeof setInterval> | null = null
-
-function startTyping(fullText: string) {
-  displaySummary.value = ''
-  summaryDone.value = false
-  let idx = 0
-  typingTimer = setInterval(() => {
-    displaySummary.value += fullText[idx++] ?? ''
-    if (idx >= fullText.length) {
-      clearInterval(typingTimer!)
-      typingTimer = null
-      summaryDone.value = true
-    }
-  }, 28)
-}
-
-function stopTyping() {
-  if (typingTimer) { clearInterval(typingTimer); typingTimer = null }
-  displaySummary.value = portraitData.value?.agentSummary ?? ''
-  summaryDone.value = true
-}
-
-function exportPortrait() {
-  window.print()
-}
-
-const ACCEPTED_EXTS = ['.doc', '.docx', '.ppt', '.pptx', '.pdf', '.txt']
 const ACCEPTED_MIME = [
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -179,28 +127,9 @@ async function startParse() {
   await nextTick()
   parsePhase.value = 'done'
 
-  // 调用 Agent 生成能力画像
-  portraitAgentLoading.value = true
-  try {
-    portraitData.value = await callAgentPortrait({
-      resumeText: pasteText.value || uploadedFileName.value,
-      parsedSkills: resumeStore.parsedSkills,
-      predictedRole: insights.predictedRole,
-      confidence: insights.confidence,
-      matchedCareers: resumeStore.matchedCareers,
-    })
-    parsePhase.value = 'portrait'
-    await nextTick()
-    setTimeout(initRadarChart, 80)
-    animatePortraitEntrance()
-  } finally {
-    portraitAgentLoading.value = false
-  }
-}
-
-function goToProfile() {
-  const role = resumeStore.insights?.predictedRole ?? resumeStore.matchedCareers[0]?.role ?? '前端开发'
-  router.push({ name: 'career-ability', query: { role } })
+  // 短暂停留后跳转画像页
+  await new Promise(r => setTimeout(r, 600))
+  router.push({ name: 'student-career-portrait' })
 }
 
 function goBack() {
@@ -209,11 +138,6 @@ function goBack() {
 
 function resetPage() {
   parsePhase.value = 'idle'
-  portraitData.value = null
-  stopTyping()
-  displaySummary.value = ''
-  summaryDone.value = false
-  disposeRadarChart()
   pasteText.value = ''
   uploadedFileName.value = ''
   parseProgress.value = 0
@@ -223,156 +147,6 @@ function resetPage() {
 /* ═══ 占位：roadmapMap 保留供 Step 3（career-path）使用 ═══
 type Stage = { id: string; level: number; name: string; alias: string; years: string; salary: string; salaryNum: [number,number]; icon: string; skills: string[]; milestones: string[]; status: 'completed'|'current'|'locked' }
 ═══════════════════════════════════════════════════════════ */
-
-/* ═══ ECharts 雷达图管理 ═══ */
-function initRadarChart() {
-  if (!radarEl.value || !portraitData.value) return
-  disposeRadarChart()
-  radarChart = echarts.init(radarEl.value, undefined, { renderer: 'svg' })
-  updateRadarChart()
-  setTimeout(() => radarChart?.resize(), 0)
-  window.addEventListener('resize', onRadarResize)
-}
-
-function updateRadarChart() {
-  if (!radarChart || !portraitData.value) return
-  const dims = portraitData.value.dimensions
-  const lvColor = (s: number) =>
-    s >= 80 ? 'rgba(94,179,107,0.95)' : s >= 60 ? 'rgba(212,168,85,0.95)' : 'rgba(200,100,90,0.95)'
-
-  radarChart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: 'rgba(14,8,3,0.97)',
-      borderColor: 'rgba(212,201,181,0.18)',
-      padding: [8, 12],
-      textStyle: { color: 'rgba(220,205,185,0.9)', fontSize: 11 },
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        if (!p?.value) return ''
-        const rows = dims.map((d, i) => {
-          const s = (p.value as number[])[i] ?? 0
-          const c = lvColor(s)
-          const lv = s >= 80 ? '优秀' : s >= 60 ? '良好' : '待提升'
-          return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0">` +
-            `<span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span>` +
-            `<span style="color:${c};font-weight:700;font-size:12px;min-width:22px;text-align:right">${s}</span>` +
-            `<span style="color:${c};font-size:9px;letter-spacing:.04em">${lv}</span>` +
-            `</div>`
-        }).join('')
-        return `<div style="padding:0"><div style="color:rgba(140,125,100,0.6);font-size:9px;letter-spacing:.12em;margin-bottom:6px">七维能力评估</div>${rows}</div>`
-      },
-    },
-    radar: {
-      indicator: dims.map(d => ({ name: d.label, max: 100 })),
-      shape: 'polygon',
-      center: ['50%', '50%'],
-      radius: '62%',
-      splitNumber: 5,
-      nameGap: 8,
-      axisName: {
-        formatter: (name: string) => {
-          const d = dims.find(x => x.label === name)
-          if (!d) return name
-          return d.score >= 80 ? `{g|${name}}` : d.score >= 60 ? `{m|${name}}` : `{r|${name}}`
-        },
-        rich: {
-          g: { color: 'rgba(94,179,107,0.9)',  fontSize: 10, fontWeight: '700' },
-          m: { color: 'rgba(212,168,85,0.9)',   fontSize: 10, fontWeight: '700' },
-          r: { color: 'rgba(200,100,90,0.9)',   fontSize: 10, fontWeight: '700' },
-        },
-      },
-      splitArea: {
-        show: true,
-        areaStyle: {
-          color: [
-            'rgba(200,85,74,0.12)',   // 0-20 innermost — danger
-            'rgba(200,85,74,0.08)',   // 20-40
-            'rgba(212,168,85,0.06)',  // 40-60 — caution
-            'rgba(212,168,85,0.07)',  // 60-80
-            'rgba(94,159,107,0.10)', // 80-100 outermost — good
-          ],
-        },
-      },
-      splitLine: { lineStyle: { color: 'rgba(212,201,181,0.10)', width: 1 } },
-      axisLine:  { lineStyle: { color: 'rgba(212,201,181,0.10)' } },
-    },
-    series: [{
-      type: 'radar',
-      data: [{
-        value: dims.map(d => d.score),
-        name: '能力雷达',
-        areaStyle: { color: 'rgba(139,37,0,0.20)' },
-        lineStyle: { color: 'rgba(180,60,20,0.85)', width: 2 },
-        itemStyle: { color: 'rgba(200,80,30,0.9)' },
-        symbolSize: 5,
-        label: {
-          show: true,
-          formatter: (p: any) => `${p.value}`,
-          fontSize: 9,
-          fontWeight: '700',
-          color: 'rgba(230,210,185,0.95)',
-          backgroundColor: 'rgba(14,8,3,0.65)',
-          borderRadius: 2,
-          padding: [1, 3],
-        },
-      }],
-      animation: true,
-      animationDuration: 900,
-      animationEasing: 'cubicOut',
-    }],
-  })
-}
-
-function onRadarResize() { radarChart?.resize() }
-function disposeRadarChart() {
-  window.removeEventListener('resize', onRadarResize)
-  radarChart?.dispose()
-  radarChart = null
-}
-
-function animatePortraitEntrance() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    if (portraitData.value) startTyping(portraitData.value.agentSummary)
-    return
-  }
-  gsap.fromTo('.rp-portrait__header', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
-  gsap.fromTo('.rp-portrait__radar-wrap', { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.2)', delay: 0.1 })
-  gsap.fromTo('.rp-portrait__dim-item', { opacity: 0, x: 14 }, { opacity: 1, x: 0, stagger: 0.05, duration: 0.28, ease: 'power2.out', delay: 0.15 })
-  gsap.fromTo('.rp-portrait__tag', { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.03, duration: 0.22, ease: 'back.out(1.4)', delay: 0.25 })
-  gsap.fromTo('.rp-portrait__project-card', { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.08, duration: 0.3, ease: 'power2.out', delay: 0.3 })
-  gsap.fromTo('.rp-portrait__summary', { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.5,
-    onComplete: () => { if (portraitData.value) startTyping(portraitData.value.agentSummary) },
-  })
-}
-
-const portraitSuggestions = computed(() => {
-  if (!portraitData.value) return []
-  const dims = portraitData.value.dimensions
-  const sorted = [...dims].sort((a, b) => a.score - b.score)
-  const topDim = [...dims].sort((a, b) => b.score - a.score)[0]!
-  const weak1 = sorted[0]!
-  const weak2 = sorted[1]!
-  const actionMap: Record<string, string> = {
-    professional: '系统学习行业主流技术栈，完成 2-3 个完整项目',
-    certificate:  '备考 1-2 项行业认可证书（如软考、云计算认证）',
-    innovation:   '参与开源项目或黑客马拉松，积累创新实践经历',
-    learning:     '制定系统学习计划，建立个人技术知识体系',
-    stress:       '争取高强度项目经历，参与团队协作与冲刺开发',
-    communication:'加入技术社区，进行技术分享或撰写技术博客',
-    internship:   '积极寻求暑期/兼职实习，优先匹配目标方向岗位',
-  }
-  return [
-    { type: 'strength', label: '核心优势', text: `「${topDim.label}」是你的突出优势（${topDim.score}分），持续深耕可成为核心竞争力` },
-    { type: 'improve',  label: '优先提升', text: `「${weak1.label}」得分偏低（${weak1.score}分）：${actionMap[weak1.key] ?? '针对性提升该维度'}` },
-    { type: 'improve',  label: '建议加强', text: `「${weak2.label}」（${weak2.score}分）仍有提升空间：${actionMap[weak2.key] ?? '持续关注并加强'}` },
-  ]
-})
-
-watch(radarEl, (el) => {
-  if (el && parsePhase.value === 'portrait') initRadarChart()
-})
 
 onMounted(async () => {
   await nextTick()
@@ -384,7 +158,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   gsapCtx?.revert()
-  disposeRadarChart()
 })
 
 /* ═══ 注释保留（Step 3 用）: roadmapMap 原有数据已移除，如需恢复请查看 Git 历史 ═══ */
@@ -565,10 +338,6 @@ const panelStyle = computed(() => {
   }
 })
 
-const headerTag = computed(() =>
-  parsePhase.value === 'portrait' ? '个人能力画像' : '简历导入'
-)
-
 const centerStatusText = computed(() => {
   if (parsePhase.value === 'parsing') return '解析中…'
   if (parsePhase.value === 'done') {
@@ -605,29 +374,20 @@ function getMatchPct(key: string): number {
     <header class="rp-header">
       <div class="rp-header__left">
         <button class="rp-back" @click="goBack"><Icon icon="lucide:arrow-left" :width="14"/><span>返回</span></button>
-        <span class="rp-brand-name" :class="{ 'rp-brand-name--dim': parsePhase === 'portrait' }">职途导航</span>
-        <button v-if="parsePhase === 'portrait'" class="rp-reupload-btn" @click="resetPage">
-          <Icon icon="lucide:refresh-cw" :width="12"/><span>重传简历</span>
-        </button>
+        <span class="rp-brand-name">职途导航</span>
       </div>
-      <div class="rp-header__center"><div class="rp-header-tag" :class="{ 'rp-header-tag--portrait': parsePhase === 'portrait' }">{{ headerTag }}</div></div>
+      <div class="rp-header__center"><div class="rp-header-tag">简历导入</div></div>
       <div class="rp-header__right">
         <div class="rp-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
         <span class="rp-username">{{ userStore.currentUser?.name || '同学' }}</span>
-        <button v-if="parsePhase === 'portrait'" class="rp-export-btn" @click="exportPortrait">
-          <Icon icon="lucide:download" :width="12"/><span>导出报告</span>
-        </button>
       </div>
     </header>
 
     <!-- WORKSPACE -->
-    <div class="rp-workspace" :class="{ 'rp-workspace--portrait': parsePhase === 'portrait' }">
-
-      <!-- LEFT: 完全隐藏（portrait 态）-->
-      <div v-if="parsePhase === 'portrait'" class="rp-left rp-left--hidden" aria-hidden="true"></div>
+    <div class="rp-workspace">
 
       <!-- LEFT: Editorial + Upload -->
-      <div v-else class="rp-left">
+      <div class="rp-left">
 
         <!-- Editorial headline -->
         <div class="rp-editorial">
@@ -767,189 +527,8 @@ function getMatchPct(key: string): number {
       <!-- RIGHT: Orbital / Portrait -->
       <div class="rp-right">
 
-        <!-- ══ 能力画像（portrait 态）══ -->
-        <div v-if="parsePhase === 'portrait' && portraitData" class="rp-portrait">
-
-          <!-- [A] 个人信息 + 评分横幅 -->
-          <div class="rp-portrait__header">
-            <div class="rp-portrait__header-top">
-              <div class="rp-portrait__avatar">{{ portraitData.personInfo.name.charAt(0) }}</div>
-              <div class="rp-portrait__info">
-                <div class="rp-portrait__name-row">
-                  <span class="rp-portrait__name">{{ portraitData.personInfo.name }}</span>
-                  <span class="rp-portrait__grade">{{ portraitData.personInfo.grade }}</span>
-                  <span class="rp-portrait__target">{{ portraitData.personInfo.targetRole }}</span>
-                </div>
-                <div class="rp-portrait__school-row">
-                  <Icon icon="lucide:school" :width="10" class="rp-portrait__meta-icon"/>
-                  <span>{{ portraitData.personInfo.school }}</span>
-                  <span class="rp-portrait__sep">·</span>
-                  <span>{{ portraitData.personInfo.major }}</span>
-                  <template v-if="portraitData.personInfo.gpa">
-                    <span class="rp-portrait__sep">·</span>
-                    <span>GPA {{ portraitData.personInfo.gpa }}</span>
-                  </template>
-                </div>
-              </div>
-            </div>
-            <!-- 评分横幅 -->
-            <div class="rp-portrait__score-banner">
-              <div class="rp-portrait__score-card rp-portrait__score-card--completeness">
-                <span class="rp-portrait__score-val">{{ portraitData.completenessScore }}<em>%</em></span>
-                <span class="rp-portrait__score-lbl">完整度</span>
-              </div>
-              <div class="rp-portrait__score-card rp-portrait__score-card--competitiveness">
-                <span class="rp-portrait__score-val">{{ portraitData.competitivenessScore }}<em>分</em></span>
-                <span class="rp-portrait__score-lbl">竞争力</span>
-              </div>
-              <div class="rp-portrait__score-card rp-portrait__score-card--honors">
-                <div class="rp-portrait__honor-row">
-                  <span class="rp-portrait__honor-item">
-                    <Icon icon="lucide:award" :width="11"/>
-                    <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'cert').length }}</strong> 证书
-                  </span>
-                  <span class="rp-portrait__honor-item">
-                    <Icon icon="lucide:briefcase" :width="11"/>
-                    <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'intern').length }}</strong> 实习
-                  </span>
-                  <span class="rp-portrait__honor-item">
-                    <Icon icon="lucide:trophy" :width="11"/>
-                    <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'award').length }}</strong> 获奖
-                  </span>
-                </div>
-                <span class="rp-portrait__score-lbl">荣誉档案</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- [B+C] 雷达图 + 分项评分 -->
-          <div class="rp-portrait__viz-row">
-            <div class="rp-portrait__radar-wrap">
-              <div ref="radarEl" class="rp-portrait__radar-chart"></div>
-            </div>
-            <div class="rp-portrait__dims">
-              <div
-                v-for="dim in portraitData.dimensions" :key="dim.key"
-                class="rp-portrait__dim-item"
-              >
-                <div class="rp-portrait__dim-top">
-                  <span class="rp-portrait__dim-label">{{ dim.label }}</span>
-                  <span class="rp-portrait__dim-badge"
-                    :class="`rp-portrait__dim-badge--${dim.level === '优秀' ? 'good' : dim.level === '良好' ? 'mid' : 'low'}`">
-                    {{ dim.level }}
-                  </span>
-                  <span class="rp-portrait__dim-src"
-                    :class="{ 'rp-portrait__dim-src--agent': dim.source === 'agent' }"
-                    :title="dim.source === 'agent' ? 'AI 模型计算（后端论文算法）' : '基于简历数据直接计算'">
-                    <Icon :icon="dim.source === 'agent' ? 'lucide:bot' : 'lucide:calculator'" :width="9"/>
-                  </span>
-                </div>
-                <div class="rp-portrait__dim-bar-wrap">
-                  <div class="rp-portrait__dim-track">
-                    <div class="rp-portrait__dim-bar"
-                      :style="{ width: dim.score + '%' }"
-                      :class="`rp-portrait__dim-bar--${dim.level === '优秀' ? 'good' : dim.level === '良好' ? 'mid' : 'low'}`">
-                    </div>
-                  </div>
-                  <span class="rp-portrait__dim-score">{{ dim.score }}</span>
-                </div>
-                <p class="rp-portrait__dim-desc">{{ dim.desc }}</p>
-              </div>
-              <!-- 技能标签（内嵌于维度面板底部） -->
-              <div v-if="portraitData.skillTags.length" class="rp-portrait__tags-inline">
-                <span class="rp-portrait__tags-inline-lbl">技能清单</span>
-                <div class="rp-portrait__tags">
-                  <span
-                    v-for="tag in portraitData.skillTags" :key="tag.name"
-                    class="rp-portrait__tag"
-                    :class="`rp-portrait__tag--${tag.category === '前端' ? 'fe' : tag.category === '后端' ? 'be' : tag.category === '测试' ? 'qa' : (tag.category === '数据' || tag.category === '机器学习') ? 'data' : 'gen'}`"
-                    :style="{ opacity: 0.55 + tag.weight * 0.45, fontSize: (9 + tag.weight * 3) + 'px' }"
-                    :title="'权重: ' + Math.round(tag.weight * 100) + '%'"
-                  >{{ tag.name }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- [D] 经历亮点（证书 + 实习 + 项目合并） -->
-          <div class="rp-portrait__highlights">
-            <span class="rp-portrait__section-lbl">经历亮点</span>
-            <div class="rp-portrait__highlights-grid">
-              <!-- 荣誉/证书/实习列 -->
-              <div class="rp-portrait__highlights-col">
-                <div
-                  v-for="h in portraitData.personInfo.honors" :key="h.label"
-                  class="rp-portrait__honor-card"
-                  :class="`rp-portrait__honor-card--${h.type}`"
-                >
-                  <Icon :icon="h.type === 'cert' ? 'lucide:award' : h.type === 'intern' ? 'lucide:briefcase' : 'lucide:trophy'" :width="13" class="rp-portrait__honor-icon"/>
-                  <span class="rp-portrait__honor-lbl">{{ h.label }}</span>
-                </div>
-              </div>
-              <!-- 项目经历列 -->
-              <div class="rp-portrait__highlights-col">
-                <div
-                  v-for="(proj, i) in portraitData.personInfo.projects" :key="i"
-                  class="rp-portrait__project-card"
-                >
-                  <div class="rp-portrait__project-accent"></div>
-                  <div class="rp-portrait__project-body">
-                    <div class="rp-portrait__project-head">
-                      <span class="rp-portrait__project-name">{{ proj.name }}</span>
-                      <span class="rp-portrait__project-role">{{ proj.role }}</span>
-                    </div>
-                    <p class="rp-portrait__project-desc">{{ proj.desc }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- [E] AI 综合评语 + 建议 + 自我评价 -->
-          <div class="rp-portrait__summary">
-            <span class="rp-portrait__section-lbl">
-              <Icon icon="lucide:bot" :width="10" style="vertical-align: middle; margin-right: 4px;"/>AI 综合评语
-            </span>
-            <p class="rp-portrait__summary-text" @click="stopTyping">
-              {{ displaySummary }}<span v-if="displaySummary.length < (portraitData.agentSummary?.length ?? 0)" class="rp-typing-cursor">|</span>
-            </p>
-            <!-- 三条具体建议 -->
-            <div class="rp-portrait__suggestions">
-              <div
-                v-for="(s, i) in portraitSuggestions" :key="i"
-                class="rp-portrait__suggestion"
-                :class="`rp-portrait__suggestion--${s.type}`"
-              >
-                <span class="rp-portrait__suggestion-lbl">{{ s.label }}</span>
-                <span class="rp-portrait__suggestion-text">{{ s.text }}</span>
-              </div>
-            </div>
-            <template v-if="portraitData.personInfo.selfSummary">
-              <div class="rp-portrait__summary-divider"></div>
-              <span class="rp-portrait__section-lbl" style="margin-top: 2px;">自我评价</span>
-              <p class="rp-portrait__self-summary">{{ portraitData.personInfo.selfSummary }}</p>
-            </template>
-          </div>
-
-          <!-- [H] 步骤引导 -->
-          <div class="rp-portrait__step-guide">
-            <div class="rp-portrait__step-guide-inner">
-              <div class="rp-portrait__step-guide-info">
-                <span class="rp-portrait__step-guide-title">能力画像已生成 —— 下一步</span>
-                <p class="rp-portrait__step-guide-desc">基于以上能力画像，系统将对你进行人岗匹配分析、职业路径规划与个性化成长方案</p>
-              </div>
-              <button class="rp-portrait__step-guide-btn" :disabled="!summaryDone" @click="router.push({ name: 'student-career-report' })">
-                <Icon icon="lucide:map" :width="13"/>
-                进入职业生涯发展报告
-                <Icon icon="lucide:arrow-right" :width="12"/>
-              </button>
-            </div>
-          </div>
-
-        </div><!-- /.rp-portrait -->
-
-        <!-- ══ 星图（非 portrait 态）══ -->
-        <div v-else class="rp-orbital-scene">
+        <!-- ══ 星图 ══ -->
+        <div class="rp-orbital-scene">
           <div class="rp-orbital-field">
 
           <!-- SVG: rings + spokes (data-driven) + background dots -->
@@ -1824,417 +1403,12 @@ function getMatchPct(key: string): number {
 .rp-rf-sep { color: rgba(95,80,60,0.35); font-size: 12px; }
 
 /* ══════════════════════════════════════════
-   Portrait 模式：workspace + Header 按鈕
-══════════════════════════════════════════ */
-.rp-workspace--portrait { grid-template-columns: 0 1fr; }
-.rp-workspace--portrait .rp-right-footer { display: none; }
-.rp-left--hidden { width: 0; padding: 0 !important; overflow: hidden; border: none; pointer-events: none; flex-shrink: 0; }
-
-.rp-header-tag--portrait {
-  background: rgba(139,37,0,0.12);
-  border-color: rgba(139,37,0,0.35);
-  color: rgba(220,170,130,0.9);
-}
-.rp-brand-name--dim { opacity: 0.4; font-size: 11px; }
-
-/* Header 功能按鈕 */
-.rp-reupload-btn, .rp-export-btn {
-  display: flex; align-items: center; gap: 5px;
-  background: none; border: 1px solid #D4C9B5; padding: 4px 10px;
-  cursor: pointer; font-size: 10px; letter-spacing: 0.08em;
-  font-family: inherit; color: #6B5D4F;
-  transition: all 0.2s ease;
-}
-.rp-reupload-btn:hover { border-color: #8B2500; color: #8B2500; }
-.rp-export-btn {
-  border-color: rgba(139,37,0,0.35);
-  color: rgba(210,150,100,0.85);
-  background: rgba(139,37,0,0.06);
-}
-.rp-export-btn:hover { background: rgba(139,37,0,0.12); border-color: rgba(139,37,0,0.55); }
-
-/* ══════════════════════════════════════════
-   Portrait 主容器
-══════════════════════════════════════════ */
-.rp-portrait {
-  flex: 1; min-height: 0;
-  overflow-y: auto;
-  padding: 20px 22px 20px;
-  display: flex; flex-direction: column; gap: 14px;
-  background: var(--rp-dark, #100D06);
-  color: rgba(220,205,185,0.9);
-}
-.rp-portrait::-webkit-scrollbar { width: 3px; }
-.rp-portrait::-webkit-scrollbar-track { background: transparent; }
-.rp-portrait::-webkit-scrollbar-thumb { background: rgba(192,52,24,0.42); }
-
-.rp-portrait__section-lbl {
-  display: block;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(175,155,110,0.82); text-transform: uppercase;
-  margin-bottom: 6px;
-}
-
-/* ── [A] 个人信息 + 评分横幅 ── */
-.rp-portrait__header {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 14px 16px;
-  background: rgba(237,229,214,0.05);
-  border: 1px solid rgba(212,201,181,0.15);
-  border-radius: 8px;
-}
-.rp-portrait__header-top { display: flex; align-items: center; gap: 12px; }
-.rp-portrait__avatar {
-  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, rgba(192,52,24,0.75), rgba(196,150,30,0.65));
-  border: 1.5px solid rgba(192,52,24,0.62);
-  display: grid; place-items: center;
-  font-size: 18px; font-weight: 700; color: rgba(240,225,200,0.9);
-}
-.rp-portrait__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.rp-portrait__name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rp-portrait__name { font-size: 16px; font-weight: 800; color: rgba(230,215,190,0.95); letter-spacing: 0.04em; }
-.rp-portrait__grade {
-  font-size: 10px; padding: 2px 8px; border-radius: 10px;
-  background: rgba(196,150,30,0.22); border: 1px solid rgba(196,150,30,0.48);
-  color: rgba(238,198,88,0.98); letter-spacing: 0.06em;
-}
-.rp-portrait__target { font-size: 11px; font-weight: 600; color: rgba(218,78,52,0.97); letter-spacing: 0.06em; }
-.rp-portrait__school-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-.rp-portrait__school-row span { font-size: 11px; color: rgba(202,188,162,0.92); }
-.rp-portrait__meta-icon { color: rgba(165,148,118,0.72); flex-shrink: 0; }
-.rp-portrait__sep { color: rgba(128,112,86,0.6) !important; }
-
-/* 评分横幅 */
-.rp-portrait__score-banner {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-}
-.rp-portrait__score-card {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 10px 12px; border-radius: 6px; gap: 3px;
-}
-.rp-portrait__score-card--completeness {
-  background: rgba(80,165,90,0.18); border: 1px solid rgba(80,165,90,0.5);
-}
-.rp-portrait__score-card--competitiveness {
-  background: rgba(200,60,38,0.18); border: 1px solid rgba(200,60,38,0.48);
-}
-.rp-portrait__score-card--honors {
-  background: rgba(196,150,30,0.14); border: 1px solid rgba(196,150,30,0.38);
-}
-.rp-portrait__score-val {
-  font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: -0.02em;
-}
-.rp-portrait__score-card--completeness .rp-portrait__score-val { color: rgb(95,218,128); }
-.rp-portrait__score-card--competitiveness .rp-portrait__score-val { color: rgb(240,100,68); }
-.rp-portrait__score-val em { font-size: 12px; font-weight: 600; font-style: normal; opacity: 0.7; }
-.rp-portrait__score-lbl { font-size: 9px; color: rgba(168,152,122,0.88); letter-spacing: 0.1em; }
-.rp-portrait__honor-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.rp-portrait__honor-item {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 11px; color: rgba(215,200,175,0.97); letter-spacing: 0.04em;
-}
-.rp-portrait__honor-item strong { color: rgba(245,220,158,1); font-size: 13px; }
-
-/* ── [B+C] 雷达 + 分项评分 ── */
-.rp-portrait__viz-row {
-  display: grid; grid-template-columns: 220px 1fr; gap: 16px;
-}
-.rp-portrait__radar-wrap {
-  background: rgba(237,229,214,0.03);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px; overflow: hidden;
-  height: 220px; flex-shrink: 0;
-}
-.rp-portrait__radar-chart { width: 100%; height: 100%; }
-
-.rp-portrait__dims { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
-.rp-portrait__dim-item { display: flex; flex-direction: column; gap: 2px; }
-.rp-portrait__dim-top { display: flex; align-items: center; gap: 5px; }
-.rp-portrait__dim-label { font-size: 12px; font-weight: 600; color: rgba(228,212,190,1.0); flex: 1; }
-.rp-portrait__dim-badge {
-  font-size: 9px; padding: 1px 6px; border-radius: 8px; letter-spacing: 0.06em;
-}
-.rp-portrait__dim-badge--good { background: rgba(80,165,90,0.22); color: rgb(100,218,138); border: 1px solid rgba(80,165,90,0.48); }
-.rp-portrait__dim-badge--mid  { background: rgba(196,150,30,0.18); color: rgb(238,200,85); border: 1px solid rgba(196,150,30,0.48); }
-.rp-portrait__dim-badge--low  { background: rgba(200,60,38,0.15); color: rgb(242,108,78); border: 1px solid rgba(200,60,38,0.38); }
-.rp-portrait__dim-src {
-  display: inline-flex; align-items: center; padding: 2px 5px; cursor: default;
-  border: 1px solid rgba(196,185,166,0.25); color: rgba(175,155,110,0.82); border-radius: 3px;
-}
-.rp-portrait__dim-src--agent { border-color: rgba(145,88,200,0.48); color: rgba(198,158,232,0.95); }
-/* 进度条（修复：增加背景轨道） */
-.rp-portrait__dim-bar-wrap {
-  display: grid; grid-template-columns: 1fr 28px; align-items: center; gap: 6px;
-}
-.rp-portrait__dim-track {
-  height: 3px; background: rgba(212,201,181,0.22); border-radius: 2px; overflow: hidden;
-}
-.rp-portrait__dim-bar {
-  height: 100%; border-radius: 2px;
-  transition: width 0.7s cubic-bezier(0.22,0.61,0.36,1) 0.2s;
-}
-.rp-portrait__dim-bar--good { background: linear-gradient(90deg, rgba(80,165,90,0.8), rgb(100,218,138)); }
-.rp-portrait__dim-bar--mid  { background: linear-gradient(90deg, rgba(196,150,30,0.8), rgb(238,200,85)); }
-.rp-portrait__dim-bar--low  { background: linear-gradient(90deg, rgba(200,60,38,0.7), rgb(242,108,78)); }
-.rp-portrait__dim-score { font-size: 11px; font-weight: 700; color: rgba(225,208,182,0.95); text-align: right; }
-.rp-portrait__dim-desc { font-size: 10px; color: rgba(178,162,132,0.85); line-height: 1.45; margin: 0; }
-
-/* ── [D] 技能标签云 ── */
-.rp-portrait__tags-section {
-  padding: 12px 14px;
-  background: rgba(237,229,214,0.03);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px;
-}
-.rp-portrait__tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.rp-portrait__tag {
-  padding: 3px 10px; border-radius: 3px; letter-spacing: 0.04em;
-  transition: border-color 0.2s ease; cursor: default;
-  border: 1px solid; /* color set per variant */
-}
-/* 前端 */
-.rp-portrait__tag--fe { color: rgb(235,158,112); background: rgba(200,60,38,0.12); border-color: rgba(200,60,38,0.32); }
-.rp-portrait__tag--fe:hover { border-color: rgba(200,60,38,0.62); }
-/* 后端 */
-.rp-portrait__tag--be { color: rgb(242,205,90); background: rgba(196,150,30,0.12); border-color: rgba(196,150,30,0.35); }
-.rp-portrait__tag--be:hover { border-color: rgba(196,150,30,0.62); }
-/* 测试 */
-.rp-portrait__tag--qa { color: rgb(135,178,228); background: rgba(74,120,168,0.12); border-color: rgba(74,120,168,0.32); }
-.rp-portrait__tag--qa:hover { border-color: rgba(74,120,168,0.62); }
-/* 数据/机器学习 */
-.rp-portrait__tag--data { color: rgb(102,205,158); background: rgba(74,168,122,0.12); border-color: rgba(74,168,122,0.32); }
-.rp-portrait__tag--data:hover { border-color: rgba(74,168,122,0.62); }
-/* 通用 */
-.rp-portrait__tag--gen { color: rgba(215,200,178,0.97); background: rgba(196,185,166,0.1); border-color: rgba(196,185,166,0.28); }
-.rp-portrait__tag--gen:hover { border-color: rgba(196,185,166,0.58); }
-
-/* ── [E] 证书 & 实习 ── */
-.rp-portrait__honors-section {
-  padding: 12px 14px;
-  background: rgba(237,229,214,0.03);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px;
-}
-.rp-portrait__honors-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.rp-portrait__honor-card {
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 6px; border: 1px solid;
-  flex: 1; min-width: 160px;
-}
-.rp-portrait__honor-card--cert { background: rgba(196,150,30,0.13); border-color: rgba(196,150,30,0.42); }
-.rp-portrait__honor-card--intern { background: rgba(74,120,168,0.12); border-color: rgba(74,120,168,0.38); }
-.rp-portrait__honor-card--award { background: rgba(200,60,38,0.12); border-color: rgba(200,60,38,0.38); }
-.rp-portrait__honor-icon { flex-shrink: 0; opacity: 0.9; }
-.rp-portrait__honor-card--cert .rp-portrait__honor-icon { color: rgb(242,202,85); }
-.rp-portrait__honor-card--intern .rp-portrait__honor-icon { color: rgb(132,178,228); }
-.rp-portrait__honor-card--award .rp-portrait__honor-icon { color: rgb(238,148,108); }
-.rp-portrait__honor-lbl { font-size: 11px; color: rgba(215,200,178,0.97); letter-spacing: 0.02em; }
-
-/* ── [F] 项目经历（左竖色条） ── */
-.rp-portrait__projects-section {
-  padding: 12px 14px;
-  background: rgba(237,229,214,0.03);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px;
-}
-.rp-portrait__projects { display: flex; flex-direction: column; gap: 8px; }
-.rp-portrait__project-card {
-  display: flex; overflow: hidden;
-  background: rgba(240,235,224,0.04);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 6px;
-  transition: border-color 0.2s ease;
-}
-.rp-portrait__project-card:hover { border-color: rgba(192,52,24,0.48); }
-.rp-portrait__project-accent { width: 3px; flex-shrink: 0; background: rgba(200,60,38,0.8); }
-.rp-portrait__project-body { flex: 1; padding: 9px 12px; display: flex; flex-direction: column; gap: 4px; }
-.rp-portrait__project-head { display: flex; align-items: center; gap: 8px; }
-.rp-portrait__project-name { font-size: 13px; font-weight: 700; color: rgba(240,224,202,0.99); }
-.rp-portrait__project-role {
-  font-size: 10px; padding: 1px 7px; border-radius: 8px;
-  background: rgba(196,150,30,0.16); border: 1px solid rgba(196,150,30,0.42);
-  color: rgb(242,205,90);
-}
-.rp-portrait__project-desc {
-  font-size: 11px; color: rgba(195,180,158,0.92); line-height: 1.5; margin: 0;
-  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-}
-
-/* ── 技能标签内嵌（[B+C]底部）── */
-.rp-portrait__tags-inline {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(212,201,181,0.1);
-}
-.rp-portrait__tags-inline-lbl {
-  display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(175,155,110,0.82); text-transform: uppercase; margin-bottom: 6px;
-}
-
-/* ── [D] 经历亮点（合并区）── */
-.rp-portrait__highlights {
-  padding: 12px 14px;
-  background: rgba(237,229,214,0.03);
-  border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.rp-portrait__highlights-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-}
-.rp-portrait__highlights-col { display: flex; flex-direction: column; gap: 6px; }
-
-/* ── [E] AI建议条 ── */
-.rp-portrait__suggestions {
-  display: flex; flex-direction: column; gap: 5px;
-  margin-top: 4px;
-}
-.rp-portrait__suggestion {
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 6px 10px; border-radius: 5px; border: 1px solid;
-  font-size: 11px; line-height: 1.45;
-}
-.rp-portrait__suggestion--strength {
-  background: rgba(94,159,107,0.07); border-color: rgba(94,159,107,0.22);
-}
-.rp-portrait__suggestion--improve {
-  background: rgba(212,168,85,0.07); border-color: rgba(212,168,85,0.22);
-}
-.rp-portrait__suggestion-lbl {
-  flex-shrink: 0; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
-  padding: 1px 6px; border-radius: 3px; white-space: nowrap; margin-top: 1px;
-}
-.rp-portrait__suggestion--strength .rp-portrait__suggestion-lbl {
-  background: rgba(80,165,90,0.22); color: rgb(100,218,138);
-}
-.rp-portrait__suggestion--improve .rp-portrait__suggestion-lbl {
-  background: rgba(196,150,30,0.22); color: rgb(238,200,85);
-}
-.rp-portrait__suggestion-text { color: rgba(208,192,168,0.97); }
-
-/* ── [G] AI 综合评语 + 打字机 ── */
-.rp-portrait__summary {
-  padding: 12px 14px;
-  background: rgba(139,37,0,0.05);
-  border: 1px solid rgba(139,37,0,0.15);
-  border-radius: 8px;
-  display: flex; flex-direction: column; gap: 6px;
-}
-.rp-portrait__summary-text {
-  font-size: 11px; color: rgba(212,196,172,0.97); line-height: 1.7; margin: 0;
-  letter-spacing: 0.02em; cursor: pointer;
-}
-.rp-typing-cursor {
-  display: inline-block; width: 1px; height: 1em;
-  background: rgba(200,140,100,0.8); vertical-align: text-bottom; margin-left: 1px;
-  animation: rp-blink 0.9s step-end infinite;
-}
-@keyframes rp-blink { 0%,100% { opacity:1 } 50% { opacity:0 } }
-.rp-portrait__summary-divider {
-  height: 1px; background: rgba(139,37,0,0.12); margin: 2px 0;
-}
-.rp-portrait__self-summary {
-  font-size: 11px; color: rgba(188,172,150,0.88); line-height: 1.6; margin: 0;
-  font-style: italic;
-}
-
-/* ── [H] 步骤引导 ── */
-.rp-portrait__step-guide {
-  border: 1px solid rgba(139,37,0,0.2);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(139,37,0,0.06), rgba(139,105,20,0.04));
-  padding: 14px 16px;
-}
-.rp-portrait__step-guide-inner {
-  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-}
-.rp-portrait__step-guide-info { display: flex; flex-direction: column; gap: 4px; }
-.rp-portrait__step-guide-title {
-  font-size: 12px; font-weight: 700; color: rgba(240,215,175,1); letter-spacing: 0.04em;
-}
-.rp-portrait__step-guide-desc {
-  font-size: 10px; color: rgba(182,165,138,0.88); line-height: 1.5; margin: 0; max-width: 380px;
-}
-.rp-portrait__step-guide-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 6px; font-family: inherit;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
-  border: 1px solid rgba(192,58,32,0.7); color: rgba(242,182,142,0.99);
-  background: rgba(192,58,32,0.25); cursor: pointer;
-  white-space: nowrap; transition: background 0.2s, border-color 0.2s;
-}
-.rp-portrait__step-guide-btn:hover:not(:disabled) {
-  background: rgba(192,58,32,0.42); border-color: rgba(192,58,32,0.9);
-}
-.rp-portrait__step-guide-btn:disabled {
-  opacity: 0.38; cursor: not-allowed;
-  border-color: rgba(139,37,0,0.2); color: rgba(160,130,100,0.5);
-  background: rgba(139,37,0,0.05);
-}
-
-/* ══════════════════════════════════════════
    打印 / 导出报告样式
 ══════════════════════════════════════════ */
 @media print {
-  /* 隐藏所有非报告元素 */
-  .rp-header,
-  .rp-left,
-  .rp-orbital-scene,
-  .rp-right-footer,
-  .rp-portrait__step-guide { display: none !important; }
-
-  /* 页面与 workspace 平铺 */
-  .rp-page { display: block !important; height: auto !important; max-height: none !important; overflow: visible !important; }
-  .rp-workspace { display: block !important; }
-  .rp-right { width: 100% !important; height: auto !important; overflow: visible !important; box-shadow: none !important; }
-
-  /* Portrait 容器：白底 + 可读色 */
-  .rp-portrait {
-    background: #fff !important;
-    color: #1a1410 !important;
-    overflow: visible !important;
-    padding: 24px 32px !important;
-    gap: 16px !important;
-  }
-  .rp-portrait__section-lbl { color: #5a4e42 !important; }
-
-  /* 卡片转为浅色 */
-  .rp-portrait__header,
-  .rp-portrait__viz-row,
-  .rp-portrait__highlights,
-  .rp-portrait__summary {
-    background: #f9f6f0 !important;
-    border-color: #d4c9b5 !important;
-    color: #1a1410 !important;
-  }
-  .rp-portrait__score-card {
-    background: #f0ece4 !important;
-    border-color: #c4b9a6 !important;
-  }
-  .rp-portrait__score-val { color: #1a1410 !important; }
-  .rp-portrait__score-card--completeness .rp-portrait__score-val { color: #3a7a3a !important; }
-  .rp-portrait__score-card--competitiveness .rp-portrait__score-val { color: #8b2500 !important; }
-  .rp-portrait__name { color: #1a1410 !important; }
-  .rp-portrait__dim-label { color: #2a2018 !important; }
-  .rp-portrait__dim-track { background: #d4c9b5 !important; }
-  .rp-portrait__summary-text { color: #3a3028 !important; }
-  .rp-portrait__self-summary { color: #5a4e42 !important; }
-  .rp-portrait__honor-lbl { color: #3a3028 !important; }
-  .rp-portrait__project-name { color: #1a1410 !important; }
-  .rp-portrait__project-desc { color: #5a4e42 !important; -webkit-line-clamp: unset !important; line-clamp: unset !important; }
-  .rp-portrait__dim-desc { color: #6a5e52 !important; }
-
-  /* 打字机光标打印时隐藏 */
-  .rp-typing-cursor { display: none !important; }
-
-  /* 防跨页断裂 */
-  .rp-portrait__header,
-  .rp-portrait__viz-row,
-  .rp-portrait__honors-section,
-  .rp-portrait__project-card { break-inside: avoid; }
+  .rp-header, .rp-left, .rp-orbital-scene, .rp-right-footer { display: none !important; }
+  .rp-page { display: block !important; height: auto !important; overflow: visible !important; }
 }
-
 /* Responsive */
 @media (max-width: 1280px) { .rp-workspace { grid-template-columns: 420px 1fr; } }
 @media (max-width: 1024px) {

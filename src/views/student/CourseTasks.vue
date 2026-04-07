@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程任务；路由：tasks（student-course-tasks）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程任务；路由：tasks（student-course-tasks）；角色：STUDENT -->
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <!-- 回纹 Hui Fret - 方折连续螺旋纹 -->
+  <!-- 左上单元 -->
+  <path d="M2,2 H18 V18 H6 V6 H14 V14 H10 V10" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="miter"/>
+  <!-- 右下单元（镜像偏移，形成连续感） -->
+  <path d="M22,22 H38 V38 H26 V26 H34 V34 H30 V30" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="miter"/>
+</svg>

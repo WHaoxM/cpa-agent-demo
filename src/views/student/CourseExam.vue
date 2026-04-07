@@ -1,4 +1,4 @@
-﻿<!-- 页面：课程考试；路由：exam（student-course-exam）；角色：STUDENT/TEACHER -->
+﻿<!-- 页面：课程考试；路由：exam（student-course-exam）；角色：STUDENT -->
 <script setup lang="ts">
 </script>
 

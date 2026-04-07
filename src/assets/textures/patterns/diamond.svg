@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <!-- 菱格纹 Diamond Grid - 斜方格锦纹 -->
+  <path d="M15,0 L30,15 L15,30 L0,15 Z" stroke="currentColor" stroke-width="0.8" fill="none"/>
+</svg>

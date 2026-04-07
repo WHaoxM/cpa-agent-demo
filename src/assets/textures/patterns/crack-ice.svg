@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <!-- 冰裂纹 Crack Ice - 冰裂肌理纹 -->
+  <path d="M0,35 L18,20 L38,30 L55,5 M18,20 L30,48 L50,40 L80,58 M30,48 L44,80 M38,30 L62,44 L80,32" stroke="currentColor" stroke-width="0.8" fill="none"/>
+  <path d="M5,60 L22,50 L40,65 L60,52 L80,68" stroke="currentColor" stroke-width="0.6" fill="none" opacity="0.6"/>
+</svg>

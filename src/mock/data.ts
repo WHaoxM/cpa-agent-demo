@@ -11,6 +11,7 @@ import type {
   Category,
   ClassData,
   AIMessage,
+  ReportRecord,
 } from '@/types'
 import { UserRole, QuestionType } from '@/types'
 
@@ -531,6 +532,173 @@ export const mockStudyStats = {
     { name: '项目实战', completed: 0, studying: 0, notStarted: 100 },
   ],
 }
+
+export const mockReportRecords: ReportRecord[] = [
+  {
+    id: 'report_portrait_001',
+    type: 'portrait',
+    createdAt: '2026-03-30',
+    title: '个人能力画像（前端进阶）',
+    snapshot: {
+      predictedRole: '前端开发工程师',
+      competitivenessScore: 84,
+      sevenDim: [
+        { name: '基础知识', score: 86 },
+        { name: '工程能力', score: 80 },
+        { name: '框架掌握', score: 88 },
+        { name: '算法思维', score: 72 },
+        { name: '项目经验', score: 81 },
+        { name: '沟通协作', score: 85 },
+        { name: '学习效率', score: 90 },
+      ],
+    },
+  },
+  {
+    id: 'report_portrait_002',
+    type: 'portrait',
+    createdAt: '2026-03-24',
+    title: '个人能力画像（全栈探索）',
+    snapshot: {
+      predictedRole: '全栈开发工程师',
+      competitivenessScore: 76,
+      sevenDim: [
+        { name: '基础知识', score: 78 },
+        { name: '工程能力', score: 75 },
+        { name: '框架掌握', score: 80 },
+        { name: '算法思维', score: 66 },
+        { name: '项目经验', score: 74 },
+        { name: '沟通协作', score: 79 },
+        { name: '学习效率', score: 82 },
+      ],
+    },
+  },
+  {
+    id: 'report_portrait_003',
+    type: 'portrait',
+    createdAt: '2026-03-17',
+    title: '个人能力画像（工程化方向）',
+    snapshot: {
+      predictedRole: '前端工程化开发',
+      competitivenessScore: 69,
+      sevenDim: [
+        { name: '基础知识', score: 72 },
+        { name: '工程能力', score: 77 },
+        { name: '框架掌握', score: 68 },
+        { name: '算法思维', score: 60 },
+        { name: '项目经验', score: 64 },
+        { name: '沟通协作', score: 71 },
+        { name: '学习效率', score: 74 },
+      ],
+    },
+  },
+  {
+    id: 'report_portrait_004',
+    type: 'portrait',
+    createdAt: '2026-03-10',
+    title: '个人能力画像（数据可视化）',
+    snapshot: {
+      predictedRole: '数据可视化开发',
+      competitivenessScore: 63,
+      sevenDim: [
+        { name: '基础知识', score: 64 },
+        { name: '工程能力', score: 62 },
+        { name: '框架掌握', score: 67 },
+        { name: '算法思维', score: 58 },
+        { name: '项目经验', score: 59 },
+        { name: '沟通协作', score: 70 },
+        { name: '学习效率', score: 68 },
+      ],
+    },
+  },
+  {
+    id: 'report_portrait_005',
+    type: 'portrait',
+    createdAt: '2026-03-05',
+    title: '个人能力画像（应届冲刺）',
+    snapshot: {
+      predictedRole: '初级前端开发',
+      competitivenessScore: 58,
+      sevenDim: [
+        { name: '基础知识', score: 60 },
+        { name: '工程能力', score: 54 },
+        { name: '框架掌握', score: 62 },
+        { name: '算法思维', score: 50 },
+        { name: '项目经验', score: 52 },
+        { name: '沟通协作', score: 64 },
+        { name: '学习效率', score: 66 },
+      ],
+    },
+  },
+  {
+    id: 'report_portrait_006',
+    type: 'portrait',
+    createdAt: '2026-02-27',
+    title: '个人能力画像（基础回顾）',
+    snapshot: {
+      predictedRole: '前端实习生',
+      competitivenessScore: 51,
+      sevenDim: [
+        { name: '基础知识', score: 55 },
+        { name: '工程能力', score: 48 },
+        { name: '框架掌握', score: 53 },
+        { name: '算法思维', score: 44 },
+        { name: '项目经验', score: 46 },
+        { name: '沟通协作', score: 58 },
+        { name: '学习效率', score: 60 },
+      ],
+    },
+  },
+  {
+    id: 'report_career_001',
+    type: 'career',
+    createdAt: '2026-03-29',
+    title: '职业发展规划（前端主线）',
+    snapshot: {
+      topMatchScore: 82,
+      targetRoles: ['前端开发工程师', '前端工程化开发', '可视化开发工程师'],
+    },
+  },
+  {
+    id: 'report_career_002',
+    type: 'career',
+    createdAt: '2026-03-22',
+    title: '职业发展规划（产品技术复合）',
+    snapshot: {
+      topMatchScore: 74,
+      targetRoles: ['前端开发工程师', '产品技术经理', '增长分析师'],
+    },
+  },
+  {
+    id: 'report_career_003',
+    type: 'career',
+    createdAt: '2026-03-15',
+    title: '职业发展规划（全栈试探）',
+    snapshot: {
+      topMatchScore: 67,
+      targetRoles: ['全栈开发工程师', 'Node.js 开发工程师', '平台研发工程师'],
+    },
+  },
+  {
+    id: 'report_career_004',
+    type: 'career',
+    createdAt: '2026-03-08',
+    title: '职业发展规划（实习投递）',
+    snapshot: {
+      topMatchScore: 61,
+      targetRoles: ['前端开发实习生', '测试开发实习生', '低代码平台运营'],
+    },
+  },
+  {
+    id: 'report_career_005',
+    type: 'career',
+    createdAt: '2026-03-01',
+    title: '职业发展规划（能力补齐）',
+    snapshot: {
+      topMatchScore: 56,
+      targetRoles: ['前端开发实习生', '数据分析助理', '技术支持工程师'],
+    },
+  },
+]
 
 // 管理员统计数据
 export const mockAdminStats = {

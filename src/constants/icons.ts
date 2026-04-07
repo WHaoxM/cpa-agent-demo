@@ -1,5 +1,6 @@
 export const ICONS = {
   activity: 'lucide:activity',
+  home: 'lucide:home',
   alertTriangle: 'lucide:alert-triangle',
   arrowUpRight: 'lucide:arrow-up-right',
   bot: 'lucide:bot',

@@ -1,4 +1,4 @@
-<!-- 页面：课程体系分层图谱；路由：student/course-system；角色：STUDENT/TEACHER -->
+<!-- 页面：课程体系分层图谱；路由：student/course-system；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

@@ -1,4 +1,4 @@
-<!-- 页面：双栏分析（右侧面板）；路由：student/career-ability/dual；角色：STUDENT/TEACHER -->
+<!-- 组件：双栏分析右侧面板；由 CareerAbilityShell.vue 引入使用，非路由直接渲染；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
