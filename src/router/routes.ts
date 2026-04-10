@@ -5,15 +5,7 @@ import { UserRole } from '@/types'
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'landing',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { title: '首页', public: true },
-  },
-  {
-    path: '/app/home',
-    name: 'app-home',
-    component: () => import('@/views/HomeView.vue'),
-    meta: { title: '首页', public: true, allowAuthenticated: true },
+    redirect: '/login',
   },
   {
     path: '/login',
@@ -31,7 +23,7 @@ export const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/views/HomeCenter.vue'),
-        meta: { title: '首页', requiresAuth: true },
+        meta: { title: '首页', requiresAuth: true, immersive: true, keepTopNav: true },
       },
       {
         path: 'student/learning',
@@ -94,7 +86,7 @@ export const routes: RouteRecordRaw[] = [
         path: 'student/ai-assistant',
         name: 'student-ai-assistant',
         component: () => import('@/views/student/AIAssistant.vue'),
-        meta: { title: 'AI助手', requiresAuth: true, roles: [UserRole.STUDENT] },
+        meta: { title: 'ai助手', requiresAuth: true, roles: [UserRole.STUDENT] },
       },
       {
         path: 'student/my-reports',
@@ -170,22 +162,10 @@ export const routes: RouteRecordRaw[] = [
         redirect: to => ({ name: 'career-ability', query: to.query }),
       },
       {
-        path: 'student/settings',
-        name: 'student-settings',
-        component: () => import('@/views/student/Settings.vue'),
-        meta: { title: '个人设置', requiresAuth: true, roles: [UserRole.STUDENT] },
-      },
-      {
         path: 'student/favorites',
         name: 'student-favorites',
         component: () => import('@/views/student/Favorites.vue'),
-        meta: { title: '心仪岗位', requiresAuth: true, roles: [UserRole.STUDENT] },
-      },
-      {
-        path: 'student/wrongquestions',
-        name: 'student-wrongquestions',
-        component: () => import('@/views/student/WrongQuestions.vue'),
-        meta: { title: '薄弱点记录', requiresAuth: true, roles: [UserRole.STUDENT] },
+        meta: { title: '心仪岗位', requiresAuth: true, roles: [UserRole.STUDENT], immersive: true },
       },
       {
         path: 'admin/job-dataset',

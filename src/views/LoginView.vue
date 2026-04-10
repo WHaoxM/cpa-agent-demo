@@ -107,8 +107,7 @@ onBeforeUnmount(() => {
 
 
 <template>
-  <div ref="pageRef" class="login-page book-paper">
-    <!-- 宣纸纹理由 book-paper 类提供 -->
+  <div ref="pageRef" class="login-page">
 
     <!-- 卷轴式主容器 -->
     <div class="login-scroll">

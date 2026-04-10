@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="60" height="20" viewBox="0 0 60 20">
-  <!-- 波纹 Wave - 水波连续纹 -->
-  <path d="M0,10 Q15,2 30,10 Q45,18 60,10" stroke="currentColor" stroke-width="1" fill="none"/>
-  <path d="M0,16 Q15,8 30,16 Q45,24 60,16" stroke="currentColor" stroke-width="0.5" fill="none" opacity="0.5"/>
-</svg>

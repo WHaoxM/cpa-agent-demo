@@ -29,7 +29,7 @@ const route = useRoute()
 
 .section-title {
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 600;
   color: #111827;
 }
 
@@ -52,7 +52,7 @@ const route = useRoute()
 
 .empty-panel__meta {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   color: #6b7280;
   margin-bottom: 10px;
 }

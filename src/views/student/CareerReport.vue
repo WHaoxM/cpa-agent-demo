@@ -75,10 +75,23 @@ const showExportMenu = ref(false)
 const DIM_NAMES = ['专业技能', '证书资质', '创新能力', '学习能力', '抗压能力', '沟通能力', '实习经验'] as const
 
 const LINE_COLORS: Record<string, string> = {
-  frontend: '#E85D3A',
-  data:     '#D4A017',
-  qa:       '#4A90D9',
-  fullstack:'#3DB88C',
+  frontend:    '#E85D3A',
+  data:        '#D4A017',
+  qa:          '#4A90D9',
+  fullstack:   '#3DB88C',
+  general:     '#9A8E72',
+  algorithm:   '#7BA3B5',
+  'data-analyst': '#D4A017',
+  backend:     '#3DA87A',
+  ai:          '#A96DB8',
+  bigdata:     '#D47A42',
+  ops:         '#6A8FC8',
+  embedded:    '#8A7A52',
+  security:    '#C04848',
+  cloud:       '#4A8BBE',
+  database:    '#6A9A5A',
+  support:     '#A89A72',
+  multimedia:  '#C07A42',
 }
 
 const LEVEL_ORDER: Record<JobLevel, number> = {
@@ -175,11 +188,17 @@ function tangentCircle(a: { x: number; y: number; r: number }, b: { x: number; y
 }
 
 const bubbleLayout = computed<BubbleItem[]>(() => {
-  const sorted = [...JOB_PORTRAITS]
+  const weighted = [...JOB_PORTRAITS]
     .map(j => ({ ...j, matchScore: recommendedIds.value.has(j.id) ? j.matchScore : j.matchScore * 0.65 }))
     .sort((a, b) => b.matchScore - a.matchScore)
 
-  const circles = sorted.map(j => ({ id: j.id, r: Math.round(12 + j.matchScore * 28) }))
+  // 过滤：matchScore > 0.5 优先，最多取 7 个；不足 7 个时按分数补足
+  const highScore = weighted.filter(j => j.matchScore > 0.5)
+  const sorted = highScore.length >= 7
+    ? highScore.slice(0, 7)
+    : weighted.slice(0, Math.min(7, weighted.length))
+
+  const circles = sorted.map(j => ({ id: j.id, r: Math.max(16, Math.round(12 + j.matchScore * 28)) }))
   const packed = circlePack(circles)
   if (!packed.length) return []
 
@@ -466,7 +485,7 @@ function buildRadarOption() {
       trigger: 'item' as const,
       formatter: (params: { name: string; value: number[] }) => {
         const vals = params.value
-        return DIM_NAMES.map((n, i) => `<span style="color:#9C8B78">${n}</span> ${vals[i]}`).join('<br/>')
+        return DIM_NAMES.map((n, i) => `<span style="color:#999">${n}</span> ${vals[i]}`).join('<br/>')
       },
     },
     radar: {
@@ -480,7 +499,7 @@ function buildRadarOption() {
         color: '#5C4A38',
         fontSize: 10.5,
         fontFamily: 'var(--font-ui)',
-        backgroundColor: 'rgba(247,242,232,0.75)',
+        backgroundColor: 'rgba(255,255,255,0.75)',
         borderRadius: 3,
         padding: [2, 5],
       },
@@ -489,10 +508,10 @@ function buildRadarOption() {
         show: true,
         areaStyle: {
           color: [
-            'rgba(247,242,232,0.55)',
-            'rgba(240,234,220,0.40)',
-            'rgba(233,225,210,0.25)',
-            'rgba(226,217,200,0.12)',
+            'rgba(245,245,243,0.55)',
+            'rgba(240,240,238,0.40)',
+            'rgba(235,235,233,0.25)',
+            'rgba(230,230,228,0.12)',
           ],
         },
       },
@@ -777,7 +796,7 @@ onBeforeUnmount(() => {
             <!-- 墙面纹理 pattern -->
             <defs>
               <pattern id="cw-wall" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <rect width="20" height="20" fill="var(--bg-200, #EDE5D6)"/>
+                <rect width="20" height="20" fill="var(--bg-200)"/>
                 <circle cx="3" cy="7" r="0.6" fill="rgba(139,37,0,0.06)"/>
                 <circle cx="14" cy="3" r="0.4" fill="rgba(139,37,0,0.04)"/>
                 <circle cx="8" cy="16" r="0.5" fill="rgba(139,37,0,0.05)"/>
@@ -1119,28 +1138,28 @@ onBeforeUnmount(() => {
 .cr-back {
   display: flex; align-items: center; gap: 4px; background: transparent;
   border: 1px solid var(--bg-300); color: var(--text-200);
-  font-size: 12px; padding: 4px 10px; cursor: pointer; border-radius: 5px;
-  transition: border-color 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 150ms ease; font-family: var(--font-ui);
+  font-size: 12px; padding: 4px 10px; cursor: pointer; border-radius: var(--radius-sm);
+  transition: border-color 300ms ease, color 300ms ease, transform 150ms ease, box-shadow 150ms ease; font-family: var(--font-ui);
 }
 .cr-back:hover { border-color: var(--primary-100); color: var(--primary-100); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(139,37,0,0.12); }
 .cr-tab {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
   background: transparent; border: none; border-bottom: 2px solid transparent;
   color: var(--text-300); font-size: 12px; padding: 6px 18px; height: 100%;
-  font-family: var(--font-ui); transition: color 200ms ease, border-color 200ms ease;
+  font-family: var(--font-ui); transition: color 300ms ease, border-color 300ms ease;
 }
 .cr-tab--active {
-  color: var(--primary-100); font-weight: 700;
+  color: var(--primary-100); font-weight: 600;
   border-bottom: 2px solid var(--primary-100);
 }
 .cr-tab:hover:not(.cr-tab--active) { color: var(--text-200); }
-.cr-username { font-size: 12px; font-weight: 700; color: var(--primary-100); font-family: var(--font-title); }
+.cr-username { font-size: 12px; font-weight: 600; color: var(--primary-100); font-family: var(--font-title); }
 .cr-report-btn {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
   background: var(--primary-100); border: 1px solid var(--primary-100);
-  color: #fff; border-radius: 5px; font-weight: 600;
+  color: #fff; border-radius: var(--radius-sm); font-weight: 600;
   font-size: 11px; padding: 5px 14px; font-family: var(--font-ui);
-  transition: background 200ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition: background 300ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 .cr-report-btn:hover:not(:disabled) {
   background: var(--primary-300);
@@ -1153,14 +1172,14 @@ onBeforeUnmount(() => {
 .cr-export-btn {
   display: flex; align-items: center; gap: 4px; cursor: pointer;
   background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-200) 92%);
-  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200); border-radius: 5px;
+  border: 1px solid rgba(139,37,0,0.35); color: var(--text-200); border-radius: var(--radius-sm);
   font-size: 11px; padding: 5px 12px; font-family: var(--font-ui);
-  transition: background 200ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition: background 300ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 .cr-save-btn {
   display: flex; align-items: center; gap: 5px;
-  padding: 5px 12px; border-radius: 5px; font-family: var(--font-ui);
-  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  padding: 5px 12px; border-radius: var(--radius-sm); font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.3s;
   background: rgba(139,105,20,0.15); border: 1px solid rgba(196,150,30,0.4);
   color: rgba(139,105,20,1);
 }
@@ -1197,7 +1216,7 @@ onBeforeUnmount(() => {
   margin-left: auto; display: flex; align-items: center; gap: 4px;
   background: none; border: 1px solid rgba(139,37,0,0.25); color: var(--primary-100);
   cursor: pointer; font-size: 10px; padding: 2px 10px; font-family: var(--font-ui);
-  transition: background 200ms ease; border-radius: 4px;
+  transition: background 300ms ease; border-radius: var(--radius-sm);
 }
 .cr-footer-go:hover { background: rgba(139,37,0,0.06); }
 
@@ -1223,7 +1242,7 @@ onBeforeUnmount(() => {
 .cr-cw-svg { display: block; width: 100%; height: auto; cursor: default; }
 .cw-job-node { cursor: pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.22)); }
 .cw-job-node:hover circle { filter: brightness(1.1); }
-.cw-node-title { font-size: 10.5px; fill: #3D2B1A; font-weight: 700; pointer-events: none; }
+.cw-node-title { font-size: 10.5px; fill: #333; font-weight: 600; pointer-events: none; }
 .cw-node-title--active { fill: #fff; }
 .cw-node-sub { font-size: 8.5px; fill: #5C4A38; pointer-events: none; }
 .cw-node-sub--active { fill: rgba(255,255,255,0.9); }
@@ -1231,7 +1250,7 @@ onBeforeUnmount(() => {
 .cw-hold:hover ellipse { filter: brightness(1.2); }
 .cw-hold-text { font-size: 9px; fill: #3D2B1A; pointer-events: none; font-weight: 600; }
 .cw-legend-text { font-size: 9px; fill: #5C4A38; font-weight: 600; }
-.cw-rope-path { transition: stroke-width 200ms ease; }
+.cw-rope-path { transition: stroke-width 300ms ease; }
 .cw-rope-path:hover { stroke-width: 3; }
 .cr-cw-empty {
   flex: 1; display: flex; flex-direction: column; align-items: center;
@@ -1252,10 +1271,10 @@ onBeforeUnmount(() => {
 }
 .cr-hero__gauge { flex-shrink: 0; }
 .cr-hero-ring { width: 70px; height: 70px; }
-.cr-hero-pct { font-size: 14px; font-weight: 700; fill: var(--primary-100, #8B2500); font-family: var(--font-ui); }
-.cr-hero-pct-label { font-size: 7px; fill: var(--text-300, #9C8B78); }
+.cr-hero-pct { font-size: 14px; font-weight: 600; fill: var(--primary-100, #8B2500); font-family: var(--font-ui); }
+.cr-hero-pct-label { font-size: 7px; fill: var(--text-300, #999); }
 .cr-hero__info { flex: 1; min-width: 0; }
-.cr-hero-job { font-size: 16px; font-weight: 700; color: var(--primary-300); font-family: var(--font-title); letter-spacing: 0.08em; }
+.cr-hero-job { font-size: 16px; font-weight: 600; color: var(--primary-300); font-family: var(--font-title); letter-spacing: 0.02em; }
 .cr-hero-desc { font-size: 11px; color: var(--text-300); margin-top: 4px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ── 中栏上：气泡 + 雷达 ── */
 .cr-center-top {
@@ -1270,7 +1289,7 @@ onBeforeUnmount(() => {
 .cr-bubble-svg { display: block; width: 100%; flex: 1; }
 .cr-bubble-g { cursor: pointer; }
 .cr-bubble-g:hover .cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 48%, var(--bg-100, #F7F2E8) 52%);
+  fill: color-mix(in srgb, var(--c) 48%, var(--bg-100) 52%);
   stroke-opacity: 0.75;
 }
 @keyframes cr-breathe {
@@ -1278,7 +1297,7 @@ onBeforeUnmount(() => {
   50%       { transform: scale(1.12); opacity: 0.9; }
 }
 .cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 28%, var(--bg-100, #F7F2E8) 72%);
+  fill: color-mix(in srgb, var(--c) 28%, var(--bg-100) 72%);
   stroke: var(--c);
   stroke-width: 1.2;
   stroke-opacity: 0.45;
@@ -1288,21 +1307,21 @@ onBeforeUnmount(() => {
   transition: fill 180ms ease, stroke-opacity 180ms ease;
 }
 .cr-bubble-g--sel .cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 72%, var(--bg-100, #F7F2E8) 28%);
+  fill: color-mix(in srgb, var(--c) 72%, var(--bg-100) 28%);
   stroke: color-mix(in srgb, var(--c) 88%, #000 12%);
   stroke-width: 2;
   stroke-opacity: 1;
 }
 .cr-bt {
-  font-size: 10px; font-weight: 700; fill: var(--text-100, #1A1410);
+  font-size: 10px; font-weight: 600; fill: var(--text-100);
   text-anchor: middle; pointer-events: none; font-family: var(--font-title);
 }
 .cr-bp {
-  font-size: 8.5px; fill: var(--text-200, #6B5D4F);
+  font-size: 8.5px; fill: var(--text-200, #666);
   text-anchor: middle; pointer-events: none; font-family: var(--font-ui);
 }
 .cr-ba {
-  font-size: 9px; font-weight: 700; fill: var(--text-100, #1A1410);
+  font-size: 9px; font-weight: 600; fill: var(--text-100);
   text-anchor: middle; dominant-baseline: central; pointer-events: none; font-family: var(--font-title);
 }
 .cr-bubble-g--sel .cr-bt,
@@ -1358,7 +1377,7 @@ onBeforeUnmount(() => {
   background: var(--bg-100); border: 1px solid var(--bg-300); border-radius: 8px;
   padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;
   box-shadow: 0 2px 10px rgba(26,20,16,0.06), inset 0 1px 0 rgba(255,255,255,0.6);
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition: transform 300ms ease, box-shadow 300ms ease;
 }
 .cr-plan-stage:hover {
   transform: translateY(-2px);
@@ -1374,7 +1393,7 @@ onBeforeUnmount(() => {
 .cr-ps-icon { flex-shrink: 0; color: var(--primary-100); }
 .cr-plan-stage--mid .cr-ps-icon { color: #8B6914; }
 .cr-ps-label {
-  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-sm);
   display: inline-block; width: fit-content; font-family: var(--font-ui);
 }
 .cr-plan-stage--short .cr-ps-label { background: color-mix(in srgb, var(--primary-100) 18%, var(--bg-100) 82%); color: var(--primary-100); border: 1px solid rgba(139,37,0,0.35); }
@@ -1389,7 +1408,7 @@ onBeforeUnmount(() => {
 .cr-ps-expand {
   background: none; border: 1px dashed var(--bg-300); color: var(--text-300);
   font-size: 10px; padding: 3px 8px; cursor: pointer; font-family: var(--font-ui);
-  transition: color 200ms ease; align-self: flex-start; border-radius: 4px;
+  transition: color 300ms ease; align-self: flex-start; border-radius: var(--radius-sm);
 }
 .cr-ps-expand:hover { color: var(--primary-100); border-color: rgba(139,37,0,0.3); }
 .cr-ps-milestone {
@@ -1405,8 +1424,8 @@ onBeforeUnmount(() => {
 /* ══ 公用面板标题 ══ */
 .cr-panel-title {
   flex-shrink: 0; display: flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 700; color: var(--text-100);
-  font-family: var(--font-title); letter-spacing: 0.06em;
+  font-size: 13px; font-weight: 600; color: var(--text-100);
+  font-family: var(--font-title); letter-spacing: 0.02em;
   padding: 9px 14px 8px 12px;
   border-left: 3px solid var(--primary-100);
   border-bottom: 1px solid var(--bg-300);
@@ -1429,8 +1448,8 @@ onBeforeUnmount(() => {
 .cr-rp-preview::-webkit-scrollbar { width: 4px; }
 .cr-rp-preview::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-rp-preview-inner :deep(.rp-h2) {
-  font-size: 18px; font-weight: 700; color: var(--text-100); font-family: var(--font-title);
-  letter-spacing: 0.1em; margin: 16px 0 8px; padding-bottom: 6px;
+  font-size: 18px; font-weight: 600; color: var(--text-100); font-family: var(--font-title);
+  letter-spacing: 0.02em; margin: 16px 0 8px; padding-bottom: 6px;
   border-bottom: 2px solid #8B6914;
 }
 .cr-rp-preview-inner :deep(.rp-h3) {
@@ -1469,8 +1488,8 @@ onBeforeUnmount(() => {
 .cr-tool-btn {
   display: flex; align-items: center; gap: 6px; cursor: pointer;
   background: var(--bg-100); border: 1px solid var(--bg-300); color: var(--text-200);
-  font-size: 11px; padding: 7px 12px; font-family: var(--font-ui); border-radius: 5px;
-  transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
+  font-size: 11px; padding: 7px 12px; font-family: var(--font-ui); border-radius: var(--radius-sm);
+  transition: background 300ms ease, border-color 300ms ease, transform 150ms ease;
 }
 .cr-tool-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary-100) 6%, var(--bg-100) 94%); border-color: rgba(139,37,0,0.3); transform: translateY(-1px); }
 .cr-tool-btn:disabled { opacity: 0.5; cursor: wait; }

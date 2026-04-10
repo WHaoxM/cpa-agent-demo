@@ -105,7 +105,7 @@ function draw() {
         .attr('text-anchor', 'end')
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 9)
-        .attr('fill', 'var(--color-text-subtle, #9C8B78)')
+        .attr('fill', 'var(--color-text-subtle, #999)')
         .text(label)
     }
   })
@@ -128,7 +128,7 @@ function draw() {
           .attr('x', c.col * cellStep)
           .attr('y', -5)
           .attr('font-size', 9)
-          .attr('fill', 'var(--color-text-subtle, #9C8B78)')
+          .attr('fill', 'var(--color-text-subtle, #999)')
           .attr('opacity', 0.4 + ((monthMinutes.get(month) ?? 0) / monthMax) * 0.6)
           .text(c.date.substring(5, 7) + '月')
       }
@@ -138,8 +138,8 @@ function draw() {
   // ── cells ──
   const tip = svg.append('g').style('display', 'none').attr('pointer-events', 'none')
   const tipRect = tip.append('rect').attr('rx', 3).attr('ry', 3)
-    .attr('fill', 'var(--color-text, #1C1612)').attr('opacity', 0.85).attr('height', 22)
-  const tipText = tip.append('text').attr('fill', 'var(--parchment-100, #F5EFE0)')
+    .attr('fill', 'var(--color-text, #111)').attr('opacity', 0.85).attr('height', 22)
+  const tipText = tip.append('text').attr('fill', 'var(--parchment-100, #F5F5F3)')
     .attr('font-size', 10).attr('dominant-baseline', 'middle')
 
   const rects = g.selectAll('rect.cell')
@@ -205,7 +205,7 @@ function draw() {
     .attr('width', 94)
     .attr('height', 36)
     .attr('rx', 6)
-    .attr('fill', 'rgba(28,22,18,0.75)')
+    .attr('fill', 'rgba(0,0,0,0.75)')
 
   const miniBarG = miniWeekWrap.append('g')
   const miniScaleX = d3.scaleBand<number>().domain([0, 1, 2, 3, 4, 5, 6]).range([0, 70]).padding(0.25)
@@ -294,7 +294,7 @@ function draw() {
 
   // ── legend ──
   const legendG = svg.append('g').attr('transform', `translate(${paddingLeft},${H - 14})`)
-  legendG.append('text').attr('y', 8).attr('font-size', 9).attr('fill', 'var(--color-text-subtle, #9C8B78)').text('学习较少')
+  legendG.append('text').attr('y', 8).attr('font-size', 9).attr('fill', 'var(--color-text-subtle, #999)').text('学习较少')
   const steps = 5
   for (let s = 0; s < steps; s++) {
     const pct = s / (steps - 1)
@@ -305,7 +305,7 @@ function draw() {
       .attr('fill', colorScale(pct * maxMin))
   }
   legendG.append('text').attr('x', 18 + steps * (cellW + 2) + 4).attr('y', 8)
-    .attr('font-size', 9).attr('fill', 'var(--color-text-subtle, #9C8B78)').text('较多')
+    .attr('font-size', 9).attr('fill', 'var(--color-text-subtle, #999)').text('较多')
 }
 
 onMounted(() => {

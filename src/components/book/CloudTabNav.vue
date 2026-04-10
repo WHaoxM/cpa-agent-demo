@@ -13,6 +13,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', val: string): void }>()
       type="button"
       class="cloud-tab"
       :class="{ 'is-active': modelValue === tab.key }"
+      :aria-current="modelValue === tab.key ? 'page' : undefined"
       @click="emit('update:modelValue', tab.key)"
     >
       <svg
@@ -39,12 +40,18 @@ const emit = defineEmits<{ (e: 'update:modelValue', val: string): void }>()
 <style scoped>
 .cloud-nav {
   display: flex;
-  align-items: stretch;
-  background: #1a2f4a;
-  height: 46px;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px;
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--bg-200) 8%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent 22%);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
   scrollbar-width: none;
+  scroll-snap-type: x proximity;
 }
 
 .cloud-nav::-webkit-scrollbar {
@@ -53,24 +60,41 @@ const emit = defineEmits<{ (e: 'update:modelValue', val: string): void }>()
 
 .cloud-tab {
   position: relative;
-  flex: 1;
-  min-width: 86px;
-  height: 100%;
-  border: none;
+  flex: 0 0 auto;
+  min-width: max-content;
+  height: 36px;
+  border: 1px solid transparent;
   background: transparent;
-  margin-right: -12px;
-  padding: 0;
+  margin-right: 0;
+  padding: 0 16px;
   cursor: pointer;
   z-index: 1;
-  overflow: visible;
+  overflow: hidden;
+  border-radius: 12px;
+  scroll-snap-align: start;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
 }
 
 .cloud-tab:hover {
   z-index: 2;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface) 95%);
+  border-color: color-mix(in srgb, var(--color-border) 90%, transparent 10%);
 }
 
 .cloud-tab.is-active {
   z-index: 3;
+  background: linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(17, 17, 17, 0.96));
+  border-color: rgba(17, 17, 17, 0.96);
+  box-shadow: 0 6px 14px rgba(17, 17, 17, 0.16);
+}
+
+.cloud-tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-text) 22%, transparent 78%);
+  outline-offset: 2px;
 }
 
 .cloud-bg {
@@ -78,57 +102,69 @@ const emit = defineEmits<{ (e: 'update:modelValue', val: string): void }>()
   inset: 0;
   width: 100%;
   height: 100%;
-  display: block;
-  overflow: visible;
+  display: none;
+  overflow: hidden;
 }
 
 .cloud-fill {
-  fill: rgba(255, 255, 255, 0.07);
-  transition: fill 180ms ease;
+  fill: transparent;
+  transition: fill 280ms ease;
 }
 
 .cloud-tab:hover .cloud-fill {
-  fill: rgba(255, 255, 255, 0.15);
+  fill: transparent;
 }
 
 .cloud-tab.is-active .cloud-fill {
-  fill: rgba(201, 162, 39, 0.22);
+  fill: transparent;
 }
 
 .cloud-label {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  inset: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 20px;
+  height: 100%;
+  padding: 0;
   font-size: 13px;
   font-weight: 600;
-  font-family: var(--font-title, serif);
-  letter-spacing: 0.08em;
-  color: rgba(235, 225, 200, 0.82);
+  font-family: var(--font-ui, sans-serif);
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
   white-space: nowrap;
   pointer-events: none;
-  transition: color 180ms ease;
+  transition: color 220ms ease;
   user-select: none;
 }
 
 .cloud-tab:hover .cloud-label {
-  color: rgba(250, 240, 215, 1);
+  color: var(--color-text);
 }
 
 .cloud-tab.is-active .cloud-label {
-  color: var(--gold-300, #e0c060);
+  color: #ffffff;
 }
 
 @media (max-width: 1024px) {
   .cloud-tab {
-    min-width: 76px;
+    padding: 0 14px;
   }
 
   .cloud-label {
     font-size: 12px;
-    padding: 0 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .cloud-nav {
+    border-radius: 14px;
+  }
+
+  .cloud-tab {
+    height: 34px;
+    padding: 0 13px;
+    border-radius: 10px;
   }
 }
 </style>

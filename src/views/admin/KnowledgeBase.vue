@@ -321,7 +321,7 @@ async function onDelete(row: KbDocument) {
   gap: 8px;
   font-family: var(--font-title);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -366,7 +366,7 @@ async function onDelete(row: KbDocument) {
 .stat-card__num {
   font-family: var(--font-title);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-100);
   line-height: 1.2;
 }

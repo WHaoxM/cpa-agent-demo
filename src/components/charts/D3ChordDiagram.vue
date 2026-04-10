@@ -60,7 +60,7 @@ function draw() {
 
   const color = d3.scaleOrdinal<string, string>()
     .domain(nodes)
-    .range(['#BE2A00', '#C9A227', '#6B5040', '#8F6B53', '#A13E1A', '#4A6741'])
+    .range(['#8B2500', '#B8860B', '#4A7A5A', '#4A6B8A', '#A0937D', '#8C7B6B', '#7A5C3A', '#5A7A6A'])
 
   const chord = d3.chord()
     .padAngle(0.06)
@@ -83,8 +83,9 @@ function draw() {
     .join('path')
     .attr('d', ribbon)
     .attr('fill', d => color(nodes[d.source.index] || ''))
-    .attr('stroke', d => d3.color(color(nodes[d.source.index] || ''))?.darker(0.6).toString() || '#7a6a59')
-    .attr('opacity', 0.45)
+    .attr('stroke', d => d3.color(color(nodes[d.source.index] || ''))?.darker(0.5).toString() || '#7a6a59')
+    .attr('stroke-width', 0.5)
+    .attr('opacity', 0.5)
 
   const group = g.append('g')
     .selectAll('g')
@@ -94,8 +95,8 @@ function draw() {
   group.append('path')
     .attr('d', arc)
     .attr('fill', d => color(nodes[d.index] || ''))
-    .attr('stroke', '#fff')
-    .attr('stroke-width', 1.2)
+    .attr('stroke', 'rgba(255,255,255,0.9)')
+    .attr('stroke-width', 1.5)
 
   group.append('text')
     .each(d => {
@@ -108,15 +109,16 @@ function draw() {
     })
     .attr('text-anchor', d => (((d as d3.ChordGroup & { angle?: number }).angle || 0) > Math.PI ? 'end' : 'start'))
     .attr('font-size', 10)
-    .attr('fill', 'var(--color-text-muted, #6B5040)')
+    .attr('font-weight', '500')
+    .attr('fill', '#4a3c30')
     .text(d => nodes[d.index] || '')
 
   group.on('mouseenter', (_event, d) => {
-    ribbons.attr('opacity', r => (r.source.index === d.index || r.target.index === d.index ? 0.85 : 0.08))
+    ribbons.attr('opacity', r => (r.source.index === d.index || r.target.index === d.index ? 0.9 : 0.08))
   })
 
   group.on('mouseleave', () => {
-    ribbons.attr('opacity', 0.45)
+    ribbons.attr('opacity', 0.5)
   })
 }
 

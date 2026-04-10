@@ -24,6 +24,9 @@ const userStore = useUserStore()
 
 const roleName = computed(() => (route.query.role as string) || '前端开发工程师')
 function goBack() { router.back() }
+function goToLearningCenter() {
+  router.push({ name: 'student-learning', query: { role: roleName.value } })
+}
 
 /* ═══ 状态 ═══ */
 const highlightTier = ref<SkillTier | null>(null)
@@ -65,7 +68,7 @@ let chart: echarts.ECharts | null = null
 let _blankClickTimer: ReturnType<typeof setTimeout> | null = null
 
 /* ═══ 古籍配色常量 ═══ */
-const PARCHMENT_BG = '#f8f4ec'
+const PARCHMENT_BG = '#F5F5F3'
 const PLATFORM_FILL: Record<SkillTier, string> = {
   foundation: 'rgba(205,178,144,0.60)',
   junior:     'rgba(186,150,114,0.58)',
@@ -419,18 +422,18 @@ function buildOption() {
     backgroundColor: PARCHMENT_BG,
     tooltip: {
       show: true,
-      backgroundColor: 'rgba(247,242,232,0.98)',
-      borderColor: 'rgba(139,37,0,0.18)',
+      backgroundColor: 'rgba(255,255,255,0.98)',
+      borderColor: 'rgba(0,0,0,0.08)',
       borderWidth: 1,
-      textStyle: { color: '#1a1410', fontSize: 12 },
-      extraCssText: 'box-shadow: 0 4px 12px rgba(26,20,16,0.06);',
+      textStyle: { color: '#111', fontSize: 12 },
+      extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.06);',
       formatter: (params: any) => {
         const d = params.data
         if (!d || !d.name) return ''
         if (d.tier) {
           const tier = d.tier as SkillTier
           return `<span style="color:${TIER_COLORS[tier]};font-weight:600">${d.name}</span>`
-            + `<br/><span style="color:#6b5d4f;font-size:11px">${TIER_LABELS[tier]}</span>`
+            + `<br/><span style="color:#666;font-size:11px">${TIER_LABELS[tier]}</span>`
         }
         return d.name
       },
@@ -620,6 +623,10 @@ const importanceLabels: Record<string, string> = {
             <Icon :icon="showLabels ? 'lucide:tag' : 'lucide:tag-off'" :width="14" />
             <span>{{ showLabels ? '隐藏节点名称' : '显示节点名称' }}</span>
           </button>
+          <button class="cs-tools__btn cs-tools__btn--learning" @click="goToLearningCenter">
+            <Icon icon="lucide:book-open" :width="14" />
+            <span>查看岗位课程</span>
+          </button>
         </div>
 
         <!-- 左侧书签式分层控件 -->
@@ -784,7 +791,7 @@ const importanceLabels: Record<string, string> = {
 .cs-brand__icon {
   width: 30px; height: 30px; display: grid; place-items: center;
   border: 1.5px solid var(--primary-100); color: var(--primary-100);
-  font-size: 14px; font-weight: 900; transform: rotate(-3deg);
+  font-size: 14px; font-weight: 600; transform: rotate(-3deg);
 }
 .cs-brand__title {
   font-size: 14px; font-weight: 600; letter-spacing: 0.06em;
@@ -804,7 +811,7 @@ const importanceLabels: Record<string, string> = {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--primary-100);
   color: #fff; display: grid; place-items: center;
-  font-size: 13px; font-weight: 700;
+  font-size: 13px; font-weight: 600;
 }
 .cs-user-text { display: flex; flex-direction: column; }
 .cs-user-name { font-size: 13px; font-weight: 600; color: var(--text-100); line-height: 1.2; }
@@ -831,7 +838,18 @@ const importanceLabels: Record<string, string> = {
   position: absolute;
   top: 16px; right: 16px; z-index: 5;
   display: flex;
+  gap: 6px;
   pointer-events: auto;
+}
+.cs-tools__btn--learning {
+  background: rgba(139,37,0,0.10);
+  border-color: rgba(139,37,0,0.30);
+  color: #5c1a00;
+  font-weight: 600;
+}
+.cs-tools__btn--learning:hover {
+  background: rgba(139,37,0,0.18);
+  border-color: rgba(139,37,0,0.45);
 }
 .cs-tools__btn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -903,9 +921,9 @@ const importanceLabels: Record<string, string> = {
 .cs-bookmark.is-active {
   background: var(--bm-bg, #8B2500);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
   padding-right: 20px;
-  box-shadow: 3px 3px 14px rgba(26,20,16,0.14);
+  box-shadow: 3px 3px 14px rgba(0,0,0,0.10);
 }
 .cs-bookmark.is-active .cs-bookmark__dot {
   background: #fff !important;
@@ -932,10 +950,10 @@ const importanceLabels: Record<string, string> = {
   padding: 10px 14px;
   pointer-events: auto;
   backdrop-filter: blur(10px);
-  box-shadow: 0 10px 24px rgba(26,20,16,0.08);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
 }
 .cs-legend__title {
-  font-size: 10px; font-weight: 700;
+  font-size: 10px; font-weight: 600;
   color: rgba(92,26,0,0.62); letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 6px;
@@ -1005,7 +1023,7 @@ const importanceLabels: Record<string, string> = {
   flex-shrink: 0;
 }
 .cs-panel__title {
-  font-size: 15px; font-weight: 700; color: #5c1a00;
+  font-size: 15px; font-weight: 600; color: #5c1a00;
   line-height: 1.3;
 }
 .cs-panel__close {
@@ -1048,7 +1066,7 @@ const importanceLabels: Record<string, string> = {
 }
 .cs-panel__section-title {
   display: flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700;
+  font-size: 11px; font-weight: 600;
   color: rgba(92,26,0,0.65);
   letter-spacing: 0.08em;
   margin-bottom: 10px;
@@ -1073,7 +1091,7 @@ const importanceLabels: Record<string, string> = {
   background: rgba(139,37,0,0.05);
 }
 .cs-panel__path-step.is-current {
-  font-weight: 700;
+  font-weight: 600;
 }
 .cs-panel__path-step.is-current .cs-panel__path-name {
   color: #5c1a00;

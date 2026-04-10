@@ -111,7 +111,7 @@ function draw() {
       .attr('text-anchor', Math.abs(lx) < 5 ? 'middle' : lx > 0 ? 'start' : 'end')
       .attr('dominant-baseline', Math.abs(ly) < 5 ? 'middle' : ly > 0 ? 'hanging' : 'auto')
       .attr('font-size', 10)
-      .attr('fill', 'var(--color-text-muted, #6B5040)')
+      .attr('fill', 'var(--color-text-muted, #666)')
       .text(d.axis)
   })
 
@@ -158,11 +158,11 @@ function draw() {
   const tipRect = tip.append('rect')
     .attr('rx', 4)
     .attr('ry', 4)
-    .attr('fill', 'var(--color-text, #1C1612)')
+    .attr('fill', 'var(--color-text, #111)')
     .attr('opacity', 0.9)
     .attr('height', 24)
   const tipText = tip.append('text')
-    .attr('fill', 'var(--parchment-100, #F5EFE0)')
+    .attr('fill', 'var(--parchment-100, #F5F5F3)')
     .attr('font-size', 10)
     .attr('dominant-baseline', 'middle')
 
@@ -178,7 +178,7 @@ function draw() {
       .attr('cy', cy)
       .attr('r', 0)
       .attr('fill', 'var(--color-primary, #BE2A00)')
-      .attr('stroke', 'var(--parchment-100, #F5EFE0)')
+      .attr('stroke', 'var(--parchment-100, #F5F5F3)')
       .attr('stroke-width', 1.5)
       .style('cursor', 'pointer')
 
@@ -215,7 +215,7 @@ function draw() {
       .attr('y', 4)
       .attr('dominant-baseline', 'middle')
       .attr('font-size', 10)
-      .attr('fill', 'var(--color-text-muted, #6B5040)')
+      .attr('fill', 'var(--color-text-muted, #666)')
       .text('当前')
 
     if (props.ghostData?.length === N) {
@@ -232,7 +232,7 @@ function draw() {
         .attr('y', 4)
         .attr('dominant-baseline', 'middle')
         .attr('font-size', 10)
-        .attr('fill', 'var(--color-text-muted, #6B5040)')
+        .attr('fill', 'var(--color-text-muted, #666)')
         .text('上次')
     }
 
@@ -249,7 +249,7 @@ function draw() {
       .attr('y', 4)
       .attr('dominant-baseline', 'middle')
       .attr('font-size', 10)
-      .attr('fill', 'var(--color-text-muted, #6B5040)')
+      .attr('fill', 'var(--color-text-muted, #666)')
       .text('岗位参考')
   }
 

@@ -60,22 +60,22 @@ const toggleLayout = sg.toggleLayout
   inset: 0;
   z-index: 5;
   pointer-events: none;
-  font-family: var(--font-title), 'KaiTi', serif;
-  color: var(--text-100, #1A1410);
+  font-family: var(--font-title), sans-serif;
+  color: var(--text-100, #111);
 }
 
 /* ═══ 工具栏（右上） ═══ */
 .ag-toolbar {
   position: absolute; top: 14px; right: 18px; z-index: 20;
   display: flex; align-items: center; gap: 8px;
-  background: rgba(237,229,214,0.9); backdrop-filter: blur(6px);
-  border: 1px solid var(--bg-300, #D4C9B5);
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(6px);
+  border: 1px solid var(--bg-300, #CBCBC8);
   border-radius: var(--radius-md, 3px); padding: 6px 12px;
   pointer-events: auto;
 }
 .ag-toolbar__toggle {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: var(--text-200, #6B5D4F);
+  font-size: 12px; color: var(--text-200, #666);
   cursor: pointer; user-select: none;
   padding-right: 8px; border-right: 1px solid var(--bg-300);
 }
@@ -91,23 +91,23 @@ const toggleLayout = sg.toggleLayout
 /* ═══ 图例（左下） ═══ */
 .ag-legend {
   position: absolute; bottom: 18px; left: 18px; z-index: 20;
-  background: rgba(237,229,214,0.92); backdrop-filter: blur(6px);
-  border: 1px solid var(--bg-300, #D4C9B5);
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(6px);
+  border: 1px solid var(--bg-300, #CBCBC8);
   border-radius: var(--radius-md, 3px); padding: 12px 16px; min-width: 160px;
   pointer-events: auto;
 }
 .ag-legend__title {
-  font-size: 13px; font-weight: 700; color: var(--primary-100, #8B2500);
+  font-size: 13px; font-weight: 600; color: var(--primary-100, #8B2500);
   letter-spacing: 0.08em; margin-bottom: 10px;
   padding-bottom: 6px; border-bottom: 1px solid var(--bg-300);
 }
 .ag-legend__section { margin-bottom: 8px; }
-.ag-legend__subtitle { font-size: 11px; font-weight: 600; color: var(--text-200, #6B5D4F); margin-bottom: 4px; }
+.ag-legend__subtitle { font-size: 11px; font-weight: 600; color: var(--text-200, #666); margin-bottom: 4px; }
 .ag-legend__item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-200); padding: 2px 0; }
 .ag-legend__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .ag-legend__line { width: 24px; height: 0; flex-shrink: 0; border-top-width: 2px; }
 .ag-legend__hint {
-  font-size: 10px; color: var(--text-300, #9C8B78);
+  font-size: 10px; color: var(--text-300, #999);
   margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--bg-300); line-height: 1.5;
 }
 

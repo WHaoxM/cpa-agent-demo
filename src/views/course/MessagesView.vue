@@ -116,7 +116,7 @@ function markRead(id: string) {
 }
 
 .toolbar__title {
-  font-weight: 900;
+  font-weight: 600;
   font-size: 14px;
   line-height: 1.2;
   display: inline-flex;
@@ -162,7 +162,7 @@ function markRead(id: string) {
 }
 
 .msg-row__title {
-  font-weight: 900;
+  font-weight: 600;
   line-height: 1.35;
   display: flex;
   align-items: center;

@@ -244,10 +244,10 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: var(--color-surface-raised);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -260,10 +260,10 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: color-mix(in srgb, var(--primary-100) 10%, var(--bg-100) 90%);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -276,7 +276,7 @@ function goBack() {
 
 .course-meta__title {
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 600;
   color: var(--text-100);
   white-space: nowrap;
   overflow: hidden;
@@ -285,7 +285,7 @@ function goBack() {
 
 .course-meta__sub {
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-200);
 }
 
@@ -299,7 +299,7 @@ function goBack() {
 .chapter-panel {
   background: var(--color-surface-raised);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   box-shadow: none;
   display: flex;
   flex-direction: column;
@@ -318,7 +318,7 @@ function goBack() {
 
 .chapter-panel__title {
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -339,7 +339,7 @@ function goBack() {
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
   color: var(--text-100);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .stat-pill--primary {
@@ -369,7 +369,7 @@ function goBack() {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 10px;
-  border-radius: 0;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
@@ -392,7 +392,7 @@ function goBack() {
 
 .chapter-row__title {
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 600;
   color: var(--text-100);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -402,7 +402,7 @@ function goBack() {
 .chapter-row__meta {
   margin-top: 2px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-200);
 }
 
@@ -416,7 +416,7 @@ function goBack() {
   background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
   color: var(--text-200);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .state-pill--doing {
@@ -432,7 +432,7 @@ function goBack() {
 .workspace-content {
   background: var(--color-surface-raised);
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   padding: 0;
   min-height: 640px;
   box-shadow: none;
@@ -481,7 +481,7 @@ function goBack() {
 
 .drawer-title {
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -489,10 +489,10 @@ function goBack() {
   appearance: none;
   border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
   background: var(--color-surface-raised);
-  border-radius: 0;
+  border-radius: var(--radius-md);
   padding: 8px 10px;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-100);
 }
 

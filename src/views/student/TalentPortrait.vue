@@ -118,7 +118,7 @@ function updateRadarChart() {
           const lv = s >= 80 ? '优秀' : s >= 60 ? '良好' : '待提升'
           return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0">` +
             `<span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span>` +
-            `<span style="color:${c};font-weight:700;font-size:12px;min-width:22px;text-align:right">${s}</span>` +
+            `<span style="color:${c};font-weight:600;font-size:12px;min-width:22px;text-align:right">${s}</span>` +
             `<span style="color:${c};font-size:9px;letter-spacing:.04em">${lv}</span>` +
             `</div>`
         }).join('')
@@ -499,16 +499,16 @@ onBeforeUnmount(() => {
 <style scoped>
 /* ── CSS vars ── */
 :root {
-  --tp-bg: #F7F2E8;
-  --tp-panel: #EDE5D6;
-  --tp-border: #D4C9B5;
+  --tp-bg: #F5F5F3;
+  --tp-panel: #EDEDEB;
+  --tp-border: #E3E3E0;
   --tp-red: #8B2500;
   --tp-gold: #8B6914;
-  --tp-text: #1A1410;
-  --tp-sub: #6B5D4F;
-  --tp-hint: #9C8B78;
-  --tp-dark: #1A1008;
-  --tp-dark2: #120D06;
+  --tp-text: #111111;
+  --tp-sub: #666666;
+  --tp-hint: #999999;
+  --tp-dark: #151515;
+  --tp-dark2: #111111;
 }
 
 /* ── Page container ── */
@@ -517,10 +517,10 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100vh;
   max-height: 100vh;
-  background: #1A1008;
+  background: #151515;
   display: flex;
   flex-direction: column;
-  font-family: var(--font-title, 'LXGW WenKai', serif);
+  font-family: var(--font-title), sans-serif;
   overflow: hidden;
 }
 
@@ -534,7 +534,7 @@ onBeforeUnmount(() => {
   padding: 0 28px;
   height: 48px;
   min-height: 48px;
-  background: #0E0805;
+  background: #0a0a0a;
   border-bottom: 1px solid rgba(212,201,181,0.12);
   flex-shrink: 0;
 }
@@ -546,14 +546,14 @@ onBeforeUnmount(() => {
   padding: 4px 10px; border: 1px solid rgba(212,201,181,0.22);
   background: transparent; color: rgba(168,152,122,0.88);
   font-size: 12px; font-family: inherit; cursor: pointer;
-  transition: all 0.2s ease; letter-spacing: 0.04em;
+  transition: all 0.3s ease; letter-spacing: 0.02em;
 }
 .tp-back:hover { border-color: rgba(139,37,0,0.55); color: rgba(200,120,90,0.9); }
 
-.tp-brand-name { font-size: 13px; font-weight: 700; color: rgba(228,210,182,0.5); letter-spacing: 0.14em; }
+.tp-brand-name { font-size: 13px; font-weight: 600; color: rgba(220,220,220,0.5); letter-spacing: 0.04em; }
 
 .tp-header-tag {
-  font-size: 10px; letter-spacing: 0.18em;
+  font-size: 10px; letter-spacing: 0.06em;
   color: rgba(220,170,130,0.9);
   border: 1px solid rgba(139,37,0,0.35);
   background: rgba(139,37,0,0.12);
@@ -565,16 +565,16 @@ onBeforeUnmount(() => {
   background: rgba(139,37,0,0.22);
   border: 1.5px solid rgba(139,37,0,0.42);
   display: grid; place-items: center;
-  font-size: 12px; font-weight: 700; color: rgba(220,140,100,0.9); flex-shrink: 0;
+  font-size: 12px; font-weight: 600; color: rgba(220,140,100,0.9); flex-shrink: 0;
 }
 .tp-username { font-size: 12px; color: rgba(168,152,122,0.88); letter-spacing: 0.04em; }
 
 .tp-export-btn {
   display: flex; align-items: center; gap: 5px;
   background: rgba(139,37,0,0.06); border: 1px solid rgba(139,37,0,0.35);
-  padding: 4px 10px; cursor: pointer; font-size: 10px; letter-spacing: 0.08em;
+  padding: 4px 10px; cursor: pointer; font-size: 10px; letter-spacing: 0.02em;
   font-family: inherit; color: rgba(210,150,100,0.85);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .tp-export-btn:hover { background: rgba(139,37,0,0.12); border-color: rgba(139,37,0,0.55); }
 
@@ -595,7 +595,7 @@ onBeforeUnmount(() => {
 }
 .tp-loading-spin { color: rgba(200,80,40,0.9); animation: tp-spin 1.2s linear infinite; }
 @keyframes tp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.tp-loading-msg { font-size: 13px; color: rgba(178,162,132,0.88); letter-spacing: 0.06em; margin: 0; }
+.tp-loading-msg { font-size: 13px; color: rgba(200,200,200,0.88); letter-spacing: 0.02em; margin: 0; }
 
 /* ══════════════════════════════════════════
    Portrait 主容器
@@ -605,7 +605,7 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   padding: 20px 22px 20px;
   display: flex; flex-direction: column; gap: 14px;
-  background: var(--tp-dark, #1A1008);
+  background: var(--tp-dark, #151515);
   color: rgba(220,205,185,0.9);
 }
 .tp-portrait::-webkit-scrollbar { width: 3px; }
@@ -614,8 +614,8 @@ onBeforeUnmount(() => {
 
 .tp-portrait__section-lbl {
   display: block;
-  font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(175,155,110,0.82); text-transform: uppercase;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  color: rgba(200,200,200,0.7); text-transform: uppercase;
   margin-bottom: 6px;
 }
 
@@ -633,17 +633,17 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, rgba(192,52,24,0.75), rgba(196,150,30,0.65));
   border: 1.5px solid rgba(192,52,24,0.62);
   display: grid; place-items: center;
-  font-size: 18px; font-weight: 700; color: rgba(240,225,200,0.9);
+  font-size: 18px; font-weight: 600; color: rgba(240,225,200,0.9);
 }
 .tp-portrait__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .tp-portrait__name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.tp-portrait__name { font-size: 16px; font-weight: 800; color: rgba(230,215,190,0.95); letter-spacing: 0.04em; }
+.tp-portrait__name { font-size: 16px; font-weight: 600; color: rgba(230,230,230,0.95); letter-spacing: 0.02em; }
 .tp-portrait__grade {
   font-size: 10px; padding: 2px 8px; border-radius: 10px;
   background: rgba(196,150,30,0.22); border: 1px solid rgba(196,150,30,0.48);
-  color: rgba(238,198,88,0.98); letter-spacing: 0.06em;
+  color: rgba(238,198,88,0.98); letter-spacing: 0.02em;
 }
-.tp-portrait__target { font-size: 11px; font-weight: 600; color: rgba(218,78,52,0.97); letter-spacing: 0.06em; }
+.tp-portrait__target { font-size: 11px; font-weight: 600; color: rgba(218,78,52,0.97); letter-spacing: 0.02em; }
 .tp-portrait__school-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .tp-portrait__school-row span { font-size: 11px; color: rgba(202,188,162,0.92); }
 .tp-portrait__meta-icon { color: rgba(165,148,118,0.72); flex-shrink: 0; }
@@ -667,7 +667,7 @@ onBeforeUnmount(() => {
   background: rgba(196,150,30,0.14); border: 1px solid rgba(196,150,30,0.38);
 }
 .tp-portrait__score-val {
-  font-size: 26px; font-weight: 900; line-height: 1; letter-spacing: -0.02em;
+  font-size: 26px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;
 }
 .tp-portrait__score-card--completeness .tp-portrait__score-val { color: rgb(95,218,128); }
 .tp-portrait__score-card--competitiveness .tp-portrait__score-val { color: rgb(240,100,68); }
@@ -697,7 +697,7 @@ onBeforeUnmount(() => {
 .tp-portrait__dim-top { display: flex; align-items: center; gap: 5px; }
 .tp-portrait__dim-label { font-size: 12px; font-weight: 600; color: rgba(228,212,190,1.0); flex: 1; }
 .tp-portrait__dim-badge {
-  font-size: 9px; padding: 1px 6px; border-radius: 8px; letter-spacing: 0.06em;
+  font-size: 9px; padding: 1px 6px; border-radius: 8px; letter-spacing: 0.02em;
 }
 .tp-portrait__dim-badge--good { background: rgba(80,165,90,0.22); color: rgb(100,218,138); border: 1px solid rgba(80,165,90,0.48); }
 .tp-portrait__dim-badge--mid  { background: rgba(196,150,30,0.18); color: rgb(238,200,85); border: 1px solid rgba(196,150,30,0.48); }
@@ -720,7 +720,7 @@ onBeforeUnmount(() => {
 .tp-portrait__dim-bar--good { background: linear-gradient(90deg, rgba(80,165,90,0.8), rgb(100,218,138)); }
 .tp-portrait__dim-bar--mid  { background: linear-gradient(90deg, rgba(196,150,30,0.8), rgb(238,200,85)); }
 .tp-portrait__dim-bar--low  { background: linear-gradient(90deg, rgba(200,60,38,0.7), rgb(242,108,78)); }
-.tp-portrait__dim-score { font-size: 11px; font-weight: 700; color: rgba(225,208,182,0.95); text-align: right; }
+.tp-portrait__dim-score { font-size: 11px; font-weight: 600; color: rgba(225,225,225,0.95); text-align: right; }
 .tp-portrait__dim-desc { font-size: 10px; color: rgba(178,162,132,0.85); line-height: 1.45; margin: 0; }
 
 /* 技能标签内嵌 */
@@ -730,13 +730,13 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(212,201,181,0.1);
 }
 .tp-portrait__tags-inline-lbl {
-  display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(175,155,110,0.82); text-transform: uppercase; margin-bottom: 6px;
+  display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  color: rgba(200,200,200,0.7); text-transform: uppercase; margin-bottom: 6px;
 }
 .tp-portrait__tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tp-portrait__tag {
   padding: 3px 10px; border-radius: 3px; letter-spacing: 0.04em;
-  transition: border-color 0.2s ease; cursor: default;
+  transition: border-color 0.3s ease; cursor: default;
   border: 1px solid;
 }
 .tp-portrait__tag--fe { color: rgb(235,158,112); background: rgba(200,60,38,0.12); border-color: rgba(200,60,38,0.32); }
@@ -775,13 +775,13 @@ onBeforeUnmount(() => {
   background: rgba(240,235,224,0.04);
   border: 1px solid rgba(212,201,181,0.1);
   border-radius: 6px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.3s ease;
 }
 .tp-portrait__project-card:hover { border-color: rgba(192,52,24,0.48); }
 .tp-portrait__project-accent { width: 3px; flex-shrink: 0; background: rgba(200,60,38,0.8); }
 .tp-portrait__project-body { flex: 1; padding: 9px 12px; display: flex; flex-direction: column; gap: 4px; }
 .tp-portrait__project-head { display: flex; align-items: center; gap: 8px; }
-.tp-portrait__project-name { font-size: 13px; font-weight: 700; color: rgba(240,224,202,0.99); }
+.tp-portrait__project-name { font-size: 13px; font-weight: 600; color: rgba(240,240,240,0.99); }
 .tp-portrait__project-role {
   font-size: 10px; padding: 1px 7px; border-radius: 8px;
   background: rgba(196,150,30,0.16); border: 1px solid rgba(196,150,30,0.42);
@@ -833,7 +833,7 @@ onBeforeUnmount(() => {
   background: rgba(212,168,85,0.07); border-color: rgba(212,168,85,0.22);
 }
 .tp-portrait__suggestion-lbl {
-  flex-shrink: 0; font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+  flex-shrink: 0; font-size: 9px; font-weight: 600; letter-spacing: 0.04em;
   padding: 1px 6px; border-radius: 3px; white-space: nowrap; margin-top: 1px;
 }
 .tp-portrait__suggestion--strength .tp-portrait__suggestion-lbl {
@@ -856,7 +856,7 @@ onBeforeUnmount(() => {
 }
 .tp-portrait__step-guide-info { display: flex; flex-direction: column; gap: 4px; }
 .tp-portrait__step-guide-title {
-  font-size: 12px; font-weight: 700; color: rgba(240,215,175,1); letter-spacing: 0.04em;
+  font-size: 12px; font-weight: 600; color: rgba(240,240,240,1); letter-spacing: 0.02em;
 }
 .tp-portrait__step-guide-desc {
   font-size: 10px; color: rgba(182,165,138,0.88); line-height: 1.5; margin: 0; max-width: 380px;
@@ -864,10 +864,10 @@ onBeforeUnmount(() => {
 .tp-portrait__step-guide-btn {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: 6px; font-family: inherit;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
   border: 1px solid rgba(192,58,32,0.7); color: rgba(242,182,142,0.99);
   background: rgba(192,58,32,0.25); cursor: pointer;
-  white-space: nowrap; transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap; transition: background 0.3s, border-color 0.3s;
 }
 .tp-portrait__step-guide-btn:hover:not(:disabled) {
   background: rgba(192,58,32,0.42); border-color: rgba(192,58,32,0.9);

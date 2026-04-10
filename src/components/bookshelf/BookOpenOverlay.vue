@@ -112,7 +112,7 @@ function initPortraitRadar() {
         if (!p?.value) return ''
         return dims.map((d, i) => {
           const s = (p.value as number[])[i] ?? 0
-          return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span><span style="color:${lvColor(s)};font-weight:700;font-size:12px">${s}</span></div>`
+          return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span><span style="color:${lvColor(s)};font-weight:600;font-size:12px">${s}</span></div>`
         }).join('')
       },
     },
@@ -126,9 +126,9 @@ function initPortraitRadar() {
           return d.score >= 80 ? `{g|${name}}` : d.score >= 60 ? `{m|${name}}` : `{r|${name}}`
         },
         rich: {
-          g: { color: 'rgba(94,179,107,0.9)', fontSize: 10, fontWeight: '700' },
-          m: { color: 'rgba(212,168,85,0.9)', fontSize: 10, fontWeight: '700' },
-          r: { color: 'rgba(200,100,90,0.9)', fontSize: 10, fontWeight: '700' },
+          g: { color: 'rgba(94,179,107,0.9)', fontSize: 10, fontWeight: '600' },
+          m: { color: 'rgba(212,168,85,0.9)', fontSize: 10, fontWeight: '600' },
+          r: { color: 'rgba(200,100,90,0.9)', fontSize: 10, fontWeight: '600' },
         },
       },
       splitArea: { show: true, areaStyle: { color: ['rgba(200,85,74,0.12)','rgba(200,85,74,0.08)','rgba(212,168,85,0.06)','rgba(212,168,85,0.07)','rgba(94,159,107,0.10)'] } },
@@ -142,7 +142,7 @@ function initPortraitRadar() {
         lineStyle: { color: 'rgba(180,60,20,0.85)', width: 2 },
         itemStyle: { color: 'rgba(200,80,30,0.9)' },
         symbolSize: 5,
-        label: { show: true, formatter: (p: any) => `${p.value}`, fontSize: 9, fontWeight: '700',
+        label: { show: true, formatter: (p: any) => `${p.value}`, fontSize: 9, fontWeight: '600',
           color: 'rgba(230,210,185,0.95)', backgroundColor: 'rgba(14,8,3,0.65)', borderRadius: 2, padding: [1,3] },
       }],
       animation: true, animationDuration: 900, animationEasing: 'cubicOut',
@@ -767,7 +767,7 @@ watch(
   align-items: center;
   justify-content: center;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(230, 210, 185, 0.95);
   flex-shrink: 0;
 }
@@ -787,7 +787,7 @@ watch(
 
 .port-profile__name {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(230, 215, 190, 0.95);
 }
 
@@ -850,7 +850,7 @@ watch(
 }
 
 .port-honor-item strong {
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(212, 168, 85, 0.95);
 }
 
@@ -930,7 +930,7 @@ watch(
 
 .port-project-name {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   color: rgba(220, 205, 185, 0.9);
 }
 
@@ -983,7 +983,7 @@ watch(
 
 .port-score-val {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 600;
   color: rgba(230, 215, 190, 0.95);
   line-height: 1.1;
 }
@@ -998,7 +998,7 @@ watch(
 
 .port-score-role {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   color: rgba(230, 160, 100, 0.9);
 }
 
@@ -1047,7 +1047,7 @@ watch(
 
 .port-dim-label {
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   color: rgba(220, 205, 185, 0.9);
   flex: 1;
 }
@@ -1105,7 +1105,7 @@ watch(
 
 .port-dim-score {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   color: rgba(200, 185, 160, 0.8);
   min-width: 22px;
   text-align: right;

@@ -25,7 +25,7 @@
 
 .section-title {
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 600;
   color: #111827;
 }
 

@@ -271,7 +271,7 @@ function finishEdit(row: DatasetRecord) {
   gap: 8px;
   font-family: var(--font-title);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-100);
 }
 

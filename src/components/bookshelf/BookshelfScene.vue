@@ -147,9 +147,9 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
               <svg class="book-face-svg" viewBox="0 0 100 320" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient :id="`book-grad-${item.record.id}`" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" :stop-color="type === 'portrait' ? '#cf4a28' : '#4169bf'" />
-                    <stop offset="0.6" :stop-color="type === 'portrait' ? '#b53516' : '#30559c'" />
-                    <stop offset="1" :stop-color="type === 'portrait' ? '#8f230f' : '#223f7f'" />
+                    <stop offset="0" :stop-color="type === 'portrait' ? '#c04828' : '#4169bf'" />
+                    <stop offset="0.6" :stop-color="type === 'portrait' ? '#a03018' : '#30559c'" />
+                    <stop offset="1" :stop-color="type === 'portrait' ? '#7a1e08' : '#223f7f'" />
                   </linearGradient>
                 </defs>
                 <rect x="0" y="0" width="100" height="320" :fill="`url(#book-grad-${item.record.id})`" />
@@ -179,11 +179,11 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   width: 100%;
   flex: 1;
   min-height: 360px;
-  border: 3px solid #7A2010;
-  background: linear-gradient(180deg, #6B1A08 0%, #551406 50%, #420E04 100%);
+  border: 3px solid #5a2818;
+  background: linear-gradient(180deg, #4a2418 0%, #3c1c12 50%, #30160e 100%);
   overflow: hidden;
   box-shadow:
-    0 8px 24px rgba(20, 6, 2, 0.50),
+    0 8px 24px rgba(10, 6, 4, 0.50),
     inset 0 0 30px rgba(0, 0, 0, 0.25);
   position: relative;
 }
@@ -198,8 +198,8 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
     90deg,
     transparent 0px,
     transparent 32px,
-    rgba(255, 210, 140, 0.06) 32px,
-    rgba(255, 210, 140, 0.06) 34px
+    rgba(220, 200, 160, 0.05) 32px,
+    rgba(220, 200, 160, 0.05) 34px
   );
   z-index: 0;
 }
@@ -214,15 +214,15 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
 
 .cabinet-frame {
   height: 100%;
-  border: 10px solid #7A2010;
+  border: 10px solid #5a2818;
   border-left-width: 13px;
   border-right-width: 13px;
   border-bottom-width: 16px;
   border-top-width: 8px;
-  background: linear-gradient(175deg, #3D1A0A 0%, #2E1208 50%, #241006 100%);
+  background: linear-gradient(175deg, #362018 0%, #2a1a14 50%, #221810 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(201, 162, 39, 0.35),
-    inset 0 0 0 2px rgba(122, 32, 16, 0.55),
+    inset 0 0 0 1px rgba(180, 155, 60, 0.30),
+    inset 0 0 0 2px rgba(90, 40, 24, 0.55),
     inset 5px 0 14px rgba(0, 0, 0, 0.22),
     inset -5px 0 14px rgba(0, 0, 0, 0.22),
     inset 0 4px 8px rgba(0, 0, 0, 0.28);
@@ -239,7 +239,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   content: '';
   position: absolute;
   inset: 3px;
-  border: 1px solid rgba(201, 162, 39, 0.25);
+  border: 1px solid rgba(180, 155, 60, 0.22);
   pointer-events: none;
   z-index: 0;
 }
@@ -260,7 +260,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   content: '';
   display: block;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(201, 162, 39, 0.7), transparent);
+  background: linear-gradient(to right, transparent, rgba(180, 155, 60, 0.6), transparent);
 }
 
 .shelf-row {
@@ -271,12 +271,12 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   flex: 1;
   min-height: 0;
   padding: 6px 8px 0;
-  background: linear-gradient(180deg, #3C1E0C 0%, #2E1508 100%);
-  border: 1px solid rgba(122, 32, 16, 0.50);
+  background: linear-gradient(180deg, #382218 0%, #2a1a14 100%);
+  border: 1px solid rgba(90, 40, 24, 0.50);
   box-shadow:
-    inset 0 0 0 1px rgba(201, 162, 39, 0.10),
+    inset 0 0 0 1px rgba(180, 155, 60, 0.08),
     inset 0 8px 16px rgba(0, 0, 0, 0.35),
-    inset 0 -2px 6px rgba(200, 120, 50, 0.12);
+    inset 0 -2px 6px rgba(180, 120, 60, 0.10);
   transform: translateZ(4px);
   z-index: 1;
   overflow: hidden;
@@ -289,8 +289,8 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   right: 0;
   bottom: 0;
   height: 10px;
-  background: linear-gradient(180deg, transparent, rgba(20, 8, 2, 0.60));
-  border-top: 1px solid rgba(160, 70, 24, 0.35);
+  background: linear-gradient(180deg, transparent, rgba(15, 10, 6, 0.55));
+  border-top: 1px solid rgba(140, 80, 40, 0.30);
 }
 
 .book-item {
@@ -400,13 +400,13 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
 .shelf-empty {
   margin: auto;
   font-size: 12px;
-  color: rgba(201, 162, 39, 0.5);
+  color: rgba(180, 155, 60, 0.5);
 }
 
 .shelf-shadow {
   flex-shrink: 0;
   height: 8px;
-  background: radial-gradient(ellipse at center, rgba(107, 26, 10, 0.55), transparent);
+  background: radial-gradient(ellipse at center, rgba(80, 30, 18, 0.45), transparent);
   transform: translateZ(1px);
 }
 

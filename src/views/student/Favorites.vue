@@ -1,17 +1,42 @@
 ﻿<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { computed, ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
-import { Delete } from '@element-plus/icons-vue'
 import { useLearningStore } from '@/stores'
 import { useResumeStore } from '@/stores/resume'
 import { mockTargetRoleMarkets } from '@/mock/data'
 import type { TargetRoleMarket } from '@/types'
 
-type SortKey = 'matchScore' | 'savedAt' | 'medianSalary'
-type SortOrder = 'asc' | 'desc'
+// ── 角色专属色（当代杂志调：暖而有质地） ──
+const roleColors: Record<string, string> = {
+  '前端开发':       '#D4622A',
+  '后端开发':       '#3D6B52',
+  '测试开发':       '#7A5C8A',
+  '数据分析':       '#2E618F',
+  '机器学习工程师': '#8A5230',
+}
+const roleDarkColors: Record<string, string> = {
+  '前端开发':       '#B04D1E',
+  '后端开发':       '#2C5040',
+  '测试开发':       '#5E4470',
+  '数据分析':       '#1E4A72',
+  '机器学习工程师': '#6B3C1E',
+}
+
+// ── 排序 ──
+type SortMode =
+  | 'matchScore_desc' | 'matchScore_asc'
+  | 'medianSalary_desc' | 'medianSalary_asc'
+  | 'savedAt_desc' | 'savedAt_asc'
+
+// ── 技能展开（reactive Set，避免 ref(new Set()) 响应式失效） ──
+const expandedSkills = reactive<Set<string>>(new Set())
+function toggleSkills(role: string) {
+  if (expandedSkills.has(role)) expandedSkills.delete(role)
+  else expandedSkills.add(role)
+}
 
 type FollowedRoleMarket = TargetRoleMarket & {
   sourceRole: string
@@ -53,8 +78,15 @@ function goToAnalysis(role: string) {
 // TODO: API — GET /api/saved-jobs?userId=xxx
 const savedJobs = computed(() => learningStore.savedJobs)
 
-const sortKey = ref<SortKey>('matchScore')
-const sortOrder = ref<SortOrder>('desc')
+const sortMode = ref<SortMode>('matchScore_desc')
+const sortModeOptions: Array<{ label: string; value: SortMode }> = [
+  { label: '匹配度 高→低', value: 'matchScore_desc' },
+  { label: '匹配度 低→高', value: 'matchScore_asc' },
+  { label: '薪资 高→低',   value: 'medianSalary_desc' },
+  { label: '薪资 低→高',   value: 'medianSalary_asc' },
+  { label: '最新关注',     value: 'savedAt_desc' },
+  { label: '最早关注',     value: 'savedAt_asc' },
+]
 
 const filteredDirections = computed<FollowedRoleMarket[]>(() => {
   const merged = new Map<string, FollowedRoleMarket>()
@@ -73,13 +105,17 @@ const filteredDirections = computed<FollowedRoleMarket[]>(() => {
     }
   })
 
-  return [...merged.values()]
-    .sort((a, b) => {
-      const direction = sortOrder.value === 'asc' ? 1 : -1
-      if (sortKey.value === 'medianSalary') return (a.medianSalary - b.medianSalary) * direction
-      if (sortKey.value === 'savedAt') return a.savedAt.localeCompare(b.savedAt) * direction
-      return (a.matchScore - b.matchScore) * direction
-    })
+  return [...merged.values()].sort((a, b) => {
+    switch (sortMode.value) {
+      case 'matchScore_asc':    return a.matchScore - b.matchScore
+      case 'matchScore_desc':   return b.matchScore - a.matchScore
+      case 'medianSalary_asc':  return a.medianSalary - b.medianSalary
+      case 'medianSalary_desc': return b.medianSalary - a.medianSalary
+      case 'savedAt_asc':       return a.savedAt.localeCompare(b.savedAt)
+      case 'savedAt_desc':      return b.savedAt.localeCompare(a.savedAt)
+      default:                  return b.matchScore - a.matchScore
+    }
+  })
 })
 
 const followedCount = computed(() => {
@@ -100,6 +136,16 @@ function goToMatch() {
 
 function goToCareerAnalysis() {
   router.push('/app/student/career-analysis')
+}
+
+function goBack() {
+  router.back()
+}
+
+/* 需求标签只取逗号前第一段，防止长句撑破 badge */
+function shortDemand(level: string): string {
+  const cut = level.match(/^[^，,。]+/)
+  return cut ? cut[0] : level
 }
 
 const isParsed = computed(() => resumeStore.isParsed)
@@ -172,13 +218,8 @@ onMounted(async () => {
   }, { threshold: 0.08 })
 
   const cards = document.querySelectorAll('.job-card')
-  cards.forEach((el, i) => {
-    ;(el as HTMLElement).style.transitionDelay = `${i * 80}ms`
-    el.addEventListener('transitionend', () => {
-      ;(el as HTMLElement).style.transitionDelay = ''
-    }, { once: true })
-    cardObserver?.observe(el)
-  })
+  setCardStagger(cards)
+  cards.forEach(el => cardObserver?.observe(el))
 
   /* 100ms 后启动数据动画，确保卡片已开始进场 */
   setTimeout(triggerDataAnimations, 100)
@@ -188,21 +229,17 @@ onUnmounted(() => {
   cardObserver?.disconnect()
 })
 
-const sortOptions: Array<{ label: string; value: SortKey }> = [
-  { label: '按匹配度排序', value: 'matchScore' },
-  { label: '按关注时间排序', value: 'savedAt' },
-  { label: '按中位薪资排序', value: 'medianSalary' },
-]
-
-const sortOrderOptions: Array<{ label: string; value: SortOrder }> = [
-  { label: '顺序', value: 'asc' },
-  { label: '逆序', value: 'desc' },
-]
-
-function scoreColor(score: number) {
-  if (score >= 80) return 'var(--color-primary)'
-  if (score >= 60) return 'var(--color-gold)'
-  return 'var(--color-text-muted)'
+/* 设置卡片进场交错延迟，通过 CSS 自定义属性传递给子面板 */
+function setCardStagger(cards: NodeListOf<Element>) {
+  cards.forEach((el, i) => {
+    ;(el as HTMLElement).style.setProperty('--stagger', `${i * 80}ms`)
+    const leftPanel = el.querySelector('.card-panel-left')
+    if (leftPanel) {
+      leftPanel.addEventListener('transitionend', () => {
+        ;(el as HTMLElement).style.removeProperty('--stagger')
+      }, { once: true })
+    }
+  })
 }
 </script>
 
@@ -214,6 +251,9 @@ function scoreColor(score: number) {
     <div class="page-hero">
       <div class="hero-inner">
         <div class="hero-left">
+          <button class="hero-back-btn" @click="goBack">
+            <Icon icon="mdi:arrow-left" />返回
+          </button>
           <div class="hero-title">
             <span class="hero-icon">♥</span>
             <h1>心仪岗位</h1>
@@ -243,103 +283,130 @@ function scoreColor(score: number) {
     <!-- ── 内容区 ── -->
     <div class="favorites-content">
 
-    <!-- ── Slim 工具栏 ── -->
-    <div v-if="followedCount > 0" class="toolbar">
-      <span class="toolbar__count">共 {{ filteredDirections.length }} 个方向</span>
-      <div class="toolbar__controls">
-        <el-select v-model="sortKey" size="small" style="width: 148px">
-          <el-option v-for="item in sortOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-        <el-select v-model="sortOrder" size="small" style="width: 96px">
-          <el-option v-for="item in sortOrderOptions" :key="item.value" :label="item.label" :value="item.value" />
+      <!-- ── 工具栏 ── -->
+      <div v-if="followedCount > 0" class="toolbar">
+        <span class="toolbar__count">共 {{ filteredDirections.length }} 个方向</span>
+        <el-select v-model="sortMode" size="small" style="width: 180px">
+          <el-option v-for="item in sortModeOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </div>
-    </div>
 
-    <div v-if="filteredDirections.length > 0" class="jobs-list">
-      <div v-for="job in filteredDirections" :key="job.role" class="job-card">
-        <!-- 左侧彩色 accent bar -->
-        <div class="job-accent-bar" :style="{ background: scoreColor(job.matchScore) }"></div>
-
-        <!-- 主体内容 -->
-        <div class="job-body">
-          <!-- 第一区：岗位名 + 薪资 + 匹配度 ring -->
-          <div class="card-header">
-            <div class="card-title-area">
-              <h3 class="job-title">{{ job.role }}</h3>
-              <div class="job-meta">
-                <span>{{ job.industries.join(' / ') }}</span>
-                <span class="job-sep">·</span>
-                <span>{{ job.hotCities.slice(0, 2).join(' / ') }}</span>
-              </div>
-            </div>
-            <div class="card-salary">
-              <span class="salary-range">{{ job.salaryRange }}</span>
-              <small class="salary-median">中位 {{ job.medianSalary }}K</small>
-            </div>
+      <!-- ── 卡片列表 ── -->
+      <div v-if="filteredDirections.length > 0" class="jobs-list">
+        <div
+          v-for="job in filteredDirections"
+          :key="job.role"
+          class="job-card"
+          :style="{ '--panel-color': roleColors[job.role] ?? '#555' }"
+        >
+          <!-- 左侧色块 -->
+          <div
+            class="card-panel-left"
+            :style="{ background: `linear-gradient(175deg, ${roleColors[job.role] ?? '#555'} 0%, ${roleDarkColors[job.role] ?? '#333'} 100%)` }"
+          >
+            <div class="panel-role-name">{{ job.role }}</div>
             <div
               class="score-ring"
               :title="isParsed ? '结合简历估算' : '参考匹配度'"
-              :style="{ '--score-pct': progressWidths[job.role] ?? 0, '--ring-fill': scoreColor(job.matchScore) }"
+              :style="{ '--score-pct': progressWidths[job.role] ?? 0, '--ring-fill': 'rgba(255,255,255,0.9)' }"
             >
               <div class="score-ring-inner">
-                <span class="score-num" :style="{ color: scoreColor(job.matchScore) }">{{ displayScores[job.role] ?? 0 }}</span>
+                <span class="score-num">{{ displayScores[job.role] ?? 0 }}</span>
                 <span class="score-pct-sign">%</span>
               </div>
             </div>
+            <div class="panel-saved-at">{{ job.savedAt }}</div>
           </div>
 
-          <!-- 第二区：需求标签 + 技能（top-3 + N） -->
-          <div class="card-middle">
-            <span class="demand-badge" :class="demandClass(job.demandLevel)">
-              <span class="demand-dot"></span>{{ job.demandLevel }}
-            </span>
-            <div class="job-skills">
-              <el-tag
-                v-for="skill in topSkills(job.skillTags)"
-                :key="skill"
-                size="small"
-                effect="plain"
-                class="skill-tag"
-              >{{ skill }}</el-tag>
-              <span v-if="extraCount(job.skillTags) > 0" class="skill-extra">+{{ extraCount(job.skillTags) }}</span>
-            </div>
-          </div>
-
-          <!-- 第三区：岗位实情（单行截断）+ 操作按钮 -->
-          <div class="card-footer">
-            <div class="job-notes">
-              <span class="notes-label">实情：</span>{{ job.trendNote }}
-            </div>
-            <div class="card-actions">
-              <span class="job-saved-at">关注于 {{ job.savedAt }}</span>
-              <div class="action-btns">
-                <el-button text size="small" @click="goToAnalysis(job.role)">查看实情</el-button>
-                <el-button text size="small" @click="goToMatch">去匹配</el-button>
-                <el-button text type="danger" :icon="Delete" size="small" @click="removeJob(job.role)">取消关注</el-button>
+          <!-- 右侧内容 -->
+          <div class="card-panel-right">
+            <!-- 第一区：薪资 + 需求标签 + 热门城市 -->
+            <div class="right-header">
+              <div class="salary-block">
+                <span class="salary-main" :style="{ color: roleColors[job.role] ?? 'var(--color-primary)' }">{{ job.salaryRange }}</span>
+                <small class="salary-median">中位 {{ job.medianSalary }}K</small>
               </div>
+              <span class="demand-badge" :class="demandClass(job.demandLevel)">
+                <span class="demand-dot"></span>{{ shortDemand(job.demandLevel) }}
+              </span>
+              <div class="city-chips">
+                <span v-for="city in job.hotCities.slice(0, 3)" :key="city" class="city-chip">{{ city }}</span>
+                <span v-if="job.hotCities.length > 3" class="city-chip city-chip--extra">+{{ job.hotCities.length - 3 }}</span>
+              </div>
+            </div>
+
+            <!-- 第二区：技能标签（可展开） -->
+            <div class="right-skills">
+              <template v-if="expandedSkills.has(job.role)">
+                <el-tag
+                  v-for="skill in job.skillTags"
+                  :key="skill"
+                  size="small"
+                  effect="plain"
+                  class="skill-tag"
+                  :style="{ '--tag-color': roleColors[job.role] ?? '#888' }"
+                >{{ skill }}</el-tag>
+                <el-button text size="small" class="skill-toggle-btn" @click="toggleSkills(job.role)">收起</el-button>
+              </template>
+              <template v-else>
+                <el-tag
+                  v-for="skill in job.skillTags.slice(0, 4)"
+                  :key="skill"
+                  size="small"
+                  effect="plain"
+                  class="skill-tag"
+                  :style="{ '--tag-color': roleColors[job.role] ?? '#888' }"
+                >{{ skill }}</el-tag>
+                <el-button
+                  v-if="job.skillTags.length > 4"
+                  text size="small"
+                  class="skill-toggle-btn"
+                  @click="toggleSkills(job.role)"
+                >展开 +{{ job.skillTags.length - 4 }}</el-button>
+              </template>
+            </div>
+
+            <!-- 第三区：趋势说明（完整显示，不截断） -->
+            <div class="right-note" :style="{ borderLeftColor: roleColors[job.role] ?? 'var(--color-gold)' }">
+              <Icon icon="mdi:text-box-outline" class="note-icon" />
+              <span>{{ job.trendNote }}</span>
+            </div>
+
+            <!-- 第四区：操作按钮 -->
+            <div class="right-footer">
+              <el-button text size="small" @click="goToAnalysis(job.role)">查看实情</el-button>
+              <el-popconfirm
+                title="确定取消关注该方向？"
+                confirm-button-text="确定"
+                cancel-button-text="取消"
+                @confirm="removeJob(job.role)"
+              >
+                <template #reference>
+                  <el-button text type="danger" size="small">取消关注</el-button>
+                </template>
+              </el-popconfirm>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-else-if="followedCount > 0" class="empty-box">
-      <Icon icon="mdi:filter-off-outline" class="empty-icon" />
-      <div class="empty-title">当前排序条件下暂无结果</div>
-      <div class="empty-desc">尝试切换排序方式或顺序</div>
-      <el-button size="default" @click="sortOrder = 'desc'">切换为逆序</el-button>
-    </div>
-
-    <div v-else class="empty-box">
-      <Icon icon="mdi:bookmark-outline" class="empty-icon" />
-      <div class="empty-title">还没有关注任何方向</div>
-      <div class="empty-desc">
-        在职业分析页面关注感兴趣的方向，这里会自动同步展示岗位实情、薪资和匹配度
-        <span v-if="savedJobs.length">（已保留 {{ savedJobs.length }} 条历史收藏）</span>
+      <!-- 空状态（筛选后无结果，理论上排序不会触发此分支） -->
+      <div v-else-if="followedCount > 0" class="empty-box">
+        <Icon icon="mdi:filter-off-outline" class="empty-icon" />
+        <div class="empty-title">当前排序条件下暂无结果</div>
+        <div class="empty-desc">尝试切换排序方式</div>
+        <el-button size="default" @click="sortMode = 'matchScore_desc'">重置排序</el-button>
       </div>
-      <el-button type="primary" size="default" @click="goToCareerAnalysis">去职业分析关注方向</el-button>
-    </div>
+
+      <div v-else class="empty-box">
+        <Icon icon="mdi:bookmark-outline" class="empty-icon" />
+        <div class="empty-title">还没有关注任何方向</div>
+        <div class="empty-desc">
+          在职业分析页面关注感兴趣的方向，这里会自动同步展示岗位实情、薪资和匹配度
+          <span v-if="savedJobs.length">（已保留 {{ savedJobs.length }} 条历史收藏）</span>
+        </div>
+        <el-button type="primary" size="default" @click="goToCareerAnalysis">去职业分析关注方向</el-button>
+      </div>
 
     </div><!-- /.favorites-content -->
   </div>
@@ -347,14 +414,14 @@ function scoreColor(score: number) {
 
 <style scoped>
 /* ══════════════════════════════════
-   页面容器（immersive，自管理滚动）
+   页面容器
    ══════════════════════════════════ */
 .favorites-page {
   height: 100%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  background: #f5f4f2;
+  background: var(--parchment-100);
   scrollbar-width: thin;
   scrollbar-color: rgba(0,0,0,0.15) transparent;
 }
@@ -363,37 +430,27 @@ function scoreColor(score: number) {
    Hero 页头区
    ══════════════════════════════════ */
 .page-hero {
-  background: linear-gradient(135deg, #1c1410 0%, #2d1f14 60%, #3a2318 100%);
+  background: #1A1815;
   padding: 0 28px;
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
 }
 
-/* 噪点纹理叠加 */
+/* 锦纹斜线纹理 */
 .page-hero::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 48L48 0M-6 6L6-6M42 54L54 42' stroke='rgba(255,255,255,0.035)' stroke-width='1'/%3E%3C/svg%3E");
   pointer-events: none;
-}
-
-/* 底部渐变分割线 */
-.page-hero::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.12) 70%, transparent);
 }
 
 .hero-inner {
   max-width: 1160px;
   margin: 0 auto;
-  padding: 28px 0;
+  padding: 24px 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -403,7 +460,26 @@ function scoreColor(score: number) {
   z-index: 1;
 }
 
-.hero-left { display: flex; flex-direction: column; gap: 10px; }
+.hero-left { display: flex; flex-direction: column; gap: 8px; }
+
+.hero-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 0;
+  font-family: inherit;
+  transition: color 160ms ease;
+  width: fit-content;
+}
+
+.hero-back-btn:hover {
+  color: rgba(255, 255, 255, 0.82);
+}
 
 .hero-title {
   display: flex;
@@ -482,14 +558,14 @@ function scoreColor(score: number) {
   max-width: 1160px;
   width: 100%;
   margin: 0 auto;
-  padding: 20px 28px 40px;
+  padding: 16px 28px 48px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
 /* ══════════════════════════════════
-   Slim 工具栏
+   工具栏
    ══════════════════════════════════ */
 .toolbar {
   display: flex;
@@ -509,128 +585,99 @@ function scoreColor(score: number) {
   font-weight: 500;
 }
 
-.toolbar__controls { display: flex; gap: 8px; align-items: center; }
-
 /* ══════════════════════════════════
    卡片列表
    ══════════════════════════════════ */
-.jobs-list { display: flex; flex-direction: column; gap: 12px; }
+.jobs-list { display: flex; flex-direction: column; gap: 14px; }
 
-/* ── 卡片：白底 + 阴影 + 进场动画 ── */
+/* ── 卡片基础（面板级分段动画替代旧的卡片级 opacity/transform）── */
 .job-card {
   display: flex;
+  flex-direction: row;
   align-items: stretch;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 10px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   overflow: hidden;
   pointer-events: none;
-  opacity: 0;
-  transform: translateY(20px);
-  transition:
-    opacity 0.42s ease,
-    transform 0.42s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 200ms ease;
 }
 
 .job-card.is-visible {
-  opacity: 1;
-  transform: translateY(0);
   pointer-events: auto;
-  transition:
-    box-shadow 200ms ease,
-    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .job-card.is-visible:hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.11), 0 3px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13), 0 2px 8px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
+  transition: box-shadow 200ms ease, transform 220ms ease;
 }
 
-/* ── accent bar + hover 展宽 ── */
-.job-accent-bar {
-  width: 5px;
+/* ── 分段进场动画（--stagger 由 JS 设置在卡片上，CSS 自定义属性继承至子面板）── */
+.job-card .card-panel-left {
+  opacity: 0;
+  transform: translateX(-24px);
+  transition:
+    opacity 0.4s cubic-bezier(0.2, 0, 0, 1) var(--stagger, 0ms),
+    transform 0.4s cubic-bezier(0.2, 0, 0, 1) var(--stagger, 0ms),
+    filter 200ms ease;
+}
+
+.job-card .card-panel-right {
+  opacity: 0;
+  transform: translateX(8px);
+  transition:
+    opacity 0.36s ease calc(var(--stagger, 0ms) + 130ms),
+    transform 0.36s ease calc(var(--stagger, 0ms) + 130ms);
+}
+
+.job-card.is-visible .card-panel-left {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.job-card.is-visible .card-panel-right {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.job-card.is-visible:hover .card-panel-left {
+  filter: brightness(1.08);
+}
+
+/* ── 左侧色块 ── */
+.card-panel-left {
+  width: 160px;
   flex-shrink: 0;
-  background: var(--color-primary);
-  transition: width 200ms ease;
-}
-
-.job-card.is-visible:hover .job-accent-bar {
-  width: 8px;
-}
-
-/* ── 卡片主体 ── */
-.job-body {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 18px 20px;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
+  padding: 20px 12px;
 }
 
-/* ── 第一区：三列 header ── */
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.card-title-area { flex: 1; min-width: 0; }
-
-.job-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 4px;
-  color: #1a1a1a;
-  font-family: var(--font-title);
-  letter-spacing: 0.03em;
-  line-height: 1.3;
-}
-
-.job-meta {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: #888;
-}
-
-.job-sep { opacity: 0.35; }
-
-.card-salary {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.salary-range {
+.panel-role-name {
   font-size: 18px;
-  font-weight: 700;
-  color: var(--color-primary);
-  font-family: var(--font-ui);
-  line-height: 1.2;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.93);
+  text-align: center;
+  word-break: keep-all;
+  line-height: 1.35;
+  font-family: var(--font-title, inherit);
+  letter-spacing: 0.04em;
 }
 
-.salary-median {
-  font-size: 11px;
-  color: #aaa;
-  font-weight: 400;
-}
-
-/* ── 匹配度圆弧 Ring ── */
+/* ── Score Ring（面板内：白色弧 + 深色内圆）── */
 .score-ring {
   --score-pct: 0;
-  --ring-fill: #aaa;
-  width: 68px;
-  height: 68px;
+  --ring-fill: rgba(255, 255, 255, 0.9);
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   background: conic-gradient(
     var(--ring-fill) 0% calc(var(--score-pct) * 1%),
-    #e8e8e8 calc(var(--score-pct) * 1%) 100%
+    rgba(255, 255, 255, 0.2) calc(var(--score-pct) * 1%) 100%
   );
   display: flex;
   align-items: center;
@@ -639,10 +686,10 @@ function scoreColor(score: number) {
 }
 
 .score-ring-inner {
-  width: 54px;
-  height: 54px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--panel-color, #555) 65%, #000);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -651,26 +698,61 @@ function scoreColor(score: number) {
 }
 
 .score-num {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
-  font-family: var(--font-latin);
+  color: #ffffff;
+  font-family: var(--font-latin, monospace);
   line-height: 1;
 }
 
 .score-pct-sign {
   font-size: 9px;
-  color: #bbb;
+  color: rgba(255, 255, 255, 0.6);
   margin-top: 1px;
 }
 
-/* ── 第二区：需求标签 + 技能 ── */
-.card-middle {
+.panel-saved-at {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.42);
+  letter-spacing: 0.02em;
+}
+
+/* ── 右侧内容区 ── */
+.card-panel-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+}
+
+/* 第一区：薪资 + 需求 + 城市 */
+.right-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  padding-top: 4px;
-  border-top: 1px dashed rgba(0,0,0,0.08);
+}
+
+.salary-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.salary-main {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-ui, inherit);
+  line-height: 1.1;
+}
+
+.salary-median {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 400;
 }
 
 .demand-badge {
@@ -707,56 +789,81 @@ function scoreColor(score: number) {
   background: #f0f0f0;
 }
 
-.job-skills { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-.skill-tag { font-size: 11px; }
-
-.skill-extra {
-  font-size: 11px;
-  color: #999;
-  font-weight: 600;
-  padding: 2px 7px;
-  background: #f0f0f0;
-  border-radius: 10px;
-}
-
-/* ── 第三区：岗位实情 + 操作 ── */
-.card-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 4px;
-  border-top: 1px dashed rgba(0,0,0,0.08);
-}
-
-.job-notes {
-  font-size: 12px;
-  color: #888;
-  padding: 6px 10px;
-  background: #fffbf0;
-  border-left: 2px solid var(--color-gold);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  border-radius: 0 4px 4px 0;
-}
-
-.notes-label { font-weight: 600; color: #555; }
-
-.card-actions {
+.city-chips {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
-.job-saved-at {
-  font-size: 10px;
+.city-chip {
+  font-size: 11px;
+  color: #666;
+  background: #f3f3f1;
+  border-radius: 4px;
+  padding: 2px 7px;
+  line-height: 1.6;
+}
+
+.city-chip--extra { color: #999; background: transparent; }
+
+/* 第二区：技能标签（可展开） */
+.right-skills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.skill-tag {
+  font-size: 11px;
+  background: color-mix(in srgb, var(--tag-color, #888) 11%, white) !important;
+  border-color: color-mix(in srgb, var(--tag-color, #888) 28%, white) !important;
+  color: color-mix(in srgb, var(--tag-color, #888) 85%, #222) !important;
+}
+
+.skill-toggle-btn {
+  font-size: 11px !important;
+  color: #999 !important;
+  padding: 0 4px !important;
+}
+
+/* 第三区：趋势说明（完整显示，不截断）*/
+.right-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--parchment-100);
+  border-left: 3px solid var(--color-gold);
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.68;
+}
+
+.note-icon {
+  font-size: 14px;
   color: #bbb;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
-.action-btns { display: flex; align-items: center; gap: 0; }
+/* 第四区：操作按钮 */
+.right-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
 
 /* ══════════════════════════════════
-   自定义空状态
+   空状态
    ══════════════════════════════════ */
 .empty-box {
   display: flex;
@@ -792,20 +899,42 @@ function scoreColor(score: number) {
    响应式
    ══════════════════════════════════ */
 @media (max-width: 900px) {
-  .hero-inner { padding: 22px 0; }
+  .hero-inner { padding: 22px 0 40px; }
   .hero-title h1 { font-size: 22px; }
-  .favorites-content { padding: 16px 16px 32px; }
+  .favorites-content { padding: 14px 16px 32px; }
+  .card-panel-left { width: 120px; }
+  .panel-role-name { font-size: 16px; }
+  .score-ring { width: 64px; height: 64px; }
+  .score-ring-inner { width: 50px; height: 50px; }
+  .score-num { font-size: 17px; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 680px) {
   .page-hero { padding: 0 16px; }
   .hero-actions { width: 100%; }
-  .card-header { flex-wrap: wrap; }
-  .card-salary { align-items: flex-start; }
-  .score-ring { width: 56px; height: 56px; }
-  .score-ring-inner { width: 44px; height: 44px; }
-  .score-num { font-size: 16px; }
-  .card-actions { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .job-card { flex-direction: column; }
+  .card-panel-left {
+    width: 100%;
+    height: 72px;
+    flex-direction: row;
+    padding: 0 16px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0;
+    border-radius: 0;
+  }
+  .panel-saved-at { display: none; }
+  .score-ring { width: 52px; height: 52px; }
+  .score-ring-inner { width: 40px; height: 40px; }
+  .score-num { font-size: 14px; }
+  .panel-role-name { font-size: 17px; }
+}
+
+@media (max-width: 480px) {
+  .hero-actions { flex-direction: column; gap: 8px; }
+  .toolbar { height: auto; padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+  .salary-main { font-size: 18px; }
+  .right-header { flex-direction: column; align-items: flex-start; }
 }
 </style>
 

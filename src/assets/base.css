@@ -1,26 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Crimson+Text:wght@400;600;700&family=Ma+Shan+Zheng&family=ZCOOL+KuaiLe&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
 
-/* ═══ 古籍风字体系统 ═══ */
+/* ═══ 现代 sans-serif 字体系统 ═══ */
 :root {
-  --font-title: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
-  --font-body: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --font-title: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body:  'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-ui: 'Noto Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', 'PingFang SC', sans-serif;
-  --font-accent: 'KaiTi', 'STKaiti', 'Noto Serif SC', serif;
-  --font-latin: 'Crimson Text', 'Georgia', serif;
+  --font-accent: 'Noto Sans SC', 'PingFang SC', sans-serif;
+  --font-latin: 'DM Sans', 'Inter', 'Noto Sans SC', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-  --font-brush: 'Ma Shan Zheng', 'STXingkai', 'Noto Serif SC', cursive;
+  --font-brush: 'Noto Sans SC', sans-serif;
   --font-cjk: var(--font-title);
   --el-font-family: var(--font-ui);
-
-  --color-background: var(--parchment-100);
-  --color-background-soft: var(--parchment-200);
-  --color-background-mute: var(--parchment-300);
-
-  --color-border: var(--parchment-400);
-  --color-border-hover: var(--parchment-500);
-
-  --color-heading: var(--ink-900);
-  --color-text: var(--ink-900);
 
   --section-gap: 80px;
 }
@@ -40,10 +30,10 @@ html {
 body {
   min-height: 100vh;
   color: var(--color-text);
-  line-height: 1.8;
+  line-height: 1.6;
   font-family: var(--font-body);
   font-size: 16px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

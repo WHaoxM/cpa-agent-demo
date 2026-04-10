@@ -480,10 +480,10 @@ export const mockAIResponses: Record<string, string[]> = {
     '你的 TypeScript 类型定义还有些薄弱，建议多练习接口和类型的定义，特别是泛型的使用。可以参考官方文档中的高级类型章节。',
     '你在算法题方面的练习还不够，建议每天保持至少一题的练习量。可以从简单的数组和字符串操作开始，逐步过渡到复杂的数据结构。',
   ],
-  '薄弱点提醒': [
-    '通过分析你的测验记录，发现你在「生命周期钩子」这个知识点上掌握不够牢固，错误率较高。建议重新复习相关章节。',
-    '注意到你在「泛型编程」相关的题目上花费时间较长，这是你的薄弱点。建议多做相关练习，理解泛型的约束条件和默认类型。',
-    '你的「状态管理」相关题目正确率只有 60%，建议深入学习 Pinia 的使用，特别是 actions 和 getters 的编写。',
+  '能力补齐': [
+    '从你当前的学习情况看，建议先补齐「状态管理」「路由权限」「接口联调」这三类高频能力，再进入更复杂的项目实践。',
+    '如果你准备投递前端或测试开发方向，近期优先补项目复盘、接口调试和自动化测试，会比继续堆叠零散知识点更有效。',
+    '你已经有一定基础，下一步更值得投入的是把核心技能串成完整项目案例，而不是只增加单点知识。',
   ],
 }
 
@@ -492,7 +492,7 @@ export const mockAIMessages: AIMessage[] = [
   {
     id: 'ai_msg_001',
     role: 'assistant',
-    content: '你好！我是你的 AI 学习助手。我可以帮助你：\n1. 解答课程相关问题\n2. 提供解题思路指导\n3. 根据学习情况给出建议\n4. 提醒你学习薄弱点\n\n请告诉我你需要什么帮助？',
+    content: '你好，这里是ai助手。你可以直接提问课程重点、解题思路、技能补齐顺序，或者结合目标方向讨论下一步学习安排。',
     timestamp: '2024-02-10 08:00',
   },
 ]
@@ -814,6 +814,69 @@ export const mockSavedJobs: import('@/types').SavedJob[] = [
     requiredSkills: ['深度学习', 'PyTorch', '机器学习', '数学基础'],
     savedAt: '2024-02-05',
     notes: '当前匹配度低，需要1年提升',
+  },
+]
+
+export const mockTargetRoleMarkets: import('@/types').TargetRoleMarket[] = [
+  {
+    role: '前端开发',
+    salaryRange: '12K-24K',
+    medianSalary: 18,
+    demandLevel: '需求稳定，校招与实习岗位充足',
+    hotCities: ['上海', '杭州', '深圳', '北京'],
+    industries: ['互联网', '企业服务', '新消费'],
+    skillTags: ['Vue 3', 'React', 'TypeScript', '工程化', '性能优化', '组件库', '可视化'],
+    sampleJobs: ['前端开发工程师', '前端工程化开发', '可视化开发工程师'],
+    trendNote: '企业更看重组件抽象、工程规范和跨端协作能力。',
+    referenceMatch: 78,
+  },
+  {
+    role: '后端开发',
+    salaryRange: '14K-26K',
+    medianSalary: 20,
+    demandLevel: '中大型团队需求持续，服务治理能力加分明显',
+    hotCities: ['北京', '深圳', '杭州', '成都'],
+    industries: ['互联网', '金融科技', '企业平台'],
+    skillTags: ['Java', 'Spring Boot', 'MySQL', 'Redis', '消息队列', 'Docker', '服务治理'],
+    sampleJobs: ['Java 后端工程师', 'Go 后端工程师', '平台研发工程师'],
+    trendNote: '分布式、缓存与接口稳定性仍是校招和社招的高频考点。',
+    referenceMatch: 69,
+  },
+  {
+    role: '测试开发',
+    salaryRange: '11K-20K',
+    medianSalary: 16,
+    demandLevel: '质量工程岗位增多，自动化与接口测试权重提升',
+    hotCities: ['深圳', '上海', '苏州', '北京'],
+    industries: ['互联网', '智能硬件', '游戏'],
+    skillTags: ['Python 自动化', 'Playwright', '接口测试', '测试用例设计', 'CI/CD', '质量体系', '缺陷分析'],
+    sampleJobs: ['测试开发工程师', '自动化测试工程师', '质量平台工程师'],
+    trendNote: '从手工测试转向自动化与质量平台建设是明显趋势。',
+    referenceMatch: 72,
+  },
+  {
+    role: '数据分析',
+    salaryRange: '12K-22K',
+    medianSalary: 17,
+    demandLevel: '数据驱动岗位稳定增长，业务理解能力很关键',
+    hotCities: ['杭州', '上海', '北京', '广州'],
+    industries: ['电商', '本地生活', '内容平台'],
+    skillTags: ['Python', 'SQL', '统计分析', 'BI 工具', '指标体系', 'A/B 测试', '数据清洗'],
+    sampleJobs: ['数据分析师', '增长分析师', '商业分析师'],
+    trendNote: '能把分析结果转化为业务建议，比单纯会出图更有竞争力。',
+    referenceMatch: 82,
+  },
+  {
+    role: '机器学习工程师',
+    salaryRange: '18K-32K',
+    medianSalary: 24,
+    demandLevel: '高薪但门槛较高，算法基础与工程落地能力并重',
+    hotCities: ['北京', '上海', '深圳', '杭州'],
+    industries: ['人工智能', '自动驾驶', '医疗科技'],
+    skillTags: ['Python', '机器学习', 'PyTorch', '特征工程', '模型部署', '数据处理', 'MLOps'],
+    sampleJobs: ['算法工程师', '机器学习工程师', 'AI 应用工程师'],
+    trendNote: '企业越来越关注模型上线、评估与业务闭环，而不只看算法竞赛经历。',
+    referenceMatch: 58,
   },
 ]
 

@@ -198,9 +198,9 @@ function logIcon(level: LogEntry['level']) {
 /* ═══ 工作台根 ═══ */
 .ws-page {
   height: 100%;
-  background: var(--bg-100, #F7F2E8);
-  font-family: var(--font-title), 'KaiTi', serif;
-  color: var(--text-100, #1A1410);
+  background: var(--bg-100, #F5F5F3);
+  font-family: var(--font-title), sans-serif;
+  color: var(--text-100, #111);
   overflow: hidden;
 }
 .ws-content {
@@ -219,8 +219,8 @@ function logIcon(level: LogEntry['level']) {
 
 /* ═══ 卡片通用 ═══ */
 .ws-card {
-  background: var(--bg-200, #EDE5D6);
-  border: 1px solid var(--bg-300, #D4C9B5);
+  background: var(--bg-200, #EDEDEB);
+  border: 1px solid var(--bg-300, #CBCBC8);
   border-radius: var(--radius-md, 3px);
   overflow: hidden;
   flex-shrink: 0;
@@ -230,7 +230,7 @@ function logIcon(level: LogEntry['level']) {
 .ws-card__title {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 18px; margin: 0;
-  font-size: 16px; font-weight: 700; color: var(--primary-100, #8B2500);
+  font-size: 16px; font-weight: 600; color: var(--primary-100, #8B2500);
   letter-spacing: 0.06em;
   border-bottom: 1px solid var(--bg-300);
 }
@@ -238,11 +238,11 @@ function logIcon(level: LogEntry['level']) {
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; border-radius: 50%;
   background: var(--primary-100, #8B2500); color: #fff;
-  font-size: 13px; font-weight: 700; flex-shrink: 0;
+  font-size: 13px; font-weight: 600; flex-shrink: 0;
 }
 .ws-card__stats {
   margin-left: auto; font-size: 12px; font-weight: 400;
-  color: var(--text-300, #9C8B78);
+  color: var(--text-300, #999);
 }
 
 .ws-card__body {
@@ -253,7 +253,7 @@ function logIcon(level: LogEntry['level']) {
 .ws-intro-summary { font-size: 13px; color: var(--text-200); margin: 0 0 10px; line-height: 1.6; }
 .ws-intro-section { margin-bottom: 10px; }
 .ws-intro-section h4 {
-  font-size: 12px; font-weight: 700; color: var(--text-100); margin: 0 0 4px;
+  font-size: 12px; font-weight: 600; color: var(--text-100); margin: 0 0 4px;
   letter-spacing: 0.04em;
 }
 .ws-intro-section ul {
@@ -298,7 +298,7 @@ function logIcon(level: LogEntry['level']) {
 }
 
 .ws-gen-progress {
-  height: 4px; background: var(--bg-300, #D4C9B5); border-radius: 2px; margin-bottom: 10px; overflow: hidden;
+  height: 4px; background: var(--bg-300, #CBCBC8); border-radius: 2px; margin-bottom: 10px; overflow: hidden;
 }
 .ws-gen-progress__bar {
   height: 100%; background: var(--primary-100, #8B2500); border-radius: 2px;
@@ -311,13 +311,13 @@ function logIcon(level: LogEntry['level']) {
 }
 .ws-gen-stat { display: flex; flex-direction: column; align-items: center; flex: 1; }
 .ws-gen-stat__value {
-  font-size: 28px; font-weight: 800; color: var(--text-100);
+  font-size: 28px; font-weight: 600; color: var(--text-100);
   font-variant-numeric: tabular-nums; line-height: 1.2;
 }
-.ws-gen-stat__label { font-size: 12px; color: var(--text-300, #9C8B78); margin-top: 2px; letter-spacing: 0.04em; }
+.ws-gen-stat__label { font-size: 12px; color: var(--text-300, #999); margin-top: 2px; letter-spacing: 0.04em; }
 
 .ws-gen-page__title {
-  font-size: 12px; font-weight: 700; color: var(--text-100); margin-bottom: 6px;
+  font-size: 12px; font-weight: 600; color: var(--text-100); margin-bottom: 6px;
 }
 .ws-gen-page__logs { display: flex; flex-direction: column; gap: 4px; }
 .ws-gen-log {
@@ -348,7 +348,7 @@ function logIcon(level: LogEntry['level']) {
 .ws-done-text { font-size: 13px; color: var(--text-200); margin: 0 0 12px; }
 .ws-action-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 20px; font-size: 13px; font-weight: 700; font-family: inherit;
+  padding: 8px 20px; font-size: 13px; font-weight: 600; font-family: inherit;
   background: var(--primary-100, #8B2500); color: #fff;
   border: none; border-radius: var(--radius-sm, 2px);
   cursor: pointer; transition: all 0.2s;
@@ -360,22 +360,22 @@ function logIcon(level: LogEntry['level']) {
 .ws-dashboard {
   flex-shrink: 0; height: 180px;
   display: flex; flex-direction: column;
-  border-top: 1px solid var(--bg-300, #D4C9B5);
-  background: #1A1410; color: #D4C9B5;
+  border-top: 1px solid var(--bg-300, #CBCBC8);
+  background: #111; color: #bbb;
   font-family: 'Consolas', 'Monaco', monospace;
 }
 .ws-dashboard__head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 14px; background: #2A231C;
-  border-bottom: 1px solid #3A332C;
+  padding: 6px 14px; background: #1a1a1a;
+  border-bottom: 1px solid #333;
 }
-.ws-dashboard__title { font-size: 12px; font-weight: 600; color: #D4C9B5; }
+.ws-dashboard__title { font-size: 12px; font-weight: 600; color: #bbb; }
 .ws-dashboard__controls { display: flex; gap: 6px; }
 .ws-dashboard__btn {
-  background: transparent; border: none; color: #9C8B78; font-size: 12px;
+  background: transparent; border: none; color: #999; font-size: 12px;
   cursor: pointer; padding: 0 4px;
 }
-.ws-dashboard__btn:hover { color: #D4C9B5; }
+.ws-dashboard__btn:hover { color: #bbb; }
 
 .ws-dashboard__logs {
   flex: 1; overflow-y: auto; padding: 6px 14px;
@@ -385,11 +385,11 @@ function logIcon(level: LogEntry['level']) {
 .ws-dashboard__logs::-webkit-scrollbar-thumb { background: #3A332C; border-radius: 2px; }
 
 .ws-log { display: flex; gap: 8px; align-items: baseline; }
-.ws-log__ts { color: #7A6F62; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.ws-log__ts { color: #777; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .ws-log__agent { color: #B7791F; font-weight: 600; flex-shrink: 0; }
-.ws-log__msg { color: #D4C9B5; }
+.ws-log__msg { color: #bbb; }
 .ws-log__icon { flex-shrink: 0; }
-.ws-log--empty { color: #7A6F62; font-size: 11px; }
+.ws-log--empty { color: #777; font-size: 11px; }
 
 /* ═══ 响应式 ═══ */
 @media (max-width: 767px) {

@@ -99,11 +99,11 @@ function draw() {
   const tipRect = tip.append('rect')
     .attr('rx', 4)
     .attr('ry', 4)
-    .attr('fill', 'var(--color-text, #1C1612)')
+    .attr('fill', 'var(--color-text, #111)')
     .attr('opacity', 0.92)
     .attr('height', 24)
   const tipText = tip.append('text')
-    .attr('fill', 'var(--parchment-100, #F5EFE0)')
+    .attr('fill', 'var(--parchment-100, #F5F5F3)')
     .attr('font-size', 10)
     .attr('dominant-baseline', 'middle')
 
@@ -156,7 +156,7 @@ function draw() {
       .attr('y', -10)
       .attr('text-anchor', 'middle')
       .attr('font-size', 11)
-      .attr('fill', 'var(--color-text-muted, #6B5040)')
+      .attr('fill', 'var(--color-text-muted, #666)')
       .text(diffLabel[diff])
   })
 
@@ -169,7 +169,7 @@ function draw() {
       .attr('text-anchor', 'end')
       .attr('dominant-baseline', 'middle')
       .attr('font-size', 11)
-      .attr('fill', 'var(--color-text, #1C1612)')
+      .attr('fill', 'var(--color-text, #111)')
       .text(kp)
 
     yAxis.append('circle')

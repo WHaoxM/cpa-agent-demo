@@ -126,12 +126,12 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.6rem;
   padding: 0.55rem 0.58rem 0.62rem;
-  border-radius: 0;
+  border-radius: var(--radius-md);
   border: 1px solid var(--parchment-400);
   border-top: 2px solid var(--color-primary);
   background: var(--parchment-100);
   box-shadow:
-    0 4px 12px rgba(28, 22, 18, 0.10),
+    0 4px 12px rgba(0, 0, 0, 0.08),
     inset 0 0 0 4px rgba(245, 235, 215, 0.55);
   position: relative;
 }
@@ -153,7 +153,7 @@ onMounted(async () => {
   font-size: 0.68rem;
   background: transparent;
   border: 1px solid var(--parchment-400);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 0.08rem 0.4rem;
   color: var(--ink-300);
   font-family: var(--font-latin, monospace);
@@ -169,7 +169,7 @@ onMounted(async () => {
   font-family: var(--font-title);
   letter-spacing: 0.06em;
   border: 1px solid currentColor;
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   padding: 0.15rem 0.5rem;
   cursor: pointer;
   background: transparent;
@@ -220,7 +220,7 @@ onMounted(async () => {
   border: 1px solid var(--color-primary);
   background: var(--color-primary);
   color: var(--parchment-100);
-  border-radius: 0;
+  border-radius: var(--radius-sm);
   font-size: 0.72rem;
   font-family: var(--font-title);
   padding: 0.22rem 0.62rem;

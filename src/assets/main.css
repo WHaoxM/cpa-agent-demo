@@ -1,6 +1,5 @@
 @import './base.css';
 @import './theme.css';
-@import './book-texture.css';
 
 /* ══════════════════════════════════════
    故宫博物院 · 全局布局与组件样式
@@ -28,7 +27,7 @@
 .page-header {
   margin-bottom: 16px;
   padding: 16px 18px;
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   border-top: 2px solid var(--color-primary);
   background: var(--color-surface);
@@ -43,14 +42,14 @@
 /* ── 工具栏卡片 ── */
 .toolbar-card {
   padding: 12px 14px;
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
 /* ── 内容卡片 ── */
 .content-card {
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -134,7 +133,6 @@ a {
 .el-dialog {
   border-radius: var(--radius-lg) !important;
   border: 1px solid var(--color-border) !important;
-  border-top: 2px solid var(--color-gold) !important;
   background: var(--color-surface-raised) !important;
   box-shadow: var(--shadow-xl) !important;
 }
@@ -149,7 +147,7 @@ a {
   font-weight: 600;
   font-size: 15px;
   color: var(--color-text);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
 }
 
 /* ── Element Plus 表格覆盖 ── */
@@ -166,7 +164,7 @@ a {
   font-weight: 600;
   font-size: 13px;
   color: var(--color-text-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
 }
 
 /* ── 表单区块 ── */
@@ -187,7 +185,7 @@ a {
   font-weight: 600;
   font-family: var(--font-title);
   color: var(--color-text);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
 
 .form-section__desc {
@@ -244,7 +242,7 @@ a {
 
 .stat-strip__value {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   font-family: var(--font-title);
   color: var(--color-text);
   line-height: 1.1;
@@ -253,7 +251,7 @@ a {
 .stat-strip__label {
   font-size: 11px;
   color: var(--color-text-muted);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
 }
 
 /* ── 对话框摘要区 ── */
@@ -308,9 +306,9 @@ a {
 
 .dialog-section__title {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--color-text-muted);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   margin-bottom: 10px;
   text-transform: uppercase;
 }
@@ -323,7 +321,7 @@ a {
   gap: 16px;
   margin-bottom: 16px;
   padding: 14px 18px;
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   border-top: 2px solid var(--color-primary);
   background: var(--color-surface);
@@ -341,7 +339,7 @@ a {
   font-size: 15px;
   font-weight: 600;
   font-family: var(--font-title);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   color: var(--color-text);
   margin: 0;
   line-height: 1.3;
@@ -408,46 +406,6 @@ a {
   }
 }
 
-/* ══════════════════════════════════════
-   故宫装饰工具类 Palace Decorative Utils
-   ══════════════════════════════════════ */
-
-/* 金线分隔符 */
-.gold-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--color-gold);
-  margin: 16px 0;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-}
-.gold-divider::before,
-.gold-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-gold);
-  opacity: 0.5;
-}
-
-/* 墨色分隔符 */
-.classical-divider {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: var(--color-text-subtle);
-  margin: 16px 0;
-  font-size: 12px;
-}
-.classical-divider::before,
-.classical-divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--color-border);
-}
-
 /* 角落装饰（方正风格） */
 .corner-ornament {
   position: relative;
@@ -472,45 +430,6 @@ a {
   bottom: 0;
   right: 0;
   border-width: 0 2px 2px 0;
-}
-
-/* 印章徽章 */
-.seal-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 2px solid var(--color-primary);
-  color: var(--color-primary);
-  font-family: var(--font-title);
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  border-radius: var(--radius-none);
-}
-
-/* 竖向文字 */
-.vertical-text {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  letter-spacing: 0.2em;
-  font-family: var(--font-title);
-}
-
-/* 朱砂顶边 */
-.top-vermillion {
-  border-top: 2px solid var(--color-primary) !important;
-}
-
-/* 朱砂左边 */
-.left-vermillion {
-  border-left: 3px solid var(--color-primary) !important;
-}
-
-/* 金线顶边 */
-.top-gold {
-  border-top: 1px solid var(--color-gold) !important;
 }
 
 /* ── 字体工具类 ── */

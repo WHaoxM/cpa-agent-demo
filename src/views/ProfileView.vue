@@ -238,7 +238,7 @@ function onSave() {
 
 .rail__section-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-200);
   letter-spacing: 0.06em;
   margin-bottom: 6px;
@@ -271,7 +271,7 @@ function onSave() {
 
 .section-head__title {
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -281,7 +281,7 @@ function onSave() {
 
 .form-section__title {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-100);
 }
 
@@ -307,7 +307,7 @@ function onSave() {
 
 .user__name {
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -365,7 +365,7 @@ function onSave() {
 
 .kv__v {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-100);
   display: flex;
   align-items: center;
@@ -420,7 +420,7 @@ function onSave() {
 }
 
 .pref-row__title {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 13px;
 }
 

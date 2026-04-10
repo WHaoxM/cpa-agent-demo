@@ -54,10 +54,8 @@ const hiddenBookHeaderRoutes = new Set([
   '/app/exams',
   '/app/student/favorites',
   '/app/student/learning',
-  '/app/student/wrongquestions',
   '/app/student/my-reports',
   '/app/student/ai-assistant',
-  '/app/student/settings',
 ])
 
 const hideBookHeader = computed(() => hiddenBookHeaderRoutes.has(route.path))
@@ -84,12 +82,10 @@ const studentMenus = [
   { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
   // ── 学习执行 ──
   { index: '/app/student/learning', icon: ICONS.trendingUp, title: '技能提升' },
-  { index: '/app/student/wrongquestions', icon: ICONS.closeCircle, title: '薄弱点记录' },
   // ── 成果追踪 ──
   { index: '/app/student/my-reports', icon: ICONS.fileText, title: '我的报告' },
   // ── 工具 ──
-  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'AI助手' },
-  { index: '/app/student/settings', icon: ICONS.settings, title: '个人设置' },
+  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'ai助手' },
 ]
 
 // 管理员菜单
@@ -214,7 +210,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="shellRef" class="book-shell" :class="{ 'book-shell--immersive': isImmersiveRoute }">
-    <div v-if="!isImmersiveRoute" class="top-row">
+    <div v-if="!isImmersiveRoute || route.meta.keepTopNav" class="top-row">
       <CloudTabNav
         class="top-row__nav"
         v-model="activeTabKey"
@@ -222,7 +218,7 @@ onBeforeUnmount(() => {
       />
 
       <div class="top-row__user">
-        <button class="top-row__icon-btn" @click="router.push('/app/messages')" title="消息">
+        <button class="top-row__icon-btn" type="button" @click="router.push('/app/messages')" title="消息">
           <Icon :icon="ICONS.inbox" />
         </button>
 
@@ -296,7 +292,7 @@ onBeforeUnmount(() => {
 
       <!-- 书页内容区 -->
       <main v-if="!isImmersiveRoute" class="book-content">
-        <BookPage :chapter-name="currentChapter" :show-corners="true" :show-footer="true">
+        <BookPage>
           <div class="page-turn-perspective">
             <router-view v-slot="{ Component }">
               <Transition name="page-fade" mode="out-in">
@@ -354,7 +350,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* ═══ 古籍册页布局 ═══ */
+/* ═══ 现代布局 ═══ */
 .book-shell {
   display: flex;
   flex-direction: column;
@@ -365,50 +361,70 @@ onBeforeUnmount(() => {
 }
 
 .top-row {
-  height: 46px;
+  min-height: 58px;
   display: flex;
-  align-items: stretch;
-  gap: 8px;
-  padding: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
   position: relative;
   z-index: 4;
   flex-shrink: 0;
   overflow: visible;
-  background: #1a2f4a;
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--bg-200) 6%);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent 30%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85), 0 8px 24px rgba(17, 24, 39, 0.04);
+  backdrop-filter: blur(12px);
 }
 
 .top-row__nav {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  width: fit-content;
   min-width: 0;
-  max-width: min(80vw, 1080px);
+  max-width: 100%;
   margin-right: auto;
 }
 
 .top-row__user {
-  height: 100%;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  border-left: 1px solid rgba(201, 162, 39, 0.20);
-  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent 28%);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--bg-200) 4%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
   flex-shrink: 0;
 }
 
 .top-row__icon-btn {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
   background: transparent;
   cursor: pointer;
   font-size: 16px;
-  color: rgba(225, 215, 195, 0.85);
+  color: var(--color-text-muted);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .top-row__icon-btn:hover {
-  color: var(--gold-300, #e0c060);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface) 95%);
+  border-color: color-mix(in srgb, var(--color-border) 80%, transparent 20%);
+  transform: translateY(-1px);
+}
+
+.top-row__icon-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-text) 18%, transparent 82%);
+  outline-offset: 2px;
 }
 
 .top-row__user-card {
@@ -416,10 +432,25 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  min-height: 34px;
+  padding: 0 10px 0 4px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.top-row__user-card:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface) 95%);
+  border-color: color-mix(in srgb, var(--color-border) 80%, transparent 20%);
+  transform: translateY(-1px);
 }
 
 .top-row__avatar :deep(.el-avatar) {
-  border-radius: 0;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent 25%);
 }
 
 .top-row__user-text {
@@ -427,27 +458,16 @@ onBeforeUnmount(() => {
 }
 
 .top-row__user-name {
-  font-family: var(--font-title);
+  font-family: var(--font-ui);
   font-size: 12px;
+  font-weight: 600;
   line-height: 1.2;
-  color: rgba(235, 225, 200, 0.9);
+  color: var(--color-text);
 }
 
 .top-row__user-role {
   font-size: 11px;
-  color: rgba(200, 188, 165, 0.75);
-}
-
-/* 宣纸纹理叠加 */
-.book-shell::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.04' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23p)' opacity='.5'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  color: var(--color-text-subtle);
 }
 
 /* ═══ 书页主区域 ═══ */
@@ -471,8 +491,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: 0 18px;
-  border-bottom: 1px solid color-mix(in srgb, var(--bg-300) 60%, transparent 40%);
-  background: color-mix(in srgb, var(--bg-100) 95%, var(--bg-200) 5%);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent 35%);
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--bg-200) 4%);
   flex-shrink: 0;
   position: relative;
   z-index: 3;
@@ -487,17 +507,15 @@ onBeforeUnmount(() => {
 .book-header__chapter {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-title);
-  font-size: 13px;
-  color: var(--text-200);
-  letter-spacing: 0.15em;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
 }
 
 .book-header__ornament {
-  font-size: 7px;
-  opacity: 0.35;
-  color: var(--primary-100);
+  display: none;
 }
 
 .book-header__breadcrumb {
@@ -507,7 +525,7 @@ onBeforeUnmount(() => {
 }
 
 .book-header__breadcrumb .is-current {
-  color: var(--text-100);
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -567,10 +585,11 @@ onBeforeUnmount(() => {
 /* ═══ 用户弹窗 ═══ */
 :deep(.user-popover) {
   --el-popover-padding: 0px;
-  border-radius: 0;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 70%, transparent 30%);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent 22%);
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--bg-200) 4%);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
   transform-origin: top right;
   animation: sealPopIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -584,13 +603,13 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14px 0;
+  padding: 18px 18px 14px;
 }
 
 .user-pop__name {
-  font-family: var(--font-title);
+  font-family: var(--font-ui);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   margin-top: 10px;
 }
 
@@ -602,9 +621,9 @@ onBeforeUnmount(() => {
 
 .user-pop__section-title {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--text-200);
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
   margin-bottom: 10px;
 }
 
@@ -619,23 +638,26 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  color: var(--text-100);
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent 24%);
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--bg-200) 6%);
+  color: var(--color-text);
   font-size: 14px;
   font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .user-pop__role-item:hover {
-  border-color: color-mix(in srgb, var(--primary-100) 45%, var(--bg-300) 55%);
-  background: color-mix(in srgb, var(--primary-100) 8%, var(--bg-100) 92%);
+  border-color: color-mix(in srgb, var(--color-text) 18%, var(--color-border) 82%);
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface) 96%);
+  transform: translateY(-1px);
 }
 
 .user-pop__role-item.active {
-  border-color: color-mix(in srgb, var(--primary-100) 72%, var(--bg-300) 28%);
-  background: color-mix(in srgb, var(--primary-100) 12%, var(--bg-100) 88%);
+  border-color: rgba(17, 17, 17, 0.96);
+  background: linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(17, 17, 17, 0.96));
+  color: #ffffff;
 }
 
 .user-pop__actions {
@@ -649,16 +671,19 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: var(--bg-200);
-  border: none;
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--bg-200) 6%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent 24%);
+  border-radius: 12px;
   font-size: 14px;
-  color: var(--text-100);
+  color: var(--color-text);
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .user-pop__btn:hover {
-  background: var(--bg-300);
+  background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface) 96%);
+  border-color: color-mix(in srgb, var(--color-text) 18%, var(--color-border) 82%);
+  transform: translateY(-1px);
 }
 
 /* ═══ 移动端抽屉 ═══ */
@@ -681,7 +706,7 @@ onBeforeUnmount(() => {
   height: 40px;
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 600;
   font-family: var(--font-title);
   color: var(--primary-100);
   border: 2px solid var(--primary-100);
@@ -690,7 +715,7 @@ onBeforeUnmount(() => {
 
 .drawer__name {
   font-family: var(--font-title);
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
 }
 
@@ -698,7 +723,7 @@ onBeforeUnmount(() => {
   font-size: 11px;
   color: var(--text-300);
   font-family: var(--font-accent);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.02em;
   margin-top: 2px;
 }
 
@@ -716,7 +741,7 @@ onBeforeUnmount(() => {
 }
 
 .drawer__user-name {
-  font-weight: 700;
+  font-weight: 600;
   font-size: 14px;
 }
 
@@ -769,15 +794,24 @@ onBeforeUnmount(() => {
 
 @media (max-width: 767px) {
   .top-row {
-    min-height: 64px;
+    min-height: 0;
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .top-row__nav {
+    flex-basis: 100%;
+    width: 100%;
+    max-width: 100%;
+    margin-right: 0;
   }
 
   .top-row__user {
     margin-left: auto;
-    height: 40px;
-    padding: 0 6px;
+    min-height: 0;
+    padding: 4px;
     gap: 6px;
-    margin-top: 20px;
   }
 
   .book-header {

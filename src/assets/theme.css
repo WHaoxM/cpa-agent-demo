@@ -24,19 +24,19 @@
   --indigo-500: #1B4E79;
   --indigo-700: #0F3352;
 
-  /* 墨色 Ink */
-  --ink-100: #C8B8A8;
-  --ink-300: #9C8B78;
-  --ink-500: #6B5040;
-  --ink-700: #3D2E24;
-  --ink-900: #1C1612;
+  /* 墨色 Ink → 冷黑 */
+  --ink-100: #CCCCCC;
+  --ink-300: #999999;
+  --ink-500: #666666;
+  --ink-700: #3D3D3D;
+  --ink-900: #111111;
 
-  /* 宣纸 Parchment */
-  --parchment-100: #F5EFE0;
-  --parchment-200: #EDE0CB;
-  --parchment-300: #E0CEB4;
-  --parchment-400: #C8B89A;
-  --parchment-500: #B0A085;
+  /* 宣纸 Parchment → 冷中性灰 */
+  --parchment-100: #F5F5F3;
+  --parchment-200: #EDEDEB;
+  --parchment-300: #E3E3E0;
+  --parchment-400: #CBCBC8;
+  --parchment-500: #ABABAB;
 }
 
 /* ── 语义 Token Semantic Layer ── */
@@ -63,8 +63,8 @@
   --color-gold-dark:     var(--gold-700);
   --color-secondary:     var(--indigo-500);
   --color-background:    var(--parchment-100);
-  --color-surface:       var(--parchment-200);
-  --color-surface-raised: var(--parchment-100);
+  --color-surface:        #FFFFFF;
+  --color-surface-raised:  #FFFFFF;
   --color-border:        var(--parchment-400);
   --color-border-strong: var(--parchment-500);
   --color-text:          var(--ink-900);
@@ -86,37 +86,59 @@
 :root {
   /* 圆角：严控，趋向方正 */
   --radius-none: 0px;
-  --radius-sm:   2px;
-  --radius-md:   4px;
-  --radius-lg:   6px;
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   14px;
 
   /* 书籍布局（侧边栏） */
   --book-spine-width:    56px;
   --book-spine-expanded: 220px;
-  --book-page-shadow:    inset 6px 0 18px -8px rgba(28, 22, 18, 0.08);
+  --book-page-shadow:    inset 6px 0 18px -8px rgba(0, 0, 0, 0.08);
   --book-binding-color:  var(--color-primary);
   --book-binding-width:  3px;
 
   /* 装饰 */
   --seal-red:      var(--vermilion-500);
   --bamboo-green:  #4A6741;
-  --ink-wash-color: rgba(28, 22, 18, 0.04);
-  --noise-opacity: 0.05;
+  --ink-wash-color: rgba(0, 0, 0, 0.04);
+  --noise-opacity: 0;
 }
 
 /* ── 阴影 Shadow System ── */
 :root {
-  --shadow-sm:    0 1px 3px rgba(28, 22, 18, 0.08);
-  --shadow-md:    0 3px 10px rgba(28, 22, 18, 0.10);
-  --shadow-lg:    0 8px 20px rgba(28, 22, 18, 0.12);
-  --shadow-xl:    0 20px 40px rgba(28, 22, 18, 0.16);
-  --shadow-inset: inset 0 1px 3px rgba(28, 22, 18, 0.06);
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md:    0 3px 10px rgba(0, 0, 0, 0.07);
+  --shadow-lg:    0 8px 24px rgba(0, 0, 0, 0.09);
+  --shadow-xl:    0 20px 40px rgba(0, 0, 0, 0.12);
+  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── 图表 Chart Tokens ── */
+:root {
+  --chart-color-1: #D4622A;
+  --chart-color-2: #3D6B52;
+  --chart-color-3: #2E618F;
+  --chart-color-4: #7A5C8A;
+  --chart-color-5: #8A5230;
+  --chart-heat-0: #EBEBEA;
+  --chart-heat-1: rgba(212,98,42,0.20);
+  --chart-heat-2: rgba(212,98,42,0.45);
+  --chart-heat-3: rgba(212,98,42,0.72);
+  --chart-heat-4: #D4622A;
+  --chart-grid: rgba(0,0,0,0.05);
+  --chart-label: #999999;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: rgba(0,0,0,0.08);
+  --chart-tooltip-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  --chart-tooltip-text: #111111;
+  --chart-tooltip-muted: #666666;
+  --chart-tooltip-radius: 10px;
 }
 
 /* ── 动效 Motion ── */
 :root {
-  --transition-fast: 150ms;
-  --transition-base: 250ms;
+  --transition-fast: 200ms;
+  --transition-base: 300ms;
 }
 
 /* ── 卡片语义 Card Tokens ── */
@@ -170,7 +192,7 @@
 
   --el-box-shadow:             var(--shadow-md);
   --el-box-shadow-light:       var(--shadow-sm);
-  --el-box-shadow-lighter:     0 1px 4px rgba(28, 22, 18, 0.05);
+  --el-box-shadow-lighter:     0 1px 4px rgba(0, 0, 0, 0.05);
   --el-box-shadow-dark:        var(--shadow-lg);
 
   --el-font-family:            var(--font-ui);
@@ -185,11 +207,11 @@
   --el-disabled-border-color:  var(--parchment-400);
   --el-disabled-text-color:    var(--ink-300);
 
-  --el-overlay-color:          rgba(28, 22, 18, 0.55);
-  --el-overlay-color-light:    rgba(28, 22, 18, 0.35);
-  --el-overlay-color-lighter:  rgba(28, 22, 18, 0.20);
+  --el-overlay-color:          rgba(0, 0, 0, 0.55);
+  --el-overlay-color-light:    rgba(0, 0, 0, 0.35);
+  --el-overlay-color-lighter:  rgba(0, 0, 0, 0.20);
 
-  --el-mask-color:             rgba(28, 22, 18, 0.55);
+  --el-mask-color:             rgba(0, 0, 0, 0.55);
 }
 
 /* ── 全局基础样式 ── */
@@ -203,17 +225,6 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   overflow-x: hidden;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: var(--noise-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.1'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
 }
 
 #app {

@@ -35,7 +35,7 @@ const router = useRouter()
 
 .error-code {
   font-size: 120px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--primary-100);
   line-height: 1;
   margin-bottom: 20px;

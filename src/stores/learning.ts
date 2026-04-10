@@ -436,28 +436,28 @@ export const useLearningStore = defineStore(
       // 模拟AI回复逻辑
       const lowerInput = input.toLowerCase()
 
-      if (lowerInput.includes('答疑') || lowerInput.includes('问题') || lowerInput.includes('什么')) {
-        const responses = mockAIResponses['课程答疑']
-        return responses[Math.floor(Math.random() * responses.length)]
-      }
-
       if (lowerInput.includes('解题') || lowerInput.includes('怎么做') || lowerInput.includes('答案')) {
         const responses = mockAIResponses['解题指导']
         return responses[Math.floor(Math.random() * responses.length)]
       }
 
-      if (lowerInput.includes('建议') || lowerInput.includes('怎么学') || lowerInput.includes('提高')) {
+      if (lowerInput.includes('薄弱') || lowerInput.includes('不足') || lowerInput.includes('差距') || lowerInput.includes('补齐') || lowerInput.includes('技能') || lowerInput.includes('方向')) {
+        const responses = mockAIResponses['能力补齐']
+        return responses[Math.floor(Math.random() * responses.length)]
+      }
+
+      if (lowerInput.includes('建议') || lowerInput.includes('怎么学') || lowerInput.includes('提高') || lowerInput.includes('推荐') || lowerInput.includes('项目') || lowerInput.includes('准备')) {
         const responses = mockAIResponses['学习建议']
         return responses[Math.floor(Math.random() * responses.length)]
       }
 
-      if (lowerInput.includes('薄弱') || lowerInput.includes('不足') || lowerInput.includes('错题')) {
-        const responses = mockAIResponses['薄弱点提醒']
+      if (lowerInput.includes('答疑') || lowerInput.includes('问题') || lowerInput.includes('课程') || lowerInput.includes('重点') || lowerInput.includes('梳理') || lowerInput.includes('概念')) {
+        const responses = mockAIResponses['课程答疑']
         return responses[Math.floor(Math.random() * responses.length)]
       }
 
       // 默认回复
-      return '我理解你的问题。作为你的 AI 学习助手，我可以帮助你解答课程相关问题、提供解题思路、给出学习建议，以及分析你的学习薄弱点。请告诉我你需要哪方面的帮助？'
+      return '我已经收到你的问题。你可以继续围绕课程重点、解题思路、技能补齐顺序或目标方向的准备策略展开，我会按学习场景给你整理建议。'
     }
 
     function clearAIMessages(): void {
@@ -465,7 +465,7 @@ export const useLearningStore = defineStore(
         {
           id: 'ai_msg_init',
           role: 'assistant',
-          content: '你好！我是你的 AI 学习助手。我可以帮助你：\n1. 解答课程相关问题\n2. 提供解题思路指导\n3. 根据学习情况给出建议\n4. 提醒你学习薄弱点\n\n请告诉我你需要什么帮助？',
+          content: '你好，这里是ai助手。你可以直接提问课程重点、解题思路、技能补齐顺序，或者结合目标方向讨论下一步学习安排。',
           timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
         },
       ]
@@ -550,7 +550,7 @@ export const useLearningStore = defineStore(
         
         sampleData.push({
           id: `sample_${i}`,
-          userId: 'user_1',
+          userId: CURRENT_USER_ID,
           courseId: `course_${i}`,
           courseName,
           courseType,

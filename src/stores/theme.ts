@@ -1,21 +1,21 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
-export type ThemeName = 'classical'
+export type ThemeName = 'modern'
 
 export const useThemeStore = defineStore(
   'theme',
   () => {
-    const theme = ref<ThemeName>('classical')
-    const themeLabel = ref('古籍')
+    const theme = ref<ThemeName>('modern')
+    const themeLabel = ref('现代')
 
     function setTheme(_next?: string) {
-      theme.value = 'classical'
-      document.documentElement.dataset.theme = 'classical'
+      theme.value = 'modern'
+      document.documentElement.dataset.theme = 'modern'
     }
 
     function initTheme() {
-      document.documentElement.dataset.theme = 'classical'
+      document.documentElement.dataset.theme = 'modern'
     }
 
     return { theme, themeLabel, setTheme, initTheme }

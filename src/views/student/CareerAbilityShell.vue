@@ -172,8 +172,8 @@ function buildFullOption(t: number) {
     animationEasingUpdate: 'linear' as const,
     tooltip: {
       trigger: 'item' as const,
-      backgroundColor: 'rgba(247,242,232,0.96)', borderColor: '#D4C9B5',
-      textStyle: { color: '#1A1410', fontSize: 13 },
+      backgroundColor: 'rgba(255,255,255,0.96)', borderColor: 'rgba(0,0,0,0.08)',
+      textStyle: { color: '#111', fontSize: 13 },
       formatter: (params: any) => {
         if (params.dataType === 'node') {
           const nd = allNodes.value.find(n => n.id === params.data.id)
@@ -404,9 +404,9 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-100, #F7F2E8);
-  color: var(--text-100, #1A1410);
-  font-family: var(--font-title), 'KaiTi', serif;
+  background: var(--bg-100, #F5F5F3);
+  color: var(--text-100, #111);
+  font-family: var(--font-title), sans-serif;
   overflow: hidden;
 }
 
@@ -418,8 +418,8 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 10px 24px;
-  background: var(--bg-200, #EDE5D6);
-  border-bottom: 1px solid var(--bg-300, #D4C9B5);
+  background: var(--bg-200, #EDEDEB);
+  border-bottom: 1px solid var(--bg-300, #CBCBC8);
   flex-shrink: 0;
 }
 .shell-header__left { display: flex; align-items: center; gap: 14px; justify-self: start; }
@@ -436,11 +436,11 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 .shell-brand { display: flex; align-items: center; gap: 8px; }
 .shell-brand__icon {
   width: 30px; height: 30px; display: grid; place-items: center;
-  border: 1.5px solid var(--primary-100); color: var(--primary-100); font-size: 15px; font-weight: 900;
+  border: 1.5px solid var(--primary-100); color: var(--primary-100); font-size: 15px; font-weight: 600;
   transform: rotate(-3deg);
 }
 .shell-brand__title {
-  font-size: 15px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-100);
+  font-size: 15px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-100);
   white-space: nowrap;
 }
 
@@ -448,8 +448,8 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 .shell-layout-toggle {
   justify-self: center;
   display: flex; align-items: center; gap: 0;
-  background: var(--bg-100, #F7F2E8);
-  border: 1px solid var(--bg-300, #D4C9B5);
+  background: var(--bg-100, #F5F5F3);
+  border: 1px solid var(--bg-300, #CBCBC8);
   border-radius: var(--radius-md, 3px);
   overflow: hidden;
 }
@@ -458,19 +458,19 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   padding: 7px 22px; font-size: 13px; font-weight: 600;
   font-family: inherit; letter-spacing: 0.08em;
   background: transparent; border: none; cursor: pointer;
-  color: var(--text-200, #6B5D4F);
+  color: var(--text-200, #666);
   transition: all 0.2s ease;
 }
-.shell-toggle-btn + .shell-toggle-btn { border-left: 1px solid var(--bg-300, #D4C9B5); }
+.shell-toggle-btn + .shell-toggle-btn { border-left: 1px solid var(--bg-300, #CBCBC8); }
 .shell-toggle-btn:hover { color: var(--primary-100, #8B2500); background: rgba(139,37,0,0.04); }
 .shell-toggle-btn--active {
   color: var(--primary-100, #8B2500);
-  background: var(--bg-200, #EDE5D6);
+  background: var(--bg-200, #EDEDEB);
   box-shadow: inset 0 -2px 0 var(--primary-100, #8B2500);
 }
 
 .shell-scroll-label {
-  font-size: 16px; font-weight: 700; color: var(--primary-100);
+  font-size: 16px; font-weight: 600; color: var(--primary-100);
   letter-spacing: 0.08em; font-variant-numeric: tabular-nums;
 }
 
@@ -478,12 +478,12 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 .shell-avatar {
   width: 34px; height: 34px; border-radius: 50%;
   display: grid; place-items: center; color: #fff;
-  font-size: 14px; font-weight: 700;
+  font-size: 14px; font-weight: 600;
   background: var(--primary-100);
 }
 .shell-user-text { display: flex; flex-direction: column; line-height: 1.3; }
 .shell-user-name { font-size: 13px; font-weight: 600; color: var(--text-100); }
-.shell-user-role { font-size: 11px; color: var(--text-300, #9C8B78); }
+.shell-user-role { font-size: 11px; color: var(--text-300, #999); }
 
 /* ═══ 内容区 ═══ */
 .shell-body {
@@ -502,9 +502,9 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   overflow: hidden;
   transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   background:
-    linear-gradient(rgba(212,201,181,0.25) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212,201,181,0.25) 1px, transparent 1px),
-    var(--bg-100, #F7F2E8);
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px),
+    var(--bg-100, #F5F5F3);
   background-size: 40px 40px;
 }
 .shell-chart { width: 100%; height: 100%; }
@@ -533,7 +533,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   height: 100%;
   opacity: 1;
   overflow: hidden;
-  border-left: 1px solid var(--bg-300, #D4C9B5);
+  border-left: 1px solid var(--bg-300, #CBCBC8);
 }
 
 /* 工作台容器（始终挂载，宽度平滑过渡） */

@@ -1,16 +1,27 @@
 ﻿<!-- 页面：技能自评；路由：exams（exams）；角色：STUDENT -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import gsap from 'gsap'
 import { roleOptions, type CareerRole } from '@/composables/useCareerInsights'
+import D3CareerTree from '@/components/charts/D3CareerTree.vue'
 
 const router = useRouter()
 
 type Phase = 'select' | 'quiz' | 'result'
+type RoleTrack = {
+  label: string
+  focus: string
+}
+type TrackOption = RoleTrack & {
+  role: CareerRole
+  icon: string
+}
 
 const phase = ref<Phase>('select')
 const selectedRole = ref<CareerRole>('前端开发')
+const selectedTrack = ref('')
 const currentQuestionIndex = ref(0)
 
 /* 5 级能力选项（映射为 0-100 分） */
@@ -30,56 +41,92 @@ const levelLabel = (score: number): string => {
   return '精通'
 }
 
+const roleTrackMap: Record<CareerRole, RoleTrack[]> = {
+  前端开发: [
+    { label: 'Vue 方向', focus: '组件化、状态管理、权限与工程化' },
+    { label: 'React 方向', focus: 'Hooks、状态组织、性能优化' },
+    { label: '可视化方向', focus: '图表、数据表达、交互体验' },
+  ],
+  后端开发: [
+    { label: 'Java 后端', focus: 'Spring Boot、MySQL、Redis、接口设计' },
+    { label: 'Go 后端', focus: '并发、服务治理、gRPC、性能' },
+    { label: 'C++ 开发', focus: '底层性能、网络、系统与工程规范' },
+  ],
+  测试开发: [
+    { label: '自动化测试', focus: 'Playwright、接口测试、脚本编排' },
+    { label: '质量平台', focus: 'CI/CD、质量门禁、缺陷分析' },
+    { label: '性能测试', focus: '压测方案、指标定位、瓶颈分析' },
+  ],
+  数据分析: [
+    { label: '商业分析', focus: '指标体系、报表表达、业务洞察' },
+    { label: '数据开发', focus: 'ETL、数仓、SQL 与数据链路' },
+    { label: '增长分析', focus: 'A/B 测试、转化分析、用户分层' },
+  ],
+  机器学习工程师: [
+    { label: '算法方向', focus: '机器学习、特征工程、实验调优' },
+    { label: '深度学习方向', focus: 'PyTorch、模型训练、CV/NLP' },
+    { label: 'AI 应用工程', focus: '部署、评估、数据闭环与 MLOps' },
+  ],
+}
+
+const roleMetaMap: Record<CareerRole, { icon: string; summary: string }> = {
+  前端开发: { icon: 'lucide:monitor', summary: '面向 Web 界面、交互体验和工程交付。' },
+  后端开发: { icon: 'lucide:server', summary: '面向接口设计、数据存储与服务稳定性。' },
+  测试开发: { icon: 'lucide:bug', summary: '面向质量保障、自动化测试与测试平台。' },
+  数据分析: { icon: 'lucide:bar-chart-2', summary: '面向数据洞察、指标分析与业务决策支持。' },
+  机器学习工程师: { icon: 'lucide:cpu', summary: '面向算法建模、模型落地与 AI 工程化。' },
+}
+
 /* 各方向技能标准（来自 useCareerInsights skillGraph，热度即要求权重） */
 const roleSkillDefs: Record<CareerRole, { id: string; name: string; required: number }[]> = {
   '前端开发': [
     { id: 'vue3', name: 'Vue 3', required: 92 },
     { id: 'react', name: 'React', required: 84 },
     { id: 'ts', name: 'TypeScript', required: 88 },
-    { id: 'webpack', name: 'Webpack/Vite', required: 74 },
-    { id: 'css', name: 'CSS/Tailwind', required: 78 },
+    { id: 'webpack', name: 'Vite / Webpack', required: 74 },
+    { id: 'css', name: 'CSS / 动效 / 设计还原', required: 78 },
     { id: 'http', name: 'HTTP/浏览器原理', required: 70 },
-    { id: 'git', name: 'Git/协作开发', required: 72 },
-    { id: 'node', name: 'Node.js 基础', required: 60 },
+    { id: 'git', name: 'Git / 协作开发', required: 72 },
+    { id: 'node', name: 'Node.js / 前端工程脚本', required: 60 },
   ],
   '后端开发': [
-    { id: 'java', name: 'Java/Spring Boot', required: 90 },
-    { id: 'mysql', name: 'MySQL', required: 85 },
-    { id: 'redis', name: 'Redis', required: 78 },
+    { id: 'java', name: 'Java / Go / C++ 基础', required: 90 },
+    { id: 'mysql', name: 'MySQL / SQL', required: 85 },
+    { id: 'redis', name: 'Redis / 缓存设计', required: 78 },
     { id: 'docker', name: 'Docker', required: 62 },
-    { id: 'microservice', name: '微服务架构', required: 72 },
-    { id: 'mq', name: '消息队列', required: 68 },
-    { id: 'ts', name: 'TypeScript/Golang', required: 64 },
-    { id: 'git', name: 'Git/CI-CD', required: 72 },
+    { id: 'microservice', name: '服务治理 / 微服务', required: 72 },
+    { id: 'mq', name: '消息队列 / 异步通信', required: 68 },
+    { id: 'ts', name: '并发 / RPC / 网络基础', required: 64 },
+    { id: 'git', name: 'Git / CI-CD', required: 72 },
   ],
   '测试开发': [
     { id: 'python', name: 'Python 自动化', required: 88 },
-    { id: 'selenium', name: 'Selenium/Playwright', required: 82 },
+    { id: 'selenium', name: 'Selenium / Playwright', required: 82 },
     { id: 'testcase', name: '测试用例设计', required: 90 },
     { id: 'api-test', name: 'API 接口测试', required: 84 },
-    { id: 'perf', name: '性能测试', required: 70 },
+    { id: 'perf', name: '性能测试 / 压测分析', required: 70 },
     { id: 'cicd', name: 'CI/CD 流水线', required: 68 },
     { id: 'git', name: 'Git', required: 72 },
-    { id: 'sql', name: 'SQL', required: 64 },
+    { id: 'sql', name: 'SQL / 测试数据构造', required: 64 },
   ],
   '数据分析': [
-    { id: 'python', name: 'Python/Pandas', required: 90 },
+    { id: 'python', name: 'Python / Pandas', required: 90 },
     { id: 'sql', name: 'SQL', required: 88 },
-    { id: 'visual', name: '数据可视化', required: 80 },
+    { id: 'visual', name: '数据可视化 / 报表表达', required: 80 },
     { id: 'stats', name: '统计学基础', required: 78 },
-    { id: 'tableau', name: 'Tableau/BI 工具', required: 70 },
-    { id: 'etl', name: 'ETL/数据清洗', required: 74 },
+    { id: 'tableau', name: 'Tableau / BI 工具', required: 70 },
+    { id: 'etl', name: 'ETL / 数据清洗', required: 74 },
     { id: 'excel', name: 'Excel 高级应用', required: 62 },
-    { id: 'spark', name: 'Spark/Hadoop 基础', required: 60 },
+    { id: 'spark', name: 'Spark / 数仓基础', required: 60 },
   ],
   '机器学习工程师': [
     { id: 'python', name: 'Python', required: 92 },
-    { id: 'pytorch', name: 'PyTorch/TensorFlow', required: 88 },
+    { id: 'pytorch', name: 'PyTorch / TensorFlow', required: 88 },
     { id: 'ml-algo', name: '机器学习算法', required: 90 },
     { id: 'math', name: '数学基础（线代/概率）', required: 85 },
-    { id: 'nlp', name: 'NLP/CV 基础', required: 72 },
-    { id: 'spark', name: 'Spark/大数据', required: 68 },
-    { id: 'docker', name: 'Docker/k8s', required: 62 },
+    { id: 'nlp', name: 'NLP / CV 基础', required: 72 },
+    { id: 'spark', name: '数据处理 / 大数据基础', required: 68 },
+    { id: 'docker', name: 'Docker / 部署', required: 62 },
     { id: 'git', name: 'Git', required: 70 },
   ],
 }
@@ -87,6 +134,17 @@ const roleSkillDefs: Record<CareerRole, { id: string; name: string; required: nu
 const currentSkills = computed(() => roleSkillDefs[selectedRole.value] ?? [])
 const totalQuestions = computed(() => currentSkills.value.length)
 const currentSkill = computed(() => currentSkills.value[currentQuestionIndex.value])
+const currentTracks = computed(() => roleTrackMap[selectedRole.value] ?? [])
+const selectedDirectionLabel = computed(() => selectedTrack.value || selectedRole.value)
+const allTrackOptions = computed<TrackOption[]>(() => {
+  return roleOptions.flatMap((role) => {
+    return (roleTrackMap[role] ?? []).map((track) => ({
+      ...track,
+      role,
+      icon: roleMetaMap[role].icon,
+    }))
+  })
+})
 
 /* 用户作答（技能id → 得分 0/25/50/75/100） */
 const userAnswers = ref<Record<string, number>>({})
@@ -102,8 +160,9 @@ const progressPct = computed(() =>
   totalQuestions.value ? Math.round((currentQuestionIndex.value / totalQuestions.value) * 100) : 0
 )
 
-function selectRole(role: CareerRole) {
+function selectRole(role: CareerRole, trackLabel = '') {
   selectedRole.value = role
+  selectedTrack.value = trackLabel
   currentQuestionIndex.value = 0
   userAnswers.value = {}
   phase.value = 'quiz'
@@ -125,6 +184,7 @@ function goPrev() {
 
 function resetAll() {
   phase.value = 'select'
+  selectedTrack.value = ''
   userAnswers.value = {}
   currentQuestionIndex.value = 0
 }
@@ -168,11 +228,48 @@ function masteryBg(mastery: number): string {
 }
 
 function goToAnalysis() {
-  router.push({ path: '/app/student/career-analysis', query: { role: selectedRole.value } })
+  router.push({ path: '/app/student/career-analysis', query: { role: selectedDirectionLabel.value } })
 }
 
 function goToNavigation() {
   router.push('/app/student/career-navigation')
+}
+
+/* ─── 视图切换 ─── */
+const viewMode = ref<'card' | 'tree'>('card')
+const cardViewRef = ref<HTMLElement | null>(null)
+const treeViewRef = ref<HTMLElement | null>(null)
+
+async function switchView(mode: 'card' | 'tree') {
+  if (viewMode.value === mode) return
+  const leaving = mode === 'tree' ? cardViewRef.value : treeViewRef.value
+  if (leaving) {
+    await gsap.to(leaving, {
+      opacity: 0,
+      y: mode === 'tree' ? -10 : 0,
+      duration: 0.15,
+      ease: 'power2.in',
+    })
+    gsap.set(leaving, { opacity: '', y: '' })
+  }
+  viewMode.value = mode
+  await nextTick()
+  const entering = mode === 'tree' ? treeViewRef.value : cardViewRef.value
+  if (!entering) return
+  if (mode === 'card') {
+    const cards = entering.querySelectorAll<HTMLElement>('.role-card, .subrole-card')
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 16 },
+      { opacity: 1, y: 0, duration: 0.28, stagger: 0.04, ease: 'power2.out', clearProps: 'opacity,transform' },
+    )
+  } else {
+    gsap.fromTo(
+      entering,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'opacity,transform' },
+    )
+  }
 }
 </script>
 
@@ -182,33 +279,83 @@ function goToNavigation() {
     <!-- ══ 阶段一：选择方向 ══ -->
     <div v-if="phase === 'select'" class="phase phase--select">
       <div class="page-hd">
-        <h1 class="page-hd__title">技能自评</h1>
-        <p class="page-hd__sub">选择目标岗位方向，逐项回答能力问题，生成差距诊断报告</p>
-      </div>
-
-      <p class="select-hint">你目前最感兴趣或正在准备的方向：</p>
-
-      <div class="role-grid">
+        <div>
+          <h1 class="page-hd__title">技能自评</h1>
+          <p class="page-hd__sub">选择目标岗位方向，逐项回答能力问题，生成差距诊断报告</p>
+        </div>
         <button
-          v-for="(role, i) in roleOptions"
-          :key="role"
-          class="role-card"
-          @click="selectRole(role as CareerRole)"
+          class="view-toggle-btn"
+          :title="viewMode === 'card' ? '切换到关系图' : '切换到卡片'"
+          @click="switchView(viewMode === 'card' ? 'tree' : 'card')"
         >
-          <Icon
-            :icon="(['lucide:monitor','lucide:server','lucide:bug','lucide:bar-chart-2','lucide:cpu'])[i] || 'lucide:briefcase'"
-            :width="28" class="role-card__icon"
-          />
-          <span class="role-card__name">{{ role }}</span>
-          <span class="role-card__count">{{ roleSkillDefs[role as CareerRole]?.length ?? 0 }} 项核心技能</span>
+          <Icon :icon="viewMode === 'card' ? 'lucide:git-fork' : 'lucide:layout-grid'" :width="18" />
         </button>
       </div>
 
-      <p class="tip-row">
-        <Icon icon="lucide:info" :width="13" />
-        没有简历？先自评了解差距，再
-        <button class="link-btn" @click="goToNavigation">上传简历获取精准评估</button>
-      </p>
+      <!-- 卡片视图 -->
+      <div v-show="viewMode === 'card'" ref="cardViewRef" class="card-view">
+        <p class="select-hint">你目前最感兴趣或正在准备的方向：</p>
+
+        <div class="role-grid">
+          <button
+            v-for="(role, i) in roleOptions"
+            :key="role"
+            class="role-card"
+            @click="selectRole(role as CareerRole)"
+          >
+            <Icon
+              :icon="roleMetaMap[role as CareerRole]?.icon || (['lucide:monitor','lucide:server','lucide:bug','lucide:bar-chart-2','lucide:cpu'])[i] || 'lucide:briefcase'"
+              :width="28" class="role-card__icon"
+            />
+            <span class="role-card__name">{{ role }}</span>
+            <span class="role-card__summary">{{ roleMetaMap[role as CareerRole]?.summary }}</span>
+            <span class="role-card__count">{{ roleSkillDefs[role as CareerRole]?.length ?? 0 }} 项核心技能</span>
+            <span class="role-card__tracks">{{ roleTrackMap[role as CareerRole]?.map(item => item.label).join(' / ') }}</span>
+          </button>
+        </div>
+
+        <div class="subrole-panel">
+          <div class="subrole-panel__head">
+            <strong>细分准备方向</strong>
+            <span>如果你已经更明确，可以直接从细分赛道开始自评。</span>
+          </div>
+          <div class="subrole-grid">
+            <button
+              v-for="track in allTrackOptions"
+              :key="`${track.role}-${track.label}`"
+              class="subrole-card"
+              @click="selectRole(track.role, track.label)"
+            >
+              <div class="subrole-card__top">
+                <span class="subrole-card__role">{{ track.role }}</span>
+                <Icon :icon="track.icon" :width="14" class="subrole-card__icon" />
+              </div>
+              <strong class="subrole-card__title">{{ track.label }}</strong>
+              <span class="subrole-card__desc">{{ track.focus }}</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="tip-row">
+          <Icon icon="lucide:info" :width="13" />
+          没有简历？先自评了解差距，再
+          <button class="link-btn" @click="goToNavigation">上传简历获取精准评估</button>
+        </p>
+      </div>
+
+      <!-- 关系图视图 -->
+      <div v-show="viewMode === 'tree'" ref="treeViewRef" class="tree-view">
+        <D3CareerTree
+          :roles="roleOptions as CareerRole[]"
+          :role-track-map="roleTrackMap"
+          :role-meta-map="roleMetaMap"
+          @select-role="(role, track) => selectRole(role, track)"
+        />
+        <p class="tip-row tree-tip-row">
+          <Icon icon="lucide:info" :width="13" />
+          点击大方向节点进行整体自评，点击细分节点直接进入对应赛道
+        </p>
+      </div>
     </div>
 
     <!-- ══ 阶段二：逐题问卷 ══ -->
@@ -216,11 +363,25 @@ function goToNavigation() {
       <!-- 顶部进度 -->
       <div class="quiz-progress">
         <div class="quiz-progress__meta">
-          <span class="quiz-progress__role">{{ selectedRole }}</span>
+          <span class="quiz-progress__role">{{ selectedDirectionLabel }}</span>
           <span class="quiz-progress__count">{{ currentQuestionIndex + 1 }} / {{ totalQuestions }}</span>
         </div>
         <div class="quiz-progress__bar">
           <div class="quiz-progress__fill" :style="{ width: progressPct + '%' }" />
+        </div>
+      </div>
+
+      <div v-if="selectedTrack" class="quiz-direction-chip">
+        <span>归属主方向：{{ selectedRole }}</span>
+      </div>
+
+      <div class="track-panel">
+        <span class="track-panel__title">该方向常见细分赛道</span>
+        <div class="track-list">
+          <div v-for="item in currentTracks" :key="item.label" class="track-item">
+            <strong>{{ item.label }}</strong>
+            <span>{{ item.focus }}</span>
+          </div>
         </div>
       </div>
 
@@ -340,7 +501,7 @@ function goToNavigation() {
         </button>
         <button class="btn-primary" @click="goToAnalysis">
           <Icon icon="lucide:target" :width="13" />
-          了解 {{ selectedRole }} 市场行情
+          了解 {{ selectedDirectionLabel }} 岗位实情
         </button>
         <button class="btn-secondary" @click="goToNavigation">
           <Icon icon="lucide:route" :width="13" />
@@ -355,32 +516,73 @@ function goToNavigation() {
 <style scoped>
 /* ─── 容器 ─── */
 .exams-page {
-  max-width: 680px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 24px 20px;
 }
-.phase { display: flex; flex-direction: column; gap: 20px; }
+.phase { display: flex; flex-direction: column; gap: 20px; width: 100%; }
+
+.phase--select { max-width: none; }
+
+.phase--quiz,
+.phase--result {
+  max-width: 680px;
+  margin: 0 auto;
+}
 
 /* ─── 页头 ─── */
+.page-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 .page-hd__title {
-  font-size: 1.375rem; font-weight: 700;
+  font-size: 1.375rem; font-weight: 600;
   color: var(--color-text); margin: 0 0 4px;
   border-left: 3px solid var(--color-primary);
   padding-left: 10px;
 }
 .page-hd__sub { font-size: 13px; color: var(--color-text-muted); margin: 0; }
 
+.view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+.view-toggle-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.view-toggle-btn:active { transform: scale(0.9); }
+
+/* ─── 视图容器 ─── */
+.card-view { display: flex; flex-direction: column; gap: 20px; }
+.tree-view { display: flex; flex-direction: column; gap: 14px; }
+.tree-tip-row { justify-content: center; }
+
 /* ─── 方向选择 ─── */
 .select-hint { font-size: 13px; color: var(--color-text-muted); margin: 0; }
 
 .role-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
 }
 .role-card {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 20px 12px;
+  min-height: 220px;
+  padding: 18px 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -393,7 +595,96 @@ function goToNavigation() {
 }
 .role-card__icon { color: var(--color-primary); }
 .role-card__name { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.role-card__summary {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
 .role-card__count { font-size: 11px; color: var(--color-text-subtle); }
+.role-card__tracks {
+  font-size: 10px;
+  color: var(--color-primary);
+  line-height: 1.5;
+}
+
+.subrole-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 78%, var(--color-secondary-light, rgba(0,0,0,0.03)));
+}
+
+.subrole-panel__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subrole-panel__head strong {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.subrole-panel__head span {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.subrole-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.subrole-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 132px;
+  padding: 16px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 84%, var(--color-primary));
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.subrole-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.subrole-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.subrole-card__role {
+  font-size: 10px;
+  color: var(--color-text-subtle);
+}
+
+.subrole-card__icon {
+  color: var(--color-primary);
+}
+
+.subrole-card__title {
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.subrole-card__desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
 
 .tip-row {
   display: flex; align-items: center; gap: 6px;
@@ -425,6 +716,60 @@ function goToNavigation() {
   transition: width 0.3s ease;
 }
 
+.track-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 76%, var(--color-primary-light));
+}
+
+.track-panel__title {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.quiz-direction-chip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.track-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.track-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, var(--color-primary));
+  background: var(--color-background);
+}
+
+.track-item strong {
+  font-size: 13px;
+  color: var(--color-text);
+}
+
+.track-item span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
 /* ─── 题目卡片 ─── */
 .quiz-card {
   background: var(--color-surface);
@@ -448,7 +793,7 @@ function goToNavigation() {
   font-size: 11px; color: var(--color-text-subtle);
 }
 .quiz-card__skill {
-  font-size: 1.25rem; font-weight: 700;
+  font-size: 1.25rem; font-weight: 600;
   color: var(--color-text); margin: 0 0 6px;
 }
 .quiz-card__ask {
@@ -494,7 +839,7 @@ function goToNavigation() {
   flex-wrap: wrap;
 }
 .result-overview__left { flex: 1; min-width: 200px; }
-.result-level { font-size: 1.5rem; font-weight: 800; margin-bottom: 2px; }
+.result-level { font-size: 1.5rem; font-weight: 600; margin-bottom: 2px; }
 .result-pct { font-size: 13px; color: var(--color-text-muted); margin-bottom: 6px; }
 .result-desc { font-size: 12px; color: var(--color-text-muted); margin: 0 0 12px; line-height: 1.5; }
 .result-overview__bar {
@@ -574,9 +919,35 @@ function goToNavigation() {
 }
 .btn-ghost:hover { background: var(--color-surface); }
 
+@media (max-width: 960px) {
+  .role-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .subrole-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+  .exams-page { padding: 20px 16px; }
+  .role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .subrole-panel { padding: 18px; }
+  .subrole-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .role-card,
+  .subrole-card { min-height: unset; }
+  .view-toggle-btn { display: none; }
+  .tree-view { display: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-toggle-btn { transition: none; }
+}
+
 @media (max-width: 640px) {
   .gap-item { grid-template-columns: 1fr; }
   .result-overview { flex-direction: column; }
+  .role-grid { grid-template-columns: 1fr; }
+  .subrole-grid { grid-template-columns: 1fr; }
+  .track-list { grid-template-columns: 1fr; }
 }
 </style>
 

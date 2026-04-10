@@ -277,6 +277,19 @@ export interface TargetRole {
   savedAt: string
 }
 
+export interface TargetRoleMarket {
+  role: string
+  salaryRange: string
+  medianSalary: number
+  demandLevel: string
+  hotCities: string[]
+  industries: string[]
+  skillTags: string[]
+  sampleJobs: string[]
+  trendNote: string
+  referenceMatch: number
+}
+
 // 报告记录（存入 reportStore）
 export interface ReportRecord {
   id: string
@@ -294,4 +307,62 @@ export interface AgentStep {
   reasoning?: string
   output?: string
   highlightNodeIds?: string[]
+}
+
+// ══ 职业生涯报告相关类型 ══
+
+export type SevenDim = {
+  专业技能: number
+  证书资质: number
+  创新能力: number
+  学习能力: number
+  抗压能力: number
+  沟通能力: number
+  实习经验: number
+}
+
+export type JobLevel = 'intern' | 'junior' | 'mid' | 'senior' | 'lead' | 'expert'
+
+export type JobPortrait = {
+  id: string
+  title: string
+  level: JobLevel
+  lineId: string
+  stack?: string
+  sevenDim: SevenDim
+  keySkills: string[]
+  salaryRange: string
+  desc: string
+  matchScore: number
+}
+
+export type CareerPathEdge = {
+  fromId: string
+  toId: string
+  type: 'promote' | 'transfer'
+  skills: string[]
+}
+
+/** 已废弃（保留兼容），新代码请用 CAREER_PATH_EDGES */
+export type MetroLine = {
+  id: string
+  name: string
+  color: string
+  trackColor: string
+  stationIds: string[]
+}
+
+export type TransferEdge = {
+  fromId: string
+  toId: string
+  skills: string[]
+  label: string
+}
+
+export type GrowthAction = {
+  phase: 'short' | 'mid'
+  phaseLabel: string
+  goal: string
+  tasks: string[]
+  milestone: string
 }

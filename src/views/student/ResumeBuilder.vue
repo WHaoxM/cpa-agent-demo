@@ -628,7 +628,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rb-page {
   --accent: #8B2500;
   min-height: 100vh; display: flex; flex-direction: column;
-  background: #1A1007; color: rgba(220,205,185,0.9);
+  background: #151515; color: rgba(220,220,220,0.9);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
 }
 
@@ -637,16 +637,16 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; align-items: center; gap: 12px;
   padding: 0 20px; height: 50px; flex-shrink: 0;
   border-bottom: 1px solid rgba(212,201,181,0.1);
-  background: rgba(26,16,7,0.98);
+  background: rgba(20,20,20,0.98);
 }
 .rb-hdr-back {
   display: flex; align-items: center; gap: 6px;
   background: none; border: 1px solid rgba(212,201,181,0.18); border-radius: 5px;
   color: rgba(180,160,130,0.75); font-size: 12px; padding: 4px 10px; cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.3s, color 0.3s;
 }
 .rb-hdr-back:hover { border-color: rgba(139,37,0,0.4); color: rgba(200,150,110,0.9); }
-.rb-hdr-title { font-size: 14px; font-weight: 700; flex: 1; letter-spacing: 0.04em; }
+.rb-hdr-title { font-size: 14px; font-weight: 600; flex: 1; letter-spacing: 0.02em; }
 .rb-hdr-actions { display: flex; align-items: center; gap: 8px; }
 .rb-ghost-btn {
   position: relative; display: flex; align-items: center; gap: 5px;
@@ -664,7 +664,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; align-items: center; gap: 6px;
   background: var(--accent); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px;
   color: rgba(240,220,195,0.95); font-size: 12px; font-weight: 600; padding: 5px 14px; cursor: pointer;
-  transition: filter 0.2s;
+  transition: filter 0.3s;
 }
 .rb-use-btn:hover { filter: brightness(1.2); }
 
@@ -681,8 +681,8 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rb-left::-webkit-scrollbar { width: 3px; }
 .rb-left::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); border-radius: 2px; }
 .rb-left-section-hd {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-  color: rgba(120,108,88,0.5); text-transform: uppercase;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  color: rgba(160,160,160,0.5); text-transform: uppercase;
   padding: 0 8px; margin: 6px 0 8px;
 }
 .rb-module-list { display: flex; flex-direction: column; gap: 2px; }
@@ -720,7 +720,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; align-items: center; gap: 10px; flex-shrink: 0;
   padding: 13px 18px;
   border-bottom: 1px solid rgba(212,201,181,0.08);
-  font-size: 14px; font-weight: 700; color: rgba(210,195,170,0.95);
+  font-size: 14px; font-weight: 600; color: rgba(220,220,220,0.95);
 }
 .rb-mid-hd-icon { display: flex; align-items: center; }
 .rb-mid-body { flex: 1; overflow-y: auto; padding: 16px 18px; }
@@ -741,15 +741,15 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
   background: var(--accent); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px;
   color: rgba(240,220,195,0.95); font-size: 13px; font-weight: 600; padding: 7px; cursor: pointer;
-  transition: filter 0.2s;
+  transition: filter 0.3s;
 }
 .rb-use-btn-lg:hover { filter: brightness(1.2); }
 
 /* ══ Form Groups ══ */
 .rb-form-group { margin-bottom: 18px; }
 .rb-form-group-title {
-  font-size: 11px; font-weight: 700; color: rgba(155,140,115,0.7);
-  letter-spacing: 0.06em; margin-bottom: 8px; padding-bottom: 5px;
+  font-size: 11px; font-weight: 600; color: rgba(160,160,160,0.7);
+  letter-spacing: 0.02em; margin-bottom: 8px; padding-bottom: 5px;
   border-bottom: 1px solid rgba(212,201,181,0.08);
 }
 
@@ -775,7 +775,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rb-field-col { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .rb-fcol-lbl { font-size: 11px; color: rgba(155,140,115,0.65); }
 .rb-ftextarea {
-  width: 100%; background: rgba(240,230,210,0.04); border: 1px solid rgba(212,201,181,0.12);
+  width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(212,201,181,0.12);
   border-radius: 5px; padding: 8px 10px; font-size: 12px; color: rgba(215,200,178,0.9);
   outline: none; resize: vertical; font-family: inherit; line-height: 1.6; box-sizing: border-box;
 }
@@ -785,9 +785,9 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 /* ══ 头像 ══ */
 .rb-avatar-box {
   width: 52px; height: 52px; border-radius: 7px;
-  border: 1.5px dashed rgba(212,201,181,0.2); background: rgba(240,230,210,0.04);
+  border: 1.5px dashed rgba(200,200,200,0.2); background: rgba(255,255,255,0.04);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; overflow: hidden; transition: border-color 0.2s;
+  cursor: pointer; overflow: hidden; transition: border-color 0.3s;
 }
 .rb-avatar-box:hover { border-color: rgba(139,37,0,0.4); }
 .rb-avi { width: 100%; height: 100%; object-fit: cover; }
@@ -800,7 +800,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; flex-shrink: 0; border-radius: 5px;
   background: rgba(139,37,0,0.15); border: 1px solid rgba(139,37,0,0.3);
-  color: rgba(200,120,90,0.8); cursor: pointer; transition: background 0.2s;
+  color: rgba(200,120,90,0.8); cursor: pointer; transition: background 0.3s;
 }
 .rb-add-btn:hover { background: rgba(139,37,0,0.3); }
 .rb-skill-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -816,11 +816,11 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 /* ══ Entry cards（工作/项目/教育）══ */
 .rb-entry-card {
   border: 1px solid rgba(212,201,181,0.08); border-radius: 7px;
-  padding: 12px 14px; margin-bottom: 12px; background: rgba(240,230,210,0.02);
+  padding: 12px 14px; margin-bottom: 12px; background: rgba(255,255,255,0.02);
 }
 .rb-entry-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .rb-entry-num {
-  width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 700;
+  width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 600;
   background: rgba(139,37,0,0.2); color: rgba(200,140,110,0.85);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
@@ -835,7 +835,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; align-items: center; gap: 7px; width: 100%;
   padding: 8px 12px; border-radius: 6px; font-size: 12px;
   background: rgba(139,37,0,0.07); border: 1px dashed rgba(139,37,0,0.25);
-  color: rgba(175,120,90,0.7); cursor: pointer; transition: background 0.2s;
+  color: rgba(175,120,90,0.7); cursor: pointer; transition: background 0.3s;
 }
 .rb-add-entry-btn:hover { background: rgba(139,37,0,0.15); }
 
@@ -848,7 +848,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rb-honor--cert   { background: rgba(139,105,20,0.08); border-color: rgba(139,105,20,0.2); color: rgba(200,165,80,0.85); }
 .rb-honor--intern { background: rgba(74,107,138,0.08); border-color: rgba(74,107,138,0.2); color: rgba(120,155,190,0.85); }
 .rb-honor--award  { background: rgba(139,37,0,0.08);  border-color: rgba(139,37,0,0.2);  color: rgba(210,140,100,0.85); }
-.rb-honor-type-lbl { font-size: 9px; font-weight: 700; opacity: 0.7; }
+.rb-honor-type-lbl { font-size: 9px; font-weight: 600; opacity: 0.7; }
 .rb-honor-txt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rb-honor-del { margin-left: auto; background: none; border: none; cursor: pointer; color: rgba(160,80,70,0.5); display: flex; }
 .rb-honor-del:hover { color: rgba(200,80,70,0.9); }
@@ -857,11 +857,11 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rb-hint-text { font-size: 11px; color: rgba(110,98,78,0.45); font-style: italic; }
 
 /* ══ Right: 预览 ══ */
-.rb-right { display: flex; flex-direction: column; background: #1f1208; overflow: hidden; }
+.rb-right { display: flex; flex-direction: column; background: #1a1a1a; overflow: hidden; }
 .rb-preview-bar {
   display: flex; align-items: center; gap: 6px; flex-shrink: 0;
-  padding: 8px 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-  color: rgba(115,103,83,0.5); border-bottom: 1px solid rgba(212,201,181,0.08);
+  padding: 8px 20px; font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: rgba(160,160,160,0.5); border-bottom: 1px solid rgba(212,201,181,0.08);
   text-transform: uppercase;
 }
 .rb-preview-scroll { flex: 1; overflow-y: auto; padding: 22px 20px; display: flex; flex-direction: column; }
@@ -874,7 +874,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   padding: 32px 36px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.5);
   font-family: 'PingFang SC', 'Noto Sans SC', sans-serif;
-  color: #1a1410; min-height: 400px; flex: 1;
+  color: #111; min-height: 400px; flex: 1;
 }
 
 /* 简历头部 */
@@ -883,28 +883,28 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rp-avi { width: 70px; height: 70px; border-radius: 6px; object-fit: cover; }
 .rp-avi-ph {
   width: 70px; height: 70px; border-radius: 6px;
-  background: #f0ece4; border: 1px solid #e0d8cc;
+  background: #f5f5f3; border: 1px solid #e3e3e0;
   display: flex; align-items: center; justify-content: center; color: #b0a898;
 }
 .rp-info { flex: 1; }
-.rp-name { font-size: 24px; font-weight: 800; color: var(--accent); line-height: 1.15; margin-bottom: 3px; }
+.rp-name { font-size: 24px; font-weight: 600; color: var(--accent); line-height: 1.15; margin-bottom: 3px; }
 .rp-role { font-size: 13px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
-.rp-meta { font-size: 11px; color: #6b5d4f; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
-.rp-dot  { color: #c4b9a6; }
+.rp-meta { font-size: 11px; color: #666; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.rp-dot  { color: #bbb; }
 .rp-contact { display: flex; gap: 14px; flex-wrap: wrap; }
-.rp-contact > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #6b5d4f; }
+.rp-contact > span { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #666; }
 
 .rp-summary {
-  font-size: 11.5px; color: #5a4e42; line-height: 1.7;
+  font-size: 11.5px; color: #555; line-height: 1.7;
   border-left: 3px solid var(--accent); padding: 6px 12px;
   background: rgba(var(--accent-rgb), 0.04); margin-bottom: 12px; border-radius: 0 4px 4px 0;
 }
 .rp-rule       { height: 1.5px; background: var(--accent); margin: 0 0 14px; }
-.rp-rule-light { height: 1px; background: #ece6da; margin: 10px 0 14px; }
+.rp-rule-light { height: 1px; background: #e3e3e0; margin: 10px 0 14px; }
 
 .rp-sec-title {
-  font-size: 11px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: 0.12em; color: var(--accent);
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--accent);
   margin-bottom: 8px; padding-bottom: 3px;
   border-bottom: 1px solid rgba(var(--accent-rgb), 0.15);
 }
@@ -912,13 +912,13 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rp-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 4px; }
 .rp-chip {
   font-size: 10px; padding: 2px 9px; border-radius: 4px;
-  background: #f2ede4; color: #5a4e42; border: 1px solid #ddd6c8;
+  background: #f5f5f3; color: #555; border: 1px solid #e3e3e0;
 }
 
 .rp-entry { margin-bottom: 12px; }
 .rp-entry-hd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
-.rp-entry-name   { font-size: 13px; font-weight: 700; color: var(--accent-deep); }
-.rp-entry-sub    { font-size: 11px; color: #6b5d4f; }
+.rp-entry-name   { font-size: 13px; font-weight: 600; color: var(--accent-deep); }
+.rp-entry-sub    { font-size: 11px; color: #666; }
 .rp-entry-badge  {
   font-size: 10px; padding: 1px 7px; border-radius: 8px;
   background: rgba(var(--accent-rgb), 0.08); color: var(--accent); border: 1px solid rgba(var(--accent-rgb), 0.15);
@@ -927,10 +927,10 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   font-size: 10px; padding: 1px 7px; border-radius: 8px;
   background: rgba(42,191,170,0.1); color: #2abfaa; border: 1px solid rgba(42,191,170,0.25);
 }
-.rp-entry-period { font-size: 10px; color: #9b8f80; margin-left: auto; }
-.rp-entry-gpa    { font-size: 11px; color: #6b5d4f; }
+.rp-entry-period { font-size: 10px; color: #999; margin-left: auto; }
+.rp-entry-gpa    { font-size: 11px; color: #666; }
 
-.rp-richtext { font-size: 11px; color: #5a4e42; line-height: 1.65; }
+.rp-richtext { font-size: 11px; color: #555; line-height: 1.65; }
 .rp-richtext :deep(p)  { margin: 0 0 3px; }
 .rp-richtext :deep(ul),
 .rp-richtext :deep(ol) { margin: 0 0 3px; padding-left: 18px; }
@@ -939,7 +939,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 .rp-richtext :deep(em)     { font-style: italic; }
 .rp-richtext :deep(u)      { text-decoration: underline; }
 
-.rp-honor-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 11px; color: #5a4e42; }
+.rp-honor-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 11px; color: #555; }
 .rp-hico           { flex-shrink: 0; }
 .rp-hico--cert     { color: rgba(139,105,20,0.7); }
 .rp-hico--intern   { color: rgba(74,107,138,0.7); }
@@ -949,6 +949,6 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 12px; padding: 60px 20px; text-align: center;
 }
-.rp-empty-ico { color: #c8c0b4; }
-.rp-empty p { font-size: 12px; color: #b0a898; line-height: 1.6; }
+.rp-empty-ico { color: #ccc; }
+.rp-empty p { font-size: 12px; color: #aaa; line-height: 1.6; }
 </style>
