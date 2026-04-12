@@ -43,29 +43,29 @@ const levelLabel = (score: number): string => {
 
 const roleTrackMap: Record<CareerRole, RoleTrack[]> = {
   前端开发: [
-    { label: 'Vue 方向', focus: '组件化、状态管理、权限与工程化' },
-    { label: 'React 方向', focus: 'Hooks、状态组织、性能优化' },
-    { label: '可视化方向', focus: '图表、数据表达、交互体验' },
+    { label: 'Vue 前端工程师', focus: '组件化、状态管理、权限与工程化' },
+    { label: 'React 前端工程师', focus: 'Hooks、状态组织、性能优化' },
+    { label: '可视化工程师', focus: '图表、数据表达、交互体验' },
   ],
   后端开发: [
-    { label: 'Java 后端', focus: 'Spring Boot、MySQL、Redis、接口设计' },
-    { label: 'Go 后端', focus: '并发、服务治理、gRPC、性能' },
-    { label: 'C++ 开发', focus: '底层性能、网络、系统与工程规范' },
+    { label: 'Java 后端工程师', focus: 'Spring Boot、MySQL、Redis、接口设计' },
+    { label: 'Go 后端工程师', focus: '并发、服务治理、gRPC、性能' },
+    { label: 'Python 后端工程师', focus: 'Django/Flask、数据处理、接口开发' },
   ],
   测试开发: [
-    { label: '自动化测试', focus: 'Playwright、接口测试、脚本编排' },
-    { label: '质量平台', focus: 'CI/CD、质量门禁、缺陷分析' },
-    { label: '性能测试', focus: '压测方案、指标定位、瓶颈分析' },
+    { label: '自动化测试工程师', focus: 'Playwright、接口测试、脚本编排' },
+    { label: '质量平台工程师', focus: 'CI/CD、质量门禁、缺陷分析' },
+    { label: '性能测试工程师', focus: '压测方案、指标定位、瓶颈分析' },
   ],
   数据分析: [
-    { label: '商业分析', focus: '指标体系、报表表达、业务洞察' },
-    { label: '数据开发', focus: 'ETL、数仓、SQL 与数据链路' },
-    { label: '增长分析', focus: 'A/B 测试、转化分析、用户分层' },
+    { label: '商业数据分析师', focus: '指标体系、报表表达、业务洞察' },
+    { label: '数据开发工程师', focus: 'ETL、数仓、SQL 与数据链路' },
+    { label: '增长分析师', focus: 'A/B 测试、转化分析、用户分层' },
   ],
   机器学习工程师: [
-    { label: '算法方向', focus: '机器学习、特征工程、实验调优' },
-    { label: '深度学习方向', focus: 'PyTorch、模型训练、CV/NLP' },
-    { label: 'AI 应用工程', focus: '部署、评估、数据闭环与 MLOps' },
+    { label: '算法工程师', focus: '机器学习、特征工程、实验调优' },
+    { label: '深度学习工程师', focus: 'PyTorch、模型训练、CV/NLP' },
+    { label: 'AI 应用工程师', focus: '部署、评估、数据闭环与 MLOps' },
   ],
 }
 

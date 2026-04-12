@@ -56,7 +56,7 @@ function logIcon(level: LogEntry['level']) {
       <div class="dual-cards">
         <!-- 卡片 01：岗位介绍 -->
         <section class="dual-card">
-          <h3 class="dual-card__title"><span class="dual-card__num">01</span> 简历分析</h3>
+          <h3 class="dual-card__title"><span class="dual-card__num">01</span> 职业分析</h3>
           <div class="dual-card__body">
             <p class="dual-intro-summary">{{ roleIntro.summary }}</p>
             <div class="dual-intro-section">

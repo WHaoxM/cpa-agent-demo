@@ -61,6 +61,38 @@ export type CareerAgentInput = {
 
 export const roleOptions: CareerRole[] = ['前端开发', '后端开发', '测试开发', '数据分析', '机器学习工程师']
 
+// ── 五领域 × 三细分岗位 统一数据源 ──
+export interface BubbleDomain {
+  id: string
+  role: CareerRole
+  name: string
+  color: string
+  jobs: string[]
+}
+
+export const CAREER_DOMAINS: BubbleDomain[] = [
+  {
+    id: 'frontend', role: '前端开发', name: '前端开发', color: '#8B2500',
+    jobs: ['Vue 前端工程师', 'React 前端工程师', '可视化工程师'],
+  },
+  {
+    id: 'backend', role: '后端开发', name: '后端开发', color: '#2E7D5E',
+    jobs: ['Java 后端工程师', 'Go 后端工程师', 'Python 后端工程师'],
+  },
+  {
+    id: 'qa', role: '测试开发', name: '测试开发', color: '#1A5C5C',
+    jobs: ['自动化测试工程师', '质量平台工程师', '性能测试工程师'],
+  },
+  {
+    id: 'data', role: '数据分析', name: '数据分析', color: '#8B6914',
+    jobs: ['商业数据分析师', '数据开发工程师', '增长分析师'],
+  },
+  {
+    id: 'ml', role: '机器学习工程师', name: '机器学习工程师', color: '#1B4E8B',
+    jobs: ['算法工程师', '深度学习工程师', 'AI 应用工程师'],
+  },
+]
+
 export type BackendStack = 'java' | 'golang'
 
 export type CareerInsightsConfig = {

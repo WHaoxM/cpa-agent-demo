@@ -55,7 +55,7 @@ function logIcon(level: LogEntry['level']) {
       <div class="ws-cards">
         <!-- 卡片 01：简历分析 -->
         <section class="ws-card">
-          <h3 class="ws-card__title"><span class="ws-card__num">01</span> 简历分析</h3>
+          <h3 class="ws-card__title"><span class="ws-card__num">01</span> 职业分析</h3>
           <div class="ws-card__body">
             <p class="ws-intro-summary">{{ roleIntro.summary }}</p>
             <div class="ws-intro-section">

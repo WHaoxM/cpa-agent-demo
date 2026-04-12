@@ -6,7 +6,8 @@ import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores'
 import { useLearningStore } from '@/stores/learning'
 import { gsap } from '@/plugins/gsap'
-import { useCareerInsights, roleOptions, type CareerRole } from '@/composables/useCareerInsights'
+import { useCareerInsights, roleOptions, CAREER_DOMAINS, type CareerRole } from '@/composables/useCareerInsights'
+import * as d3 from 'd3'
 import VChart from 'vue-echarts'
 import { use, registerMap, graphic } from 'echarts/core'
 import { BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart } from 'echarts/charts'
@@ -15,6 +16,7 @@ import { TooltipComponent, GridComponent, GeoComponent, VisualMapComponent, Data
 import chinaJson from '@/assets/china.json'
 import worldJson from '@/assets/world.json'
 import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
+const parchmentBgUrl = `url("${parchmentBaseUrl}")`
 
 use([BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart, CanvasRenderer,
   TooltipComponent, GridComponent, GeoComponent, VisualMapComponent, DataZoomComponent, MarkPointComponent, GraphicComponent])
@@ -150,19 +152,34 @@ const router = useRouter()
 const userStore = useUserStore()
 const learningStore = useLearningStore()
 
-const isCurrentRoleFollowed = computed(() => learningStore.isTargetRole(targetRole.value))
+const followableRole = computed<CareerRole | null>(() => {
+  const normalizedRole = normalizeRouteRole(currentAnalysisLabel.value)
+  return roleOptions.includes(normalizedRole as CareerRole) ? normalizedRole as CareerRole : null
+})
+const isCurrentRoleFollowed = computed(() => followableRole.value ? learningStore.isTargetRole(followableRole.value) : false)
 
 function toggleFollowRole() {
-  learningStore.toggleTargetRole(targetRole.value)
+  if (!followableRole.value) return
+  learningStore.toggleTargetRole(followableRole.value)
 }
 
 function goToNavigation() {
   router.push('/app/student/career-navigation')
 }
+
+/* ═══ CTA 自动隐藏（3 秒后收起） ═══ */
+const ctaVisible = ref(true)
+let _ctaTimer: ReturnType<typeof setTimeout> | null = null
+function resetCtaTimer() {
+  if (_ctaTimer) clearTimeout(_ctaTimer)
+  ctaVisible.value = true
+  _ctaTimer = setTimeout(() => { ctaVisible.value = false }, 3000)
+}
+
 const pageRef = ref<HTMLElement | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
 const roleSearch = ref('前端开发')
-const selectedProvince = ref('四川省')
+const selectedProvince = ref<string | null>(null)
 const scrollRevealed = ref(false)
 const showSalaryTip = ref(false)
 const showDemandTip = ref(false)
@@ -184,11 +201,20 @@ function normalizeRouteRole(roleParam: unknown): string {
 
 function applyRouteRole(roleParam: unknown) {
   const normalizedRole = normalizeRouteRole(roleParam)
-  if (!normalizedRole) return
+  if (!normalizedRole) {
+    roleSearch.value = '前端开发'
+    _baseProvinceData.value = getProvinceData('前端开发')
+    selectedJob.value = null
+    selectedProvince.value = null
+    aiCommentPage.value = 0
+    targetRole.value = '前端开发' as CareerRole
+    return
+  }
   const displayRole = typeof roleParam === 'string' && roleParam.trim() ? roleParam.trim() : normalizedRole
   roleSearch.value = displayRole
   _baseProvinceData.value = getProvinceData(displayRole)
-  selectedProvince.value = '四川省'
+  selectedJob.value = null
+  selectedProvince.value = null
   aiCommentPage.value = 0
   if (roleOptions.includes(normalizedRole as CareerRole)) {
     targetRole.value = normalizedRole as CareerRole
@@ -360,12 +386,12 @@ const compareOption = computed(() => {
     label: {
       show: true,
       formatter: `${meds[idx] ?? 0}K`,
-      position: 'right' as const,
+      position: 'top' as const,
       fontSize: idx === 2 ? 11 : 10,
       fontFamily: 'KaiTi, serif',
       color: medColors[idx],
       fontWeight: idx === 2 ? ('bold' as const) : ('normal' as const),
-      offset: [4, 0] as [number, number],
+      offset: [0, -6] as [number, number],
     },
   }))
 
@@ -435,7 +461,7 @@ const compareOption = computed(() => {
       icon: 'roundRect', itemWidth: 8, itemHeight: 5,
     },
 
-    grid: { top: 28, left: '10%', right: '14%', bottom: 32 },
+    grid: { top: 28, left: '10%', right: '10%', bottom: 32 },
 
     xAxis: {
       type: 'category',
@@ -482,6 +508,7 @@ watch([provinceData, selectedProvince, roleSearch], () => {
 
 // Update mapOption to reflect highlighting — 内凹嵌入效果
 const mapOption = computed<any>(() => {
+  const provinceSelectable = hasSelectedJob.value
   /* activeLevel 筛选 regions — 同色系低调处理 */
   const chinaRegions = activeLevel.value === null
     ? hiddenRegions
@@ -514,6 +541,23 @@ const mapOption = computed<any>(() => {
     ]
 
   const data = provinceData.value.map(p => ({ ...p }))
+  const selectedProvinceRegion = selectedProvince.value
+    ? {
+        name: selectedProvince.value,
+        itemStyle: {
+          areaColor: 'rgba(155,100,50,0.85)',
+          borderColor: 'rgba(90,45,5,0.95)',
+          borderWidth: 2,
+        },
+        label: {
+          show: true,
+          color: '#2A1A08',
+          fontWeight: 'bold' as const,
+          fontSize: 16,
+          formatter: (p: any) => shortName(p.name || ''),
+        },
+      }
+    : null
 
   /* 世界底图中隐藏 China（由上层中国地图覆盖） */
   const worldLabelStyle = { show: true, color: 'rgba(120,100,70,0.55)', fontSize: 9, fontFamily: 'var(--font-title), serif', fontStyle: 'italic' as const }
@@ -556,6 +600,7 @@ const mapOption = computed<any>(() => {
     animation: false,
     hoverLayerThreshold: Infinity,
     tooltip: {
+      show: provinceSelectable,
       trigger: 'item', confine: true, transitionDuration: 0, showDelay: 60,
       backgroundColor: 'rgba(62,48,32,0.92)',
       borderColor: '#8B6914',
@@ -597,6 +642,7 @@ const mapOption = computed<any>(() => {
       {
         ...commonGeo,
         map: 'china', zlevel: 1,
+        silent: !provinceSelectable,
         itemStyle: {
           areaColor: 'rgba(210,185,145,0.6)',
           borderColor: 'rgba(139,105,20,0.55)', borderWidth: 1.2,
@@ -623,35 +669,38 @@ const mapOption = computed<any>(() => {
           label: { show: true, color: '#2A1A08', fontWeight: 'bold', fontSize: 16,
             formatter: (p: any) => shortName(p.name || '') },
         },
-        regions: chinaRegions,
+        regions: selectedProvinceRegion ? [...chinaRegions, selectedProvinceRegion] : chinaRegions,
       },
     ],
     series: [{
       name: '需求量', type: 'map', geoIndex: 1,
-      data: data, selectedMode: 'single', animation: true, animationDurationUpdate: 300
+      data: data, selectedMode: provinceSelectable ? 'single' : false, silent: !provinceSelectable, animation: true, animationDurationUpdate: 300
     }],
   }
 })
 
 /* ═══ 事件处理 ═══ */
 function handleMapClick(params: any) {
-  if (!params.name) return
+  if (!params.name || !hasSelectedJob.value) return
   selectedProvince.value = params.name
   aiCommentPage.value = 0
 }
 
 function selectRankedProvince(name: string) {
+  if (!hasSelectedJob.value) return
   selectedProvince.value = name
   aiCommentPage.value = 0
 }
 
 function doSearch() {
-  _baseProvinceData.value = getProvinceData(roleSearch.value)
-  const normalizedRole = normalizeRouteRole(roleSearch.value)
+  const nextRole = roleSearch.value.trim() || '前端开发'
+  roleSearch.value = nextRole
+  _baseProvinceData.value = getProvinceData(nextRole)
+  const normalizedRole = normalizeRouteRole(nextRole)
   if (roleOptions.includes(normalizedRole as CareerRole)) {
     targetRole.value = normalizedRole as CareerRole
   }
-  selectedProvince.value = '四川省'
+  selectedProvince.value = null
   aiCommentPage.value = 0
 }
 
@@ -665,12 +714,68 @@ function handleSearchSubmit() {
   if (matched) {
     selectedJob.value = { id: matched.domainId, name: matched.domainName, domainColor: matched.domainColor, jobName: matched.jobName }
     roleSearch.value = matched.jobName
+  } else {
+    selectedJob.value = null
+    roleSearch.value = q
   }
   doSearch()
 }
 
 function prevAiPage() { if (aiCommentPage.value > 0) aiCommentPage.value-- }
 function nextAiPage() { if (aiCommentPage.value < aiComments.value.length - 1) aiCommentPage.value++ }
+
+/* ═══ AI Drawer 对话 ═══ */
+interface DrawerMsg { role: 'user' | 'assistant'; content: string; time: string }
+const showAiDrawer = ref(false)
+const aiDrawerInput = ref('')
+const aiDrawerLoading = ref(false)
+const aiDrawerMessages = ref<DrawerMsg[]>([])
+const aiDrawerScrollRef = ref<HTMLDivElement>()
+
+function _getDrawerTimestamp() {
+  return new Date().toISOString().replace('T', ' ').substring(0, 16)
+}
+function _scrollDrawer() {
+  nextTick(() => {
+    if (aiDrawerScrollRef.value) aiDrawerScrollRef.value.scrollTop = aiDrawerScrollRef.value.scrollHeight
+  })
+}
+
+function openAiDrawer() {
+  if (aiDrawerMessages.value.length === 0) {
+    const job = selectedJob.value?.jobName ?? roleSearch.value
+    const prov = selectedProvince.value ?? '全国'
+    aiDrawerMessages.value.push({
+      role: 'assistant',
+      content: `你好！当前分析岗位：${job}，目标省份：${prov}。\n你可以问我关于这个岗位的前景、薪资趋势、技能要求等问题，我会给你可执行的建议。`,
+      time: _getDrawerTimestamp(),
+    })
+  }
+  showAiDrawer.value = true
+  _scrollDrawer()
+}
+
+const aiDrawerQuickPrompts = [
+  '这个岗位未来两年前景如何？',
+  '薪资还有多少上涨空间？',
+  '我需要掌握哪些核心技能？',
+]
+
+async function sendAiDrawerMsg(text?: string) {
+  const content = (text ?? aiDrawerInput.value).trim()
+  if (!content || aiDrawerLoading.value) return
+  aiDrawerInput.value = ''
+  const job = selectedJob.value?.jobName ?? roleSearch.value
+  const prov = selectedProvince.value ?? '全国'
+  aiDrawerMessages.value.push({ role: 'user', content, time: _getDrawerTimestamp() })
+  _scrollDrawer()
+  aiDrawerLoading.value = true
+  await new Promise(r => setTimeout(r, 800))
+  const reply = learningStore.getAIResponse(`[岗位:${job}][省份:${prov}] ${content}`)
+  aiDrawerMessages.value.push({ role: 'assistant', content: reply, time: _getDrawerTimestamp() })
+  aiDrawerLoading.value = false
+  _scrollDrawer()
+}
 
 function goToCareerCenter() {
   router.push({ name: 'career-ability', query: { role: roleSearch.value } })
@@ -725,290 +830,357 @@ function setupEntranceAnimation() {
 
 watch(selectedProvince, (val) => {
   if (!val || !pageRef.value) return
-  const rightPanel = pageRef.value.querySelector('.da-right-content')
-  if (rightPanel) {
-    gsap.fromTo(rightPanel, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.25, ease: 'power2.out', clearProps: 'transform,opacity' })
+  // 统一过渡节奏：对标图 → AI 洞察 → 操作区依次淡入
+  const sections = pageRef.value.querySelectorAll('.da-right-content > .da-section')
+  if (sections.length) {
+    gsap.killTweensOf(sections)
+    gsap.fromTo(sections,
+      { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: 0.25, stagger: 0.06, ease: 'power2.out', clearProps: 'transform,opacity' }
+    )
+  }
+  // 薪资图轻量淡入
+  const salaryChart = pageRef.value.querySelector('.da-salary-chart')
+  if (salaryChart) {
+    gsap.killTweensOf(salaryChart)
+    gsap.fromTo(salaryChart,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.3, ease: 'power2.out', clearProps: 'opacity' }
+    )
   }
 })
 
-/* ═══ 气泡图数据 ═══ */
+/* ═══ 气泡图数据（基于 CAREER_DOMAINS 5×3=15 岗位）═══ */
 
-// ── 类型定义 ─────────────────────────────────────────────────
-interface BubbleDomain {
-  id: string
-  name: string
-  color: string
-  jobs: string[]        // 该领域包含的岗位名称列表
-  // 预留 API 扩展字段（接入时在此处解构）：
-  // demandIndex?: number   // 岗位需求指数
-  // avgSalary?: number     // 平均薪资中位数（K）
-  // trendYoy?: number      // 同比增速（%）
-}
-
-// ── 模拟数据 ─────────────────────────────────────────────────
-// TODO: 接入接口时替换此处，示例：
-// const { data: domainList } = await useFetch<BubbleDomain[]>('/api/v1/career/domains')
-const BUBBLE_DOMAINS: BubbleDomain[] = [
-  {
-    id: 'internet', name: '互联网/软件', color: '#8B2500',
-    jobs: ['前端工程师', '后端工程师', '全栈工程师', '移动端开发', '测试工程师', 'DevOps工程师', '架构师', '产品经理'],
-  },
-  {
-    id: 'ai', name: 'AI / 大数据', color: '#1B4E8B',
-    jobs: ['机器学习工程师', '数据分析师', '算法工程师', 'NLP工程师', '数据工程师', '大模型工程师', '计算机视觉'],
-  },
-  {
-    id: 'cloud', name: '云计算/运维', color: '#1A5C5C',
-    jobs: ['云架构师', '网络工程师', '安全工程师', '数据库管理员', '容器化工程师', '运维工程师'],
-  },
-  {
-    id: 'enterprise', name: '企业服务', color: '#3A6B3A',
-    jobs: ['Java后端', 'ERP实施', '解决方案架构师', 'SaaS开发', '信息安全顾问', 'BI开发'],
-  },
-  {
-    id: 'fintech', name: '金融科技', color: '#8B6914',
-    jobs: ['量化工程师', '风控研发', '支付系统开发', '区块链开发', '金融数据分析'],
-  },
-  {
-    id: 'game', name: '游戏/内容', color: '#6B3A6E',
-    jobs: ['游戏客户端', '游戏服务端', '音视频开发', '虚拟现实', '游戏策划'],
-  },
-  {
-    id: 'hardware', name: '硬件/制造', color: '#7A4A2A',
-    jobs: ['嵌入式工程师', '芯片设计', '工业软件', '机器人工程师'],
-  },
-]
-
-/* ═══ 圆打包工具函数 ═══ */
-const SMALL_R = 14    // 小岗位气泡半径 px
-const DOMAIN_PAD = 10 // 大气泡与内部小气泡之间的留白
-
-// 力模拟：将 n 个半径为 r 的小圆打包在一起，返回各自坐标及外接圆半径
-function packInside(count: number, r: number): { pos: { x: number; y: number }[]; outerR: number } {
-  if (count === 0) return { pos: [], outerR: r + DOMAIN_PAD }
-  if (count === 1) return { pos: [{ x: 0, y: 0 }], outerR: r + DOMAIN_PAD }
-  const pos = Array.from({ length: count }, (_, i) => ({
-    x: Math.cos(2 * Math.PI * i / count) * r * 1.2,
-    y: Math.sin(2 * Math.PI * i / count) * r * 1.2,
-  }))
-  const gap = 2 // px gap between small bubbles
-  for (let iter = 0; iter < 300; iter++) {
-    for (let i = 0; i < count; i++) {
-      for (let j = i + 1; j < count; j++) {
-        const pi = pos[i]!, pj = pos[j]!
-        const dx = pj.x - pi.x
-        const dy = pj.y - pi.y
-        let d = Math.sqrt(dx * dx + dy * dy)
-        if (d < 0.1) d = 0.1
-        const minD = r * 2 + gap
-        if (d < minD) {
-          const f = (minD - d) / d * 0.5
-          pi.x -= dx * f; pi.y -= dy * f
-          pj.x += dx * f; pj.y += dy * f
-        }
-      }
-    }
-    for (let i = 0; i < count; i++) { pos[i]!.x *= 0.992; pos[i]!.y *= 0.992 }
-  }
-  let maxDist = 0
-  for (const p of pos) { const d = Math.sqrt(p.x * p.x + p.y * p.y) + r; if (d > maxDist) maxDist = d }
-  return { pos, outerR: maxDist + DOMAIN_PAD }
-}
-
-// 力模拟：将若干不同半径的大圆排布为边缘相靠但不重叠
-function packDomains(radii: number[]): { x: number; y: number }[] {
-  const n = radii.length
-  if (n === 0) return []
-  if (n === 1) return [{ x: 0, y: 0 }]
-  const pos = radii.map((_, i) => ({
-    x: Math.cos(2 * Math.PI * i / n) * 100,
-    y: Math.sin(2 * Math.PI * i / n) * 100,
-  }))
-  const domainGap = 4 // px gap between domain edges
-  for (let iter = 0; iter < 600; iter++) {
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const pi = pos[i]!, pj = pos[j]!
-        const dx = pj.x - pi.x
-        const dy = pj.y - pi.y
-        let d = Math.sqrt(dx * dx + dy * dy)
-        if (d < 0.1) d = 0.1
-        const minD = radii[i]! + radii[j]! + domainGap
-        if (d < minD) {
-          const f = (minD - d) / d * 0.5
-          pi.x -= dx * f; pi.y -= dy * f
-          pj.x += dx * f; pj.y += dy * f
-        }
-      }
-    }
-    for (let i = 0; i < n; i++) { pos[i]!.x *= 0.997; pos[i]!.y *= 0.997 }
-  }
-  return pos
-}
+interface FlatJob { domainIdx: number; jobIdx: number; domainId: string; domainName: string; domainColor: string; jobName: string }
+const _flatJobs: FlatJob[] = CAREER_DOMAINS.flatMap((domain, di) =>
+  domain.jobs.map((jobName, ji) => ({ domainIdx: di, jobIdx: ji, domainId: domain.id, domainName: domain.name, domainColor: domain.color, jobName })),
+)
 
 const selectedJob = ref<{ id: string; name: string; domainColor: string; jobName?: string } | null>(null)
-
-/* ═══ 气泡图 ECharts custom series ═══ */
-const bubbleUpdateOptions = { notMerge: false, replaceMerge: [] as string[] }
-
-// 预计算布局（仅依赖 BUBBLE_DOMAINS，不变化则不重算）
-const _innerLayouts = BUBBLE_DOMAINS.map(d => packInside(d.jobs.length, SMALL_R))
-const _domainRadii = _innerLayouts.map(l => l.outerR)
-const _domainPositions = packDomains(_domainRadii)
-
-// 展平所有岗位为独立数据项，供 series[1] 逐个点击
-interface FlatJob { domainIdx: number; jobIdx: number; domainId: string; domainName: string; domainColor: string; jobName: string; absX: number; absY: number }
-const _flatJobs: FlatJob[] = []
-BUBBLE_DOMAINS.forEach((domain, di) => {
-  const inner = _innerLayouts[di]!
-  const dPos = _domainPositions[di]!
-  domain.jobs.forEach((jobName, ji) => {
-    const p = inner.pos[ji]!
-    _flatJobs.push({ domainIdx: di, jobIdx: ji, domainId: domain.id, domainName: domain.name, domainColor: domain.color, jobName, absX: dPos.x + p.x, absY: dPos.y + p.y })
-  })
+const hasSelectedJob = computed(() => Boolean(selectedJob.value?.jobName))
+const hasSelectedProvince = computed(() => Boolean(selectedProvince.value))
+const analysisStage = computed<'job-pending' | 'province-pending' | 'insight-ready'>(() => {
+  if (!hasSelectedJob.value) return 'job-pending'
+  if (!hasSelectedProvince.value) return 'province-pending'
+  return 'insight-ready'
 })
+const currentAnalysisLabel = computed(() => selectedJob.value?.jobName ?? roleSearch.value ?? '前端开发')
+const selectedJobLabel = computed(() => selectedJob.value?.jobName ?? '未选择岗位')
+const selectedJobDomainLabel = computed(() => selectedJob.value?.name ?? '岗位方向')
+const selectedProvinceLabel = computed(() => selectedProvince.value ?? '未选择省份')
+const rankModeLabel = computed(() => hasSelectedJob.value ? '需求指数' : '待选岗位')
 
-const bubbleChartOption = computed(() => {
+// CTA 自动隐藏：关注列表或阶段变化时重置计时
+watch(
+  [analysisStage, () => learningStore.targetRoles.length],
+  ([stage, len]) => { if (stage === 'insight-ready' && len > 0) resetCtaTimer() },
+  { immediate: true },
+)
+
+/* ═══ D3 气泡图（双层嵌套 simulation）═══ */
+const bubbleSvgRef = ref<SVGSVGElement | null>(null)
+let _outerSim: d3.Simulation<any, undefined> | null = null
+let _innerSims: d3.Simulation<any, undefined>[] = []
+let _bubbleRo: ResizeObserver | null = null
+
+// ── 节点类型 ──
+interface DomainNode extends d3.SimulationNodeDatum {
+  id: string; name: string; color: string; r: number; domainIdx: number
+  _phaseX?: number; _phaseY?: number
+}
+interface JobNode extends d3.SimulationNodeDatum {
+  id: string; jobName: string; domainId: string; domainName: string
+  domainColor: string; r: number; domainIdx: number; jobIdx: number
+  _phaseX?: number; _phaseY?: number
+}
+
+function stopAllSimulations() {
+  if (_outerSim) { _outerSim.stop(); _outerSim = null }
+  _innerSims.forEach(s => s.stop()); _innerSims = []
+}
+
+function initBubbleChart() {
+  const svg = bubbleSvgRef.value
+  if (!svg) return
+  stopAllSimulations()
+  const el = d3.select(svg)
+  el.selectAll('*').remove()
+
+  const W = svg.clientWidth || 500
+  const H = svg.clientHeight || 300
+  const scale = Math.min(W, H)
+  const JOB_R = Math.min(32, Math.max(20, scale / 13))
+  const DOMAIN_R = JOB_R * 2.6 + 4
+  const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+
+  // ── defs ──
+  const defs = el.append('defs')
+
+  // SVG filter — 墨点晕染边缘（feTurbulence 毛糙 + 模糊扩散）
+  const fInk = defs.append('filter').attr('id', 'f-ink-bleed')
+    .attr('x', '-18%').attr('y', '-18%').attr('width', '136%').attr('height', '136%')
+  fInk.append('feTurbulence')
+    .attr('type', 'fractalNoise').attr('baseFrequency', 0.045)
+    .attr('numOctaves', 3).attr('seed', 7).attr('result', 'noise')
+  fInk.append('feDisplacementMap')
+    .attr('in', 'SourceGraphic').attr('in2', 'noise').attr('scale', 3).attr('result', 'displaced')
+  fInk.append('feGaussianBlur')
+    .attr('in', 'displaced').attr('stdDeviation', 0.6)
+
+  // SVG filter — 选中态（域色外发光）
+  const fSel = defs.append('filter').attr('id', 'f-ink-sel')
+    .attr('x', '-35%').attr('y', '-35%').attr('width', '170%').attr('height', '170%')
+  fSel.append('feGaussianBlur')
+    .attr('in', 'SourceAlpha').attr('stdDeviation', 5).attr('result', 'blur')
+  fSel.append('feFlood')
+    .attr('flood-color', 'rgba(190,42,0,0.35)').attr('result', 'color')
+  fSel.append('feComposite')
+    .attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow')
+  const fSelMerge = fSel.append('feMerge')
+  fSelMerge.append('feMergeNode').attr('in', 'glow')
+  fSelMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+
+  CAREER_DOMAINS.forEach(domain => {
+    // ── 小气泡：墨点晕染渐变（中心浓→边缘淡散）──
+    const g1 = defs.append('radialGradient').attr('id', `jb-${domain.id}`)
+      .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
+    g1.append('stop').attr('offset', '0%').attr('stop-color', domain.color).attr('stop-opacity', 0.92)
+    g1.append('stop').attr('offset', '50%').attr('stop-color', domain.color).attr('stop-opacity', 0.8)
+    g1.append('stop').attr('offset', '78%').attr('stop-color', domain.color).attr('stop-opacity', 0.38)
+    g1.append('stop').attr('offset', '100%').attr('stop-color', domain.color).attr('stop-opacity', 0.06)
+
+    // ── 大气泡：水渍圈（中心近透明、边缘微微显色）──
+    const g2 = defs.append('radialGradient').attr('id', `db-${domain.id}`)
+      .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
+    g2.append('stop').attr('offset', '0%').attr('stop-color', domain.color).attr('stop-opacity', 0.02)
+    g2.append('stop').attr('offset', '60%').attr('stop-color', domain.color).attr('stop-opacity', 0.04)
+    g2.append('stop').attr('offset', '88%').attr('stop-color', domain.color).attr('stop-opacity', 0.14)
+    g2.append('stop').attr('offset', '100%').attr('stop-color', domain.color).attr('stop-opacity', 0.2)
+  })
+
+  // ── 外层 domain 节点 ──
+  const domainCount = CAREER_DOMAINS.length
+  const angleStep = (2 * Math.PI) / domainCount
+  const spread = Math.min(W, H) * 0.29
+
+  const domainNodes: DomainNode[] = CAREER_DOMAINS.map((d, i) => ({
+    id: d.id, name: d.name, color: d.color, r: DOMAIN_R, domainIdx: i,
+    x: W / 2 + Math.cos(angleStep * i - Math.PI / 2) * spread,
+    y: H / 2 + Math.sin(angleStep * i - Math.PI / 2) * spread,
+  }))
+
+  // ── 每个领域的内层 job 节点 ──
+  const jobNodesByDomain: JobNode[][] = CAREER_DOMAINS.map((domain, di) =>
+    domain.jobs.map((jobName, ji) => ({
+      id: `${domain.id}-${ji}`, jobName, domainId: domain.id,
+      domainName: domain.name, domainColor: domain.color,
+      r: JOB_R, domainIdx: di, jobIdx: ji,
+      x: (Math.random() - 0.5) * JOB_R * 0.6,
+      y: (Math.random() - 0.5) * JOB_R * 0.6,
+    })),
+  )
+
+  // ── 渲染 domain 组 ──
+  const domainGroups = el.selectAll('g.domain-group')
+    .data(domainNodes)
+    .enter().append('g')
+    .attr('class', 'domain-group')
+
+  // 大气泡 — 水渍圈（极细描边，像水痕干燥后的残留）
+  domainGroups.append('circle')
+    .attr('class', 'domain-bg')
+    .attr('r', DOMAIN_R)
+    .attr('fill', d => `url(#db-${d.id})`)
+    .attr('stroke', d => d.color)
+    .attr('stroke-width', 0.8)
+    .attr('stroke-opacity', 0.28)
+
+  // 领域名标签（大气泡顶部外侧）
+  domainGroups.append('text')
+    .attr('class', 'domain-label')
+    .attr('y', -DOMAIN_R - 7)
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'auto')
+    .attr('fill', d => d.color)
+    .attr('font-size', 12).attr('font-weight', '700')
+    .attr('font-family', 'KaiTi, STKaiti, serif')
+    .attr('paint-order', 'stroke')
+    .attr('stroke', 'rgba(245,245,243,0.9)').attr('stroke-width', 3)
+    .text(d => d.name)
+
+  // ── 渲染 job 节点 ──
+  domainGroups.each(function (_domainD, di) {
+    const domainG = d3.select(this)
+    const jobs = jobNodesByDomain[di]!
+    const nodeG = domainG.selectAll('g.job-node')
+      .data(jobs)
+      .enter().append('g')
+      .attr('class', 'job-node')
+      .style('cursor', 'pointer')
+      .on('click', (_ev, d) => {
+        selectedJob.value = { id: d.domainId, name: d.domainName, domainColor: d.domainColor, jobName: d.jobName }
+        roleSearch.value = d.jobName
+        doSearch()
+        updateBubbleSelection()
+      })
+
+    // 墨点气泡
+    nodeG.append('circle')
+      .attr('class', 'job-circle')
+      .attr('r', d => d.r)
+      .attr('fill', d => `url(#jb-${d.domainId})`)
+      .attr('stroke', 'none')
+      .attr('filter', 'url(#f-ink-bleed)')
+
+    // 岗位文字（深墨色，与水墨底色高对比）
+    nodeG.append('text')
+      .attr('class', 'job-text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', 'rgba(62,48,32,0.92)')
+      .attr('font-size', Math.max(8, JOB_R * 0.36))
+      .attr('font-family', FONT)
+      .attr('font-weight', '600')
+      .attr('letter-spacing', '0.02em')
+      .attr('pointer-events', 'none')
+      .each(function (d) {
+        const txt = d3.select(this)
+        const name = d.jobName
+        const maxW = d.r * 1.65
+        const spaceIdx = name.indexOf(' ')
+        let line1 = '', line2 = ''
+        if (spaceIdx > 0 && spaceIdx < name.length - 1) {
+          line1 = name.slice(0, spaceIdx)
+          line2 = name.slice(spaceIdx + 1)
+        } else {
+          const boundary = name.search(/[a-zA-Z][^\x00-\x7F]|[^\x00-\x7F][a-zA-Z]/)
+          const split = boundary > 0 ? boundary + 1 : Math.ceil(name.length / 2)
+          line1 = name.slice(0, split)
+          line2 = name.slice(split)
+        }
+        txt.text(name)
+        const measured = (this as SVGTextElement).getComputedTextLength?.() ?? name.length * 7
+        if (measured > maxW && line2.length > 0) {
+          txt.text('')
+          txt.append('tspan').attr('x', 0).attr('dy', '-0.45em').text(line1)
+          txt.append('tspan').attr('x', 0).attr('dy', '1.15em').text(line2)
+        }
+      })
+
+    // tooltip
+    nodeG.append('title').text(d => {
+      const sal = getJobSalaryData(d.jobName)
+      return `${d.jobName}\n${d.domainName}\n初级 ${sal.junior}K · 中级 ${sal.mid}K · 高级 ${sal.senior}K`
+    })
+  })
+
+  // ── 内层 simulations（永不停止 + 正弦波平滑 wander）──
+  CAREER_DOMAINS.forEach((_, di) => {
+    const jobs = jobNodesByDomain[di]!
+    // 初始化各自独立随机相位
+    jobs.forEach(j => {
+      j._phaseX = Math.random() * Math.PI * 2
+      j._phaseY = Math.random() * Math.PI * 2
+    })
+    const domainG = d3.select(el.selectAll<SVGGElement, DomainNode>('g.domain-group').nodes()[di]!)
+    const innerNodeG = domainG.selectAll<SVGGElement, JobNode>('g.job-node')
+    const innerBound = DOMAIN_R - JOB_R - 2
+
+    const sim = d3.forceSimulation(jobs)
+      .alphaDecay(0)
+      .alphaTarget(0.15)
+      .velocityDecay(0.55)
+      .force('collide', d3.forceCollide<JobNode>(d => d.r + 2).strength(1))
+      .force('center', d3.forceCenter(0, 0).strength(0.02))
+      .force('wander', () => {
+        jobs.forEach(j => {
+          j._phaseX = (j._phaseX ?? 0) + 0.009 + Math.random() * 0.004
+          j._phaseY = (j._phaseY ?? 0) + 0.009 + Math.random() * 0.004
+          j.vx = (j.vx ?? 0) + Math.sin(j._phaseX) * 0.08
+          j.vy = (j.vy ?? 0) + Math.cos(j._phaseY) * 0.08
+        })
+      })
+      .on('tick', () => {
+        jobs.forEach(j => {
+          const dist = Math.sqrt((j.x ?? 0) ** 2 + (j.y ?? 0) ** 2)
+          if (dist > innerBound) {
+            const ratio = innerBound / dist
+            j.x = (j.x ?? 0) * ratio
+            j.y = (j.y ?? 0) * ratio
+          }
+        })
+        innerNodeG.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
+      })
+    _innerSims.push(sim)
+  })
+
+  // ── 外层 simulation（弹性反射边界 + 正弦波平滑 wander）──
+  // 初始化各大气泡独立相位
+  domainNodes.forEach(d => {
+    d._phaseX = Math.random() * Math.PI * 2
+    d._phaseY = Math.random() * Math.PI * 2
+  })
+  _outerSim = d3.forceSimulation(domainNodes)
+    .alphaDecay(0)
+    .alphaTarget(0.12)
+    .velocityDecay(0.35)
+    .force('collide', d3.forceCollide<DomainNode>(d => d.r + 6).strength(0.85))
+    .force('center', d3.forceCenter(W / 2, H / 2).strength(0.01))
+    .force('charge', d3.forceManyBody().strength(-50))
+    .force('wander', () => {
+      domainNodes.forEach(d => {
+        d._phaseX = (d._phaseX ?? 0) + 0.007 + Math.random() * 0.003
+        d._phaseY = (d._phaseY ?? 0) + 0.007 + Math.random() * 0.003
+        d.vx = (d.vx ?? 0) + Math.sin(d._phaseX) * 0.12
+        d.vy = (d.vy ?? 0) + Math.cos(d._phaseY) * 0.12
+      })
+    })
+    .force('bound', () => {
+      // 弹性反射：碰壁稍减速（×0.85），避免来回弹
+      domainNodes.forEach(d => {
+        const pad = d.r + 14
+        if ((d.x ?? 0) < pad)     { d.x = pad;     d.vx = Math.abs(d.vx ?? 0) * 0.85 }
+        if ((d.x ?? 0) > W - pad) { d.x = W - pad; d.vx = -Math.abs(d.vx ?? 0) * 0.85 }
+        if ((d.y ?? 0) < pad)     { d.y = pad;     d.vy = Math.abs(d.vy ?? 0) * 0.85 }
+        if ((d.y ?? 0) > H - pad) { d.y = H - pad; d.vy = -Math.abs(d.vy ?? 0) * 0.85 }
+      })
+    })
+    .on('tick', () => {
+      domainGroups.attr('transform', d => `translate(${d.x ?? W / 2},${d.y ?? H / 2})`)
+    })
+
+  updateBubbleSelection()
+}
+
+function updateBubbleSelection() {
+  const svg = bubbleSvgRef.value
+  if (!svg) return
   const sel = selectedJob.value
   const selJobName = sel?.jobName ?? ''
   const selDomainId = sel?.id ?? ''
 
-  return {
-    backgroundColor: 'transparent',
-    animation: true,
-    tooltip: {
-      show: true,
-      trigger: 'item',
-      backgroundColor: 'rgba(240,230,210,0.96)',
-      borderColor: 'rgba(139,105,20,0.28)',
-      borderWidth: 1,
-      padding: [10, 14],
-      textStyle: { color: '#3E3020', fontSize: 12 },
-      extraCssText: 'box-shadow:0 4px 16px rgba(62,48,32,0.18);border-radius:8px;',
-    },
-    series: [
-      // ── Series 0: 大气泡背景（领域边界 + 领域名标签）──
-      {
-        type: 'custom' as const,
-        coordinateSystem: 'none' as const,
-        silent: true,
-        z: 0,
-        data: BUBBLE_DOMAINS.map((_, i) => ({ value: [i] })),
-        renderItem: (_params: any, api: any) => {
-          const idx = _params.dataIndex as number
-          const domain = BUBBLE_DOMAINS[idx]!
-          const R = _domainRadii[idx]!
-          const dPos = _domainPositions[idx]!
-          const isSelected = selDomainId === domain.id
-          const w: number = api.getWidth()
-          const h: number = api.getHeight()
-          const cx = w / 2 + dPos.x
-          const cy = h / 2 + dPos.y
-          return {
-            type: 'group', x: cx, y: cy,
-            children: [
-              {
-                type: 'circle',
-                shape: { cx: 0, cy: 0, r: R },
-                style: {
-                  fill: new graphic.RadialGradient(0.4, 0.35, 0.9, [
-                    { offset: 0,   color: `${domain.color}10` },
-                    { offset: 0.7, color: `${domain.color}18` },
-                    { offset: 1,   color: `${domain.color}28` },
-                  ]),
-                  stroke: isSelected ? 'rgba(255,255,255,0.75)' : `${domain.color}44`,
-                  lineWidth: isSelected ? 2.5 : 1,
-                },
-              },
-              {
-                type: 'text',
-                style: {
-                  text: domain.name, x: 0, y: -R - 6,
-                  textAlign: 'center', textVerticalAlign: 'bottom',
-                  fontSize: 12, fontWeight: 'bold' as const,
-                  fill: domain.color, fontFamily: 'KaiTi, serif',
-                  textShadowColor: 'rgba(255,255,255,0.7)', textShadowBlur: 3,
-                },
-              },
-            ],
-          }
-        },
-      },
-      // ── Series 1: 小气泡（可点击岗位）──
-      {
-        type: 'custom' as const,
-        coordinateSystem: 'none' as const,
-        z: 1,
-        data: _flatJobs.map((j, i) => ({ value: [i] })),
-        tooltip: {
-          formatter: (params: any) => {
-            const job = _flatJobs[params.dataIndex as number]
-            if (!job) return ''
-            const sal = getJobSalaryData(job.jobName)
-            return `<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:${job.domainColor};font-family:KaiTi,serif">${job.jobName}</div>`
-              + `<span style="opacity:.7">${job.domainName}</span><br/>`
-              + `<span>初级 ${sal.junior}K · 中级 ${sal.mid}K · 高级 ${sal.senior}K</span>`
-          },
-        },
-        renderItem: (_params: any, api: any) => {
-          const idx = _params.dataIndex as number
-          const job = _flatJobs[idx]!
-          const w: number = api.getWidth()
-          const h: number = api.getHeight()
-          const cx = w / 2 + job.absX
-          const cy = h / 2 + job.absY
-          const isJobSelected = selJobName === job.jobName && selDomainId === job.domainId
-          const isDomainSelected = selDomainId === job.domainId && !selJobName
-          const highlighted = isJobSelected || isDomainSelected
-          return {
-            type: 'group', x: cx, y: cy,
-            children: [
-              {
-                type: 'circle',
-                shape: { cx: 0, cy: 0, r: isJobSelected ? SMALL_R + 2 : SMALL_R },
-                style: {
-                  fill: new graphic.RadialGradient(0.35, 0.3, 0.75, [
-                    { offset: 0,   color: `${job.domainColor}${highlighted ? 'DD' : 'BB'}` },
-                    { offset: 0.6, color: `${job.domainColor}${highlighted ? 'EE' : 'DD'}` },
-                    { offset: 1,   color: `${job.domainColor}FF` },
-                  ]),
-                  stroke: isJobSelected ? 'rgba(255,255,255,0.9)' : 'transparent',
-                  lineWidth: isJobSelected ? 2 : 0,
-                  shadowBlur: isJobSelected ? 12 : 5,
-                  shadowColor: `${job.domainColor}${isJobSelected ? '90' : '50'}`,
-                },
-              },
-              {
-                type: 'text',
-                style: {
-                  text: job.jobName, x: 0, y: 0,
-                  textAlign: 'center', textVerticalAlign: 'middle',
-                  fontSize: isJobSelected ? 9 : 8,
-                  fontWeight: isJobSelected ? 'bold' as const : 'normal' as const,
-                  fill: 'rgba(255,255,255,0.92)',
-                  fontFamily: 'KaiTi, serif',
-                  truncate: { outerWidth: SMALL_R * 2 - 2, ellipsis: '..' },
-                },
-              },
-            ],
-          }
-        },
-      },
-    ],
-  }
-})
+  d3.select(svg).selectAll<SVGGElement, JobNode>('g.job-node').each(function (d) {
+    const g = d3.select(this)
+    const isSelected = d.jobName === selJobName && d.domainId === selDomainId
+    g.select('.job-circle')
+      .classed('job-circle--selected', isSelected)
+      .attr('r', isSelected ? d.r + 3 : d.r)
+      .attr('filter', isSelected ? 'url(#f-ink-sel)' : 'url(#f-ink-bleed)')
+    g.select('.job-text')
+      .attr('font-weight', isSelected ? '700' : '600')
+      .attr('fill', isSelected ? 'rgba(30,18,8,0.98)' : 'rgba(62,48,32,0.92)')
+  })
 
-function handleBubbleClick(params: any) {
-  // series 1 = 小气泡岗位层
-  if (params.seriesIndex === 1) {
-    const idx = params.dataIndex as number
-    const job = _flatJobs[idx]
-    if (!job) return
-    selectedJob.value = { id: job.domainId, name: job.domainName, domainColor: job.domainColor, jobName: job.jobName }
-    roleSearch.value = job.jobName
-    doSearch()
-  }
+  d3.select(svg).selectAll<SVGCircleElement, DomainNode>('.domain-bg').each(function (d) {
+    const isActive = selDomainId === d.id
+    d3.select(this)
+      .attr('stroke-opacity', isActive ? 0.5 : 0.28)
+      .attr('stroke-width', isActive ? 1.5 : 0.8)
+  })
 }
+
+watch(selectedJob, () => updateBubbleSelection())
 
 /* ═══ 省份中位薪资排行（全岗位滑动） ═══ */
 function getJobMedianByProvince(jobName: string, provinceSalary: number, nationalAvgSalary: number): number {
@@ -1088,13 +1260,24 @@ onMounted(async () => {
   applyRouteRole(route.query.role)
   await nextTick()
   setupEntranceAnimation()
+  // D3 气泡图初始化
+  initBubbleChart()
+  if (bubbleSvgRef.value) {
+    _bubbleRo = new ResizeObserver(() => initBubbleChart())
+    _bubbleRo.observe(bubbleSvgRef.value)
+  }
 })
 
 watch(() => route.query.role, (val) => {
   applyRouteRole(val)
 })
 
-onBeforeUnmount(() => { gsapCtx?.revert() })
+onBeforeUnmount(() => {
+  gsapCtx?.revert()
+  if (_ctaTimer) clearTimeout(_ctaTimer)
+  stopAllSimulations()
+  if (_bubbleRo) { _bubbleRo.disconnect(); _bubbleRo = null }
+})
 </script>
 <template>
   <div class="da-page" ref="pageRef">
@@ -1144,31 +1327,31 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
       <aside class="da-left">
         <!-- #8 KPI 卡片 (带 tooltip 增强可信度) -->
         <div class="da-section">
-          <div class="da-section__title"><Icon icon="lucide:activity" :width="14" />全国概览 · {{ roleSearch }}</div>
+          <div class="da-section__title"><Icon icon="lucide:activity" :width="14" />方向概览 · {{ currentAnalysisLabel }}</div>
           <div class="kpi-card" @mouseenter="showSalaryTip = true" @mouseleave="showSalaryTip = false">
             <div class="kpi-label">平均中位薪资 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
             <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.avgSalary }}</span><span class="kpi-unit">K</span></div>
             <div class="kpi-tag kpi-tag--up">{{ nationalKpi.growthRate }}</div>
             <div class="kpi-tooltip kpi-tooltip--right" v-show="showSalaryTip">
-              <div class="tooltip-header">数据来源与说明</div>
+              <div class="tooltip-header">演示样本说明</div>
               <div class="tooltip-body">
-                <p>• 提取自过去一年各大招聘平台的 <strong>12万+</strong> 真实岗位数据。</p>
-                <p>• 算法去除了极值（前5%与后5%），取中位数以反映真实水平。</p>
-                <p>• 样本包含：腾讯、阿里、字节等大厂及数千家中小型企业。</p>
+                <p>• 当前结果基于演示岗位样本的趋势估算，用于展示职业分析路径。</p>
+                <p>• 数值会随岗位方向与后续省份选择联动变化。</p>
+                <p>• 适合用来比较方向差异，不代表真实招聘数据库结论。</p>
               </div>
-              <div class="tooltip-footer">数据截止：2026-03</div>
+              <div class="tooltip-footer">演示模式 · 用于展示分析流程</div>
             </div>
           </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
             <div class="kpi-label">岗位需求总量 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
             <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.demandTotal.toLocaleString() }}</span></div>
             <div class="kpi-tooltip kpi-tooltip--right" v-show="showDemandTip">
-              <div class="tooltip-header">需求指数说明</div>
+              <div class="tooltip-header">需求趋势说明</div>
               <div class="tooltip-body">
-                <p>• 综合计算了在线岗位的发布频率、招聘周期及企业活跃度。</p>
-                <p>• 涵盖全网 <strong>25个</strong> 主流招聘渠道去重后的岗位需求。</p>
+                <p>• 当前指数基于演示岗位样本的热度、活跃度和地区分布综合估算。</p>
+                <p>• 主要用于展示不同岗位和不同省份的相对差异。</p>
               </div>
-              <div class="tooltip-footer">数据截止：2026-03</div>
+              <div class="tooltip-footer">演示模式 · 非真实招聘平台统计</div>
             </div>
           </div>
         </div>
@@ -1178,13 +1361,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           <div class="da-section__title">
             <Icon icon="lucide:trophy" :width="14" />
             <span>TOP 10</span>
-            <span class="rank-mode-label">需求指数</span>
+            <span class="rank-mode-label">{{ rankModeLabel }}</span>
           </div>
           <div class="rank-list">
             <div
               v-for="p in provinceRanking" :key="p.name"
               class="rank-item"
-              :class="{ 'rank-item--active': selectedProvince === p.name }"
+              :class="{ 'rank-item--active': hasSelectedProvince && selectedProvince === p.name, 'rank-item--disabled': !hasSelectedJob }"
+              :aria-disabled="!hasSelectedJob"
               @click="selectRankedProvince(p.name)"
             >
               <span class="rank-badge" :class="{ 'rank-badge--top': p.rank <= 3 }">{{ p.rank }}</span>
@@ -1203,36 +1387,33 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
       <main class="da-map">
         <!-- 上半：行业气泡图（ECharts graph + force） -->
         <div class="da-bubble-wrap">
-          <div class="da-bubble-job-tag" v-if="selectedJob">
-            <Icon icon="lucide:briefcase" :width="12" />
-            <b :style="{ color: selectedJob.domainColor }">{{ selectedJob.jobName || selectedJob.name }}</b>
-            <span class="da-bubble-job-tag__domain">{{ selectedJob.name }}</span>
+          <div class="da-bubble-job-tag" :class="{ 'da-bubble-job-tag--empty': !hasSelectedJob }">
+            <Icon :icon="hasSelectedJob ? 'lucide:briefcase' : 'lucide:mouse-pointer-click'" :width="12" />
+            <template v-if="hasSelectedJob">
+              <span class="da-bubble-job-tag__step">已选岗位</span>
+              <b :style="{ color: selectedJob?.domainColor }">{{ selectedJobLabel }}</b>
+              <span class="da-bubble-job-tag__domain">{{ selectedJobDomainLabel }}</span>
+            </template>
+            <template v-else>
+              <span>第 1 步：从气泡图选择岗位</span>
+              <span class="da-bubble-job-tag__domain">当前方向：{{ currentAnalysisLabel }}</span>
+            </template>
           </div>
-          <div class="da-bubble-job-tag da-bubble-job-tag--empty" v-else>
-            <Icon icon="lucide:mouse-pointer-click" :width="12" />
-            <span>点击气泡选择岗位</span>
-          </div>
-          <VChart
-            class="da-bubble-vchart"
-            :option="bubbleChartOption"
-            :update-options="bubbleUpdateOptions"
-            @click="handleBubbleClick"
-            autoresize
-          />
+          <svg ref="bubbleSvgRef" class="da-bubble-svg"></svg>
         </div>
 
         <!-- 下半：薪资柱状图 + 地图 -->
-        <div class="da-bottom">
+        <div class="da-bottom" :class="{ 'da-bottom--focus-map': !hasSelectedProvince }">
           <!-- 左：省份中位薪资排行（全岗位滑动） -->
-          <div class="da-salary-chart">
+          <div v-if="hasSelectedProvince" class="da-salary-chart">
             <div class="da-section__title da-section__title--sm">
-              <Icon icon="lucide:list-ordered" :width="12" />{{ selectedProvince }} · 中位薪资排行（K/月）
+              <Icon icon="lucide:list-ordered" :width="12" />{{ selectedProvinceLabel }} · 中位薪资排行（K/月）
             </div>
             <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
           </div>
 
           <!-- 右：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
-          <div class="da-map-inner" ref="scrollRef">
+          <div class="da-map-inner" ref="scrollRef" :class="{ 'da-map-inner--locked': !hasSelectedJob, 'da-map-inner--pending': hasSelectedJob && !hasSelectedProvince }">
             <img :src="parchmentBaseUrl" class="da-map-inner__base" alt="" draggable="false" />
             <VChart
               ref="vchartRef"
@@ -1245,7 +1426,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
             />
             <div class="da-map-inner__vignette"></div>
             <!-- 图钉图例（缩小版） -->
-            <div class="da-pin-legend da-pin-legend--sm">
+            <div class="da-pin-legend da-pin-legend--sm" :class="{ 'da-pin-legend--muted': !hasSelectedJob }">
               <div class="pin-legend__list">
                 <div class="pin-item" :class="{ active: activeLevel === 4 }" @click="highlightMapLevel(4)">
                   <div class="pin pin--sm" style="--pin-color:#8B5E14"><div class="pin__head"></div><div class="pin__needle"></div></div>
@@ -1265,9 +1446,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
                 </div>
               </div>
             </div>
-            <div class="da-map__hint da-map__hint--sm">
+            <div v-if="analysisStage === 'job-pending'" class="da-map-overlay">
+              <span class="da-map-overlay__badge">待选择岗位</span>
+              <strong class="da-map-overlay__title">先从上方气泡图中选择岗位</strong>
+              <p class="da-map-overlay__desc">当前先展示 {{ currentAnalysisLabel }} 方向概览，选中岗位后再查看各省份差异。</p>
+            </div>
+            <div v-if="analysisStage === 'insight-ready'" class="da-map__hint da-map__hint--sm">
               <span class="da-map__hint-dot"></span>
-              <span><b>{{ roleSearch }}</b> · 点击省份</span>
+              <span><b>{{ selectedProvinceLabel }}</b> · {{ selectedJobLabel }}</span>
             </div>
           </div>
 
@@ -1276,12 +1462,12 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
       <!-- 右面板 -->
       <aside class="da-right">
-        <div v-if="selectedProvince" class="da-right-content">
+        <div v-if="analysisStage === 'insight-ready'" class="da-right-content">
           <!-- 省份对标图 -->
           <div class="da-section da-section--chart">
             <div class="da-section__title">
               <Icon icon="lucide:git-compare" :width="14" />
-              <span class="da-trend-province">{{ selectedProvince }}</span>
+              <span class="da-trend-province">{{ selectedProvinceLabel }}</span>
               <span class="da-trend-sep">·</span>
               薪资水平对标
             </div>
@@ -1290,8 +1476,11 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
           <!-- #4 AI 评价模块（可翻页） -->
           <div class="da-section da-section--ai">
-            <div class="da-section__title">
-              <Icon icon="lucide:sparkles" :width="14" />AI 市场洞察
+            <div class="da-section__title da-section__title--with-action">
+              <span class="da-section__title-text"><Icon icon="lucide:sparkles" :width="14" />AI 市场洞察</span>
+              <button class="da-ask-ai-btn" @click="openAiDrawer">
+                <Icon icon="lucide:message-circle" :width="12" />问 AI
+              </button>
             </div>
             <div class="ai-card" v-if="currentAiComment">
               <div class="ai-card__header">
@@ -1314,38 +1503,40 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
           <div class="da-section">
             <button class="da-link-btn" @click="goToCareerCenter">
               <Icon icon="lucide:cpu" :width="14" />
-              <span>查看「{{ roleSearch }}」能力图谱</span>
+              <span>查看「{{ selectedJobLabel }}」能力图谱</span>
               <Icon icon="lucide:arrow-right" :width="12" />
             </button>
-            <p class="da-link-hint">基于当前搜索岗位，查看所需技能和学习路径</p>
+            <p class="da-link-hint">基于当前已选岗位，查看所需技能和学习路径</p>
           </div>
 
           <!-- 关注此方向 -->
           <div class="da-section">
             <button
               class="da-follow-btn"
-              :class="{ 'da-follow-btn--active': isCurrentRoleFollowed }"
+              :class="{ 'da-follow-btn--active': isCurrentRoleFollowed, 'da-follow-btn--disabled': !followableRole }"
+              :disabled="!followableRole"
               @click="toggleFollowRole"
             >
-              <Icon :icon="isCurrentRoleFollowed ? 'lucide:bookmark-check' : 'lucide:bookmark'" :width="14" />
-              <span>{{ isCurrentRoleFollowed ? '已关注 · 取消' : '关注此方向' }}</span>
+              <Icon :icon="followableRole && isCurrentRoleFollowed ? 'lucide:bookmark-check' : 'lucide:bookmark'" :width="12" />
+              <span>{{ !followableRole ? '暂不支持关注' : isCurrentRoleFollowed ? '已关注 · 取消' : '关注此方向' }}</span>
             </button>
-            <p class="da-link-hint">关注后会出现在心仪岗位，也可继续前往职途导航做匹配分析</p>
           </div>
         </div>
 
         <!-- 未选中提示 -->
-        <div v-else class="da-right-empty">
-          <Icon icon="lucide:map" :width="36" />
-          <p>点击地图上的省份</p>
-          <p>查看岗位洞察与AI分析</p>
+        <div v-else class="da-right-empty" :class="{ 'da-right-empty--pending': analysisStage === 'province-pending' }">
+          <Icon :icon="analysisStage === 'job-pending' ? 'lucide:mouse-pointer-click' : 'lucide:map-pinned'" :width="36" />
+          <span class="da-right-empty__badge">{{ analysisStage === 'job-pending' ? '第 1 步' : '第 2 步' }}</span>
+          <p class="da-right-empty__title">{{ analysisStage === 'job-pending' ? '先从气泡图选择岗位' : '继续选择目标省份' }}</p>
+          <p class="da-right-empty__desc" v-if="analysisStage === 'job-pending'">当前先展示 {{ currentAnalysisLabel }} 方向概览，选中岗位后这里会展开省份分析。</p>
+          <p class="da-right-empty__desc" v-else>已选岗位：{{ selectedJobLabel }}。点击地图或左侧 TOP 10 列表后，再查看完整洞察。</p>
         </div>
       </aside>
     </div>
 
     <!-- 底部 CTA：已关注方向时出现 -->
     <Transition name="cta-slide">
-      <div v-if="learningStore.targetRoles.length > 0" class="da-bottom-cta">
+      <div v-if="analysisStage === 'insight-ready' && learningStore.targetRoles.length > 0 && ctaVisible" class="da-bottom-cta">
         <span class="da-bottom-cta__text">
           已关注
           <strong>{{ learningStore.targetRoles.map(r => r.role).join(' / ') }}</strong>
@@ -1358,6 +1549,74 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
         </button>
       </div>
     </Transition>
+
+    <!-- AI 对话 Drawer -->
+    <el-drawer
+      v-model="showAiDrawer"
+      title=""
+      direction="rtl"
+      size="380px"
+      :with-header="false"
+      class="ai-drawer"
+    >
+      <div class="ai-drawer__wrap">
+        <!-- 头部 -->
+        <div class="ai-drawer__header">
+          <div class="ai-drawer__header-info">
+            <span class="ai-drawer__avatar"><Icon icon="lucide:sparkles" :width="16" /></span>
+            <div>
+              <p class="ai-drawer__title">AI 市场洞察</p>
+              <p class="ai-drawer__sub">{{ selectedJob?.jobName ?? roleSearch }} · {{ selectedProvince ?? '全国' }}</p>
+            </div>
+          </div>
+          <button class="ai-drawer__close" @click="showAiDrawer = false">
+            <Icon icon="lucide:x" :width="16" />
+          </button>
+        </div>
+
+        <!-- 消息列表 -->
+        <div class="ai-drawer__messages" ref="aiDrawerScrollRef">
+          <div
+            v-for="(msg, i) in aiDrawerMessages"
+            :key="i"
+            class="ai-drawer__msg"
+            :class="msg.role === 'user' ? 'ai-drawer__msg--user' : 'ai-drawer__msg--ai'"
+          >
+            <div class="ai-drawer__bubble">{{ msg.content }}</div>
+            <span class="ai-drawer__time">{{ msg.time }}</span>
+          </div>
+          <div v-if="aiDrawerLoading" class="ai-drawer__msg ai-drawer__msg--ai">
+            <div class="ai-drawer__bubble ai-drawer__bubble--typing">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 快捷问题 -->
+        <div class="ai-drawer__quick" v-if="aiDrawerMessages.length <= 1">
+          <button
+            v-for="q in aiDrawerQuickPrompts"
+            :key="q"
+            class="ai-drawer__quick-btn"
+            @click="sendAiDrawerMsg(q)"
+          >{{ q }}</button>
+        </div>
+
+        <!-- 输入框 -->
+        <div class="ai-drawer__input-row">
+          <input
+            class="ai-drawer__input"
+            v-model="aiDrawerInput"
+            placeholder="输入你的问题…"
+            @keydown.enter="sendAiDrawerMsg()"
+            :disabled="aiDrawerLoading"
+          />
+          <button class="ai-drawer__send" @click="sendAiDrawerMsg()" :disabled="aiDrawerLoading || !aiDrawerInput.trim()">
+            <Icon icon="lucide:send" :width="15" />
+          </button>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 <style scoped>
@@ -1368,7 +1627,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   flex-direction: column;
   background: var(--bg-100);
   color: var(--text-100);
-  font-family: var(--font-title), sans-serif;
+  font-family: var(--font-ui, sans-serif);
   overflow: hidden;
   position: relative;
 }
@@ -1385,9 +1644,13 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   border-bottom: 1px solid var(--bg-300);
   flex-shrink: 0;
 }
-.da-header__left { display: flex; align-items: center; gap: 14px; }
-.da-header__center { flex: 1; display: flex; align-items: center; justify-content: center; }
-.da-header__right { display: flex; align-items: center; gap: 16px; }
+.da-header__left { display: flex; align-items: center; gap: 14px; z-index: 1; }
+.da-header__center {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+}
+.da-header__right { display: flex; align-items: center; gap: 16px; margin-left: auto; z-index: 1; }
 
 .da-back {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1440,23 +1703,29 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
 /* 气泡图内岗位标签（左上角） */
 .da-bubble-job-tag {
-  position: absolute; top: 8px; left: 10px; z-index: 5;
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(245,245,243,0.88); backdrop-filter: blur(6px);
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 16px; padding: 4px 12px 4px 10px;
-  font-size: 12px; font-family: var(--font-title), sans-serif;
-  color: var(--text-200); letter-spacing: 0.04em;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  position: absolute; top: 12px; left: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 999px; padding: 6px 14px 6px 12px;
+  font-size: 12px; font-family: var(--font-ui, sans-serif);
+  color: var(--text-200); letter-spacing: 0.01em;
+  box-shadow: 0 8px 24px rgba(17,24,39,0.08);
   pointer-events: none;
+}
+.da-bubble-job-tag__step {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(17,17,17,0.06); color: var(--text-200);
+  font-size: 11px; font-weight: 600;
 }
 .da-bubble-job-tag b { font-size: 13px; font-weight: 600; }
 .da-bubble-job-tag__domain { font-size: 11px; color: var(--text-300); margin-left: 1px; }
 .da-bubble-job-tag__domain::before { content: '('; }
 .da-bubble-job-tag__domain::after { content: ')'; }
 .da-bubble-job-tag--empty {
-  color: var(--text-300); font-style: italic; font-size: 11px;
-  opacity: 0.75;
+  color: var(--text-200); font-style: normal; font-size: 12px;
+  opacity: 1;
 }
 
 .da-map-search-wrap {
@@ -1526,7 +1795,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
 /* ═══ 左面板 ═══ */
 .da-left {
-  width: 280px; flex-shrink: 0;
+  width: 240px; flex-shrink: 0;
   display: flex; flex-direction: column; gap: 4px;
   background: var(--bg-200);
   border-right: 1px solid var(--bg-300);
@@ -1599,6 +1868,9 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 }
 .rank-item:hover { background: rgba(139,37,0,0.06); }
 .rank-item--active { background: rgba(139,37,0,0.1); }
+.rank-item--disabled { opacity: 0.56; cursor: default; }
+.rank-item--disabled:hover { background: transparent; }
+.rank-item--disabled .rank-bar { opacity: 0.52; }
 .rank-badge {
   width: 22px; height: 22px; display: grid; place-items: center;
   font-size: 12px; font-weight: 600; color: var(--text-300);
@@ -1630,14 +1902,46 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   position: relative;
   flex: 0 0 50%; min-height: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-100);
+  background: linear-gradient(180deg, #F7F5F0, #F0EDE6);
   border-bottom: 1px solid var(--bg-300);
-  padding: 4px 8px 0;
+  padding: 12px 14px 0;
   overflow: hidden;
 }
-.da-bubble-vchart {
+/* 宣纸纹理层（feTurbulence + feDiffuseLighting 生成）*/
+.da-bubble-wrap::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none;
+  opacity: 0.38;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' seed='3'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1.5'%3E%3CfeDistantLight azimuth='45' elevation='55'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  background-size: cover;
+}
+.da-bubble-svg {
+  position: relative; z-index: 1;
   width: 100%; height: 100%;
   display: block;
+}
+/* D3 水墨气泡 — 墨点 */
+.da-bubble-svg .job-circle {
+  transition: r 0.25s ease;
+}
+.da-bubble-svg .job-circle--selected {
+  animation: ink-pulse 2s ease-in-out infinite;
+}
+@keyframes ink-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.78; }
+}
+/* 水渍圈 */
+.da-bubble-svg .domain-bg {
+  transition: stroke-opacity 0.3s, stroke-width 0.3s;
+}
+.da-bubble-svg .domain-label {
+  pointer-events: none;
+  user-select: none;
+}
+.da-bubble-svg .job-text {
+  user-select: none;
 }
 
 /* 下半：地图 + 薪资图 */
@@ -1645,17 +1949,22 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
   flex: 0 0 50%; min-height: 0;
   display: flex; overflow: hidden;
 }
+.da-bottom--focus-map .da-map-inner {
+  flex: 1;
+  border-left: none;
+}
 
 /* 下半左：卷轴风格地图容器 */
 .da-map-inner {
-  flex: 1; min-width: 0; position: relative;
+  flex: 1.18; min-width: 0; position: relative;
   border-left: 1px solid var(--bg-300);
+  background: var(--bg-100);
   overflow: hidden;
 }
 /* 左右卷轴边（用伪元素模拟，不影响 ECharts DOM） */
 .da-map-inner::before,
 .da-map-inner::after {
-  content: ''; position: absolute; top: 0; bottom: 0; width: 14px; z-index: 5; pointer-events: none;
+  content: ''; position: absolute; top: 0; bottom: 0; width: 10px; z-index: 5; pointer-events: none;
 }
 .da-map-inner::before {
   left: 0;
@@ -1673,7 +1982,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 .da-map-inner__base {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; z-index: 0; pointer-events: none;
-  filter: saturate(0.5) brightness(1.12) contrast(0.95);
+  filter: saturate(0.42) brightness(1.08) contrast(0.96);
 }
 /* 四角暗角 */
 .da-map-inner__vignette {
@@ -1682,11 +1991,41 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 }
 .da-map-inner .da-map__chart {
   position: absolute; inset: 0; z-index: 1; mix-blend-mode: multiply;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+.da-map-inner--locked .da-map__chart {
+  opacity: 0.38;
+  filter: saturate(0.9);
+}
+.da-map-inner--locked .da-map-inner__base {
+  filter: saturate(0.28) brightness(1.06) contrast(0.94);
+}
+.da-map-overlay {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 40px));
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 18px 20px; border-radius: 20px;
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 18px 40px rgba(17,24,39,0.12);
+  text-align: center; z-index: 7; pointer-events: none;
+}
+.da-map-overlay__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(17,17,17,0.06); color: var(--text-200);
+  font-size: 11px; font-weight: 600;
+}
+.da-map-overlay__title {
+  font-size: 18px; line-height: 1.35; color: var(--text-100);
+}
+.da-map-overlay__desc {
+  margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-200);
 }
 
 /* 下半右：薪资柱状图 */
 .da-salary-chart {
-  flex: 1; min-width: 0;
+  flex: 0.82; min-width: 0;
   display: flex; flex-direction: column;
   background: var(--bg-100);
   padding: 8px 10px 6px;
@@ -1711,6 +2050,7 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 .da-pin-legend--sm {
   left: 8px; top: 42%; gap: 3px;
 }
+.da-pin-legend--muted { opacity: 0.35; pointer-events: none; }
 .pin-legend__title {
   font-size: 11px; font-weight: 600; color: var(--text-100); letter-spacing: 0.02em;
   background: rgba(245,245,243,0.88); padding: 3px 10px; border-radius: 10px;
@@ -1775,6 +2115,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 .da-map__hint--sm {
   font-size: 10px; padding: 4px 10px; bottom: 6px;
 }
+.da-map__hint--muted {
+  background: rgba(255,255,255,0.92);
+  color: var(--text-200);
+}
+.da-map__hint--muted .da-map__hint-dot {
+  background: var(--text-300);
+  animation: none;
+}
 .da-map__hint b { color: var(--primary-100, #8B2500); }
 .da-map__hint-dot {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
@@ -1797,29 +2145,78 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 /* ═══ 右面板 ═══ */
 .da-right {
   width: 320px; flex-shrink: 0;
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 8px;
   background: var(--bg-200);
   border-left: 1px solid var(--bg-300);
-  overflow-y: hidden; padding: 16px;
+  overflow-y: auto; padding: 16px 14px;
+  position: relative;
 }
-.da-right-content { display: flex; flex-direction: column; gap: 4px; height: 100%; }
+.da-right::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: v-bind(parchmentBgUrl);
+  background-size: cover;
+  background-position: center;
+}
+.da-right > * { position: relative; z-index: 1; }
+.da-right-content { display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; }
+.da-right-content > .da-section { margin-bottom: 0; }
 .da-right-empty {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 8px;
-  color: var(--text-300); text-align: center;
+  flex: 0 0 auto; margin: auto 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  position: relative; overflow: hidden;
+  color: var(--text-200); text-align: center;
+  background: var(--bg-100); border: 1px solid var(--bg-300);
+  border-radius: var(--radius-md); padding: 28px 20px;
 }
-.da-right-empty p { margin: 0; font-size: 15px; }
+.da-right-empty::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  pointer-events: none;
+  opacity: 0.25;
+  background-image: v-bind(parchmentBgUrl);
+  background-size: cover;
+  background-position: center;
+  border-radius: inherit;
+}
+.da-right-empty::after {
+  content: '';
+  position: absolute;
+  right: -20px; bottom: -20px;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 40%, rgba(190,42,0,0.06) 60%, rgba(190,42,0,0.03) 80%, transparent 100%);
+  pointer-events: none; z-index: 0;
+}
+.da-right-empty > * { position: relative; z-index: 1; }
+.da-right-empty :deep(svg) { color: var(--primary-100); opacity: 0.85; }
+.da-right-empty--pending { border-color: color-mix(in srgb, var(--primary-100) 18%, var(--bg-300) 82%); }
+.da-right-empty__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(17,17,17,0.06); color: var(--text-200);
+  font-size: 11px; font-weight: 600;
+}
+.da-right-empty__title {
+  margin: 0; font-size: 16px; font-weight: 600; color: var(--text-100);
+}
+.da-right-empty__desc {
+  margin: 0; font-size: 13px; line-height: 1.7; color: var(--text-200);
+}
 
 /* #3 趋势图 — 固定高度，留空间给 AI 模块 */
 .da-section--chart { flex: 0 0 auto; display: flex; flex-direction: column; }
-.da-trend-chart { width: 100%; height: 220px; }
+.da-trend-chart { width: 100%; height: 200px; }
 
 /* 趋势图标题内嵌省份样式 */
 .da-trend-province { font-weight: 600; color: var(--primary-100); }
 .da-trend-sep { color: var(--text-300); margin: 0 2px; font-weight: 400; }
 
 /* #4 AI评价卡片 — flex:1 充分利用剩余空间 */
-.da-section--ai { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+.da-section--ai { flex: 1 1 0; min-height: 100px; display: flex; flex-direction: column; }
 .da-section--ai .ai-card { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .da-section--ai .ai-card__content { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
 .ai-card {
@@ -1869,18 +2266,26 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 }
 
 .da-follow-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%; padding: 12px 0;
-  background: var(--bg-200); border: 1.5px solid var(--bg-300);
-  color: var(--text-200); font-family: inherit; font-size: 14px; font-weight: 600;
-  letter-spacing: 0.02em; cursor: pointer; transition: all 0.3s;
-  border-radius: var(--radius-sm);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  width: auto; margin: 0 auto; padding: 6px 0;
+  background: transparent; border: none; border-bottom: 1px dashed var(--bg-300);
+  color: var(--text-300); font-family: inherit; font-size: 13px; font-weight: 500;
+  letter-spacing: 0.01em; cursor: pointer; transition: all 0.2s;
 }
-.da-follow-btn:hover { border-color: var(--primary-100); color: var(--primary-100); }
+.da-follow-btn:hover { border-bottom-color: var(--primary-100); color: var(--primary-100); }
 .da-follow-btn--active {
-  background: rgba(187,52,24,0.1);
-  border-color: var(--primary-100);
+  background: transparent;
+  border-bottom-color: var(--primary-100);
   color: var(--primary-100);
+}
+.da-follow-btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-bottom-style: dotted;
+}
+.da-follow-btn--disabled:hover {
+  color: var(--text-300);
+  border-bottom-color: var(--bg-300);
 }
 
 /* 底部 CTA */
@@ -1918,14 +2323,14 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
 /* ═══ 响应式 ═══ */
 @media (max-width: 1199px) {
-  .da-left { width: 210px; padding: 10px; }
-  .da-right { width: 260px; padding: 10px; }
+  .da-left { width: 208px; padding: 10px; }
+  .da-right { width: 280px; padding: 10px; }
   .da-brand__title { font-size: 12px; }
 }
 
 @media (max-width: 1023px) {
   .da-left { display: none; }
-  .da-right { width: 280px; }
+  .da-right { width: 296px; }
 }
 
 @media (max-width: 767px) {
@@ -1939,14 +2344,160 @@ onBeforeUnmount(() => { gsapCtx?.revert() })
 
   .da-body { flex-direction: column; }
   .da-map { flex: 1; }
+  .da-bubble-wrap { flex-basis: 50%; padding: 8px 10px 0; }
+  .da-bottom { flex-basis: 50%; flex-direction: column; }
+  .da-salary-chart {
+    flex: 0 0 180px;
+    border-top: 1px solid var(--bg-300);
+  }
+  .da-map-inner {
+    border-left: none;
+    min-height: 220px;
+  }
+  .da-bottom--focus-map .da-map-inner {
+    min-height: 260px;
+  }
+  .da-map-overlay {
+    width: calc(100% - 24px);
+    padding: 16px;
+  }
+  .da-bubble-job-tag {
+    top: 10px; left: 10px; right: 10px; width: auto;
+  }
   .da-right {
     width: 100%; height: auto; max-height: 45vh;
     border-left: none; border-top: 1px solid var(--bg-300);
     flex-shrink: 0;
   }
-  .da-right-empty { padding: 16px 0; }
+  .da-right-empty { padding: 20px 12px; margin: auto 0; }
   .da-trend-chart { height: 180px; }
 }
+
+/* ═══ AI 洞察标题行 ═══ */
+.da-section__title--with-action {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.da-section__title-text {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.da-ask-ai-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--primary-100); border: none;
+  color: #fff; font-size: 11px; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.da-ask-ai-btn:hover { background: var(--primary-300, #5C1A00); transform: scale(1.04); }
+
+/* ═══ AI Drawer ═══ */
+.ai-drawer :deep(.el-drawer) { background: var(--bg-100); }
+.ai-drawer :deep(.el-drawer__body) { padding: 0; height: 100%; overflow: hidden; }
+.ai-drawer__wrap {
+  display: flex; flex-direction: column; height: 100%;
+  background: var(--bg-100);
+}
+.ai-drawer__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--bg-300);
+  flex-shrink: 0;
+}
+.ai-drawer__header-info { display: flex; align-items: center; gap: 10px; }
+.ai-drawer__avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary-100); color: #fff;
+  display: grid; place-items: center; flex-shrink: 0;
+}
+.ai-drawer__title { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-100); }
+.ai-drawer__sub { margin: 2px 0 0; font-size: 11px; color: var(--text-300); }
+.ai-drawer__close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-300); display: grid; place-items: center;
+  padding: 4px; border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.ai-drawer__close:hover { color: var(--text-100); background: var(--bg-300); }
+
+.ai-drawer__messages {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 14px;
+  scroll-behavior: smooth;
+}
+.ai-drawer__msg {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ai-drawer__msg--user { align-items: flex-end; }
+.ai-drawer__msg--ai  { align-items: flex-start; }
+.ai-drawer__bubble {
+  max-width: 82%;
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 13px; line-height: 1.65; color: var(--text-100);
+  white-space: pre-wrap; word-break: break-word;
+}
+.ai-drawer__msg--user .ai-drawer__bubble {
+  background: var(--primary-100); color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.ai-drawer__msg--ai .ai-drawer__bubble {
+  background: var(--bg-200); border: 1px solid var(--bg-300);
+  border-bottom-left-radius: 4px;
+}
+.ai-drawer__bubble--typing {
+  display: flex; align-items: center; gap: 5px; padding: 12px 16px;
+}
+.ai-drawer__bubble--typing span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-300);
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+.ai-drawer__bubble--typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-drawer__bubble--typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+.ai-drawer__time {
+  font-size: 10px; color: var(--text-300); margin-top: 2px;
+}
+
+.ai-drawer__quick {
+  padding: 0 20px 12px;
+  display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+}
+.ai-drawer__quick-btn {
+  text-align: left; background: var(--bg-200);
+  border: 1px solid var(--bg-300); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 12px; color: var(--text-200);
+  font-family: inherit; cursor: pointer; transition: all 0.15s;
+}
+.ai-drawer__quick-btn:hover {
+  border-color: var(--primary-100); color: var(--primary-100); background: rgba(139,37,0,0.04);
+}
+
+.ai-drawer__input-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--bg-300); flex-shrink: 0;
+}
+.ai-drawer__input {
+  flex: 1; padding: 9px 14px;
+  background: var(--bg-200); border: 1px solid var(--bg-300);
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+  color: var(--text-100); outline: none; transition: border-color 0.2s;
+  min-width: 0;
+}
+.ai-drawer__input:focus { border-color: var(--primary-100); }
+.ai-drawer__input::placeholder { color: var(--text-300); }
+.ai-drawer__input:disabled { opacity: 0.6; cursor: not-allowed; }
+.ai-drawer__send {
+  width: 36px; height: 36px; border-radius: var(--radius-sm);
+  background: var(--primary-100); border: none; color: #fff;
+  display: grid; place-items: center; cursor: pointer;
+  transition: background 0.2s, opacity 0.2s; flex-shrink: 0;
+}
+.ai-drawer__send:hover:not(:disabled) { background: var(--primary-300, #5C1A00); }
+.ai-drawer__send:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ═══ 滚动条 ═══ */
 .da-left::-webkit-scrollbar, .da-right::-webkit-scrollbar, .rank-list::-webkit-scrollbar { width: 3px; }
