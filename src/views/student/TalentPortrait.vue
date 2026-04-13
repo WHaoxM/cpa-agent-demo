@@ -1,38 +1,52 @@
 <!-- 页面：个人能力画像；路由：student/career-portrait；角色：STUDENT -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
-import { useUserStore } from '@/stores'
+import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useResumeStore } from '@/stores/resume'
 import { useReportStore } from '@/stores/report'
-import { callAgentPortrait } from '@/composables/useAgentPortrait'
-import type { AgentPortraitResult } from '@/composables/useAgentPortrait'
-import * as echarts from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { TooltipComponent, LegendComponent } from 'echarts/components'
-import { SVGRenderer } from 'echarts/renderers'
-echarts.use([RadarChart, TooltipComponent, LegendComponent, SVGRenderer])
+import { callAgentPortraitStreaming, PHASE_META } from '@/composables/useAgentPortrait'
+import type { AgentPortraitResult, AgentPhase, PhaseData, PersonInfo, AbilityDimension, SummarySource } from '@/composables/useAgentPortrait'
+import D3RadarChart from '@/components/charts/D3RadarChart.vue'
+import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 
 const router = useRouter()
-const userStore = useUserStore()
 const resumeStore = useResumeStore()
 const reportStore = useReportStore()
 
+/* ═══ 完整结果（保存/导出用） ═══ */
 const portraitData = ref<AgentPortraitResult | null>(null)
+const portraitSaved = ref(false)
+const pageRef = ref<HTMLElement | null>(null)
+
+/* ═══ 阶段渐进渲染 ═══ */
 const portraitAgentLoading = ref(false)
-const radarEl = ref<HTMLDivElement | null>(null)
-let radarChart: echarts.ECharts | null = null
+const currentPhase = ref<AgentPhase | 'idle' | 'done'>('idle')
+const phaseIndex = computed(() => {
+  const map: Record<string, number> = { idle: -1, parsing: 0, evaluating: 1, analyzing: 2, summarizing: 3, done: 4 }
+  return map[currentPhase.value] ?? -1
+})
+
+const phasePersonInfo = ref<PersonInfo | null>(null)
+const phaseCompleteness = ref(0)
+const phaseDimensions = ref<AbilityDimension[]>([])
+const phaseCompetitiveness = ref(0)
+const phaseSkillTags = ref<{ name: string; weight: number; category: string }[]>([])
+const phaseHonors = ref<PersonInfo['honors']>([])
+const phaseProjects = ref<PersonInfo['projects']>([])
+
+/* ═══ AI 综评（string | ReadableStream 双模式） ═══ */
 const displaySummary = ref('')
 const summaryDone = ref(false)
 let typingTimer: ReturnType<typeof setInterval> | null = null
-const portraitSaved = ref(false)
-const pageRef = ref<HTMLElement | null>(null)
+let fullSummaryText = ''
 
 function startTyping(fullText: string) {
   displaySummary.value = ''
   summaryDone.value = false
+  fullSummaryText = fullText
   let idx = 0
   typingTimer = setInterval(() => {
     displaySummary.value += fullText[idx++] ?? ''
@@ -44,9 +58,35 @@ function startTyping(fullText: string) {
   }, 28)
 }
 
+async function streamToDisplay(stream: ReadableStream<string>) {
+  const reader = stream.getReader()
+  displaySummary.value = ''
+  summaryDone.value = false
+  fullSummaryText = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      displaySummary.value += value
+      fullSummaryText = displaySummary.value
+    }
+  } finally {
+    reader.releaseLock()
+    summaryDone.value = true
+  }
+}
+
+function renderSummary(source: SummarySource) {
+  if (typeof source === 'string') {
+    startTyping(source)
+  } else {
+    streamToDisplay(source)
+  }
+}
+
 function stopTyping() {
   if (typingTimer) { clearInterval(typingTimer); typingTimer = null }
-  displaySummary.value = portraitData.value?.agentSummary ?? ''
+  displaySummary.value = fullSummaryText || portraitData.value?.agentSummary || ''
   summaryDone.value = true
 }
 
@@ -85,132 +125,21 @@ function goBack() {
   router.push({ name: 'student-career-navigation' })
 }
 
-/* ═══ ECharts 雷达图管理 ═══ */
-function initRadarChart() {
-  if (!radarEl.value || !portraitData.value) return
-  disposeRadarChart()
-  radarChart = echarts.init(radarEl.value, undefined, { renderer: 'svg' })
-  updateRadarChart()
-  setTimeout(() => radarChart?.resize(), 0)
-  window.addEventListener('resize', onRadarResize)
-}
+/* ═══ D3 雷达图数据（基于阶段 ref） ═══ */
+const radarData = computed<RadarDatum[]>(() => {
+  if (!phaseDimensions.value.length) return []
+  return phaseDimensions.value.map(d => ({
+    axis: d.label,
+    value: d.score,
+    level: d.level,
+    desc: d.desc,
+  }))
+})
 
-function updateRadarChart() {
-  if (!radarChart || !portraitData.value) return
-  const dims = portraitData.value.dimensions
-  const lvColor = (s: number) =>
-    s >= 80 ? 'rgba(94,179,107,0.95)' : s >= 60 ? 'rgba(212,168,85,0.95)' : 'rgba(200,100,90,0.95)'
-
-  radarChart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: 'rgba(14,8,3,0.97)',
-      borderColor: 'rgba(212,201,181,0.18)',
-      padding: [8, 12],
-      textStyle: { color: 'rgba(220,205,185,0.9)', fontSize: 11 },
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        if (!p?.value) return ''
-        const rows = dims.map((d, i) => {
-          const s = (p.value as number[])[i] ?? 0
-          const c = lvColor(s)
-          const lv = s >= 80 ? '优秀' : s >= 60 ? '良好' : '待提升'
-          return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0">` +
-            `<span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span>` +
-            `<span style="color:${c};font-weight:600;font-size:12px;min-width:22px;text-align:right">${s}</span>` +
-            `<span style="color:${c};font-size:9px;letter-spacing:.04em">${lv}</span>` +
-            `</div>`
-        }).join('')
-        return `<div style="padding:0"><div style="color:rgba(140,125,100,0.6);font-size:9px;letter-spacing:.12em;margin-bottom:6px">七维能力评估</div>${rows}</div>`
-      },
-    },
-    radar: {
-      indicator: dims.map(d => ({ name: d.label, max: 100 })),
-      shape: 'polygon',
-      center: ['50%', '50%'],
-      radius: '62%',
-      splitNumber: 5,
-      nameGap: 8,
-      axisName: {
-        formatter: (name: string) => {
-          const d = dims.find(x => x.label === name)
-          if (!d) return name
-          return d.score >= 80 ? `{g|${name}}` : d.score >= 60 ? `{m|${name}}` : `{r|${name}}`
-        },
-        rich: {
-          g: { color: 'rgba(94,179,107,0.9)',  fontSize: 10, fontWeight: '700' },
-          m: { color: 'rgba(212,168,85,0.9)',   fontSize: 10, fontWeight: '700' },
-          r: { color: 'rgba(200,100,90,0.9)',   fontSize: 10, fontWeight: '700' },
-        },
-      },
-      splitArea: {
-        show: true,
-        areaStyle: {
-          color: [
-            'rgba(200,85,74,0.12)',
-            'rgba(200,85,74,0.08)',
-            'rgba(212,168,85,0.06)',
-            'rgba(212,168,85,0.07)',
-            'rgba(94,159,107,0.10)',
-          ],
-        },
-      },
-      splitLine: { lineStyle: { color: 'rgba(212,201,181,0.10)', width: 1 } },
-      axisLine:  { lineStyle: { color: 'rgba(212,201,181,0.10)' } },
-    },
-    series: [{
-      type: 'radar',
-      data: [{
-        value: dims.map(d => d.score),
-        name: '能力雷达',
-        areaStyle: { color: 'rgba(139,37,0,0.20)' },
-        lineStyle: { color: 'rgba(180,60,20,0.85)', width: 2 },
-        itemStyle: { color: 'rgba(200,80,30,0.9)' },
-        symbolSize: 5,
-        label: {
-          show: true,
-          formatter: (p: any) => `${p.value}`,
-          fontSize: 9,
-          fontWeight: '700',
-          color: 'rgba(230,210,185,0.95)',
-          backgroundColor: 'rgba(14,8,3,0.65)',
-          borderRadius: 2,
-          padding: [1, 3],
-        },
-      }],
-      animation: true,
-      animationDuration: 900,
-      animationEasing: 'cubicOut',
-    }],
-  })
-}
-
-function onRadarResize() { radarChart?.resize() }
-function disposeRadarChart() {
-  window.removeEventListener('resize', onRadarResize)
-  radarChart?.dispose()
-  radarChart = null
-}
-
-function animatePortraitEntrance() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    if (portraitData.value) startTyping(portraitData.value.agentSummary)
-    return
-  }
-  gsap.fromTo('.tp-portrait__header', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
-  gsap.fromTo('.tp-portrait__radar-wrap', { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.2)', delay: 0.1 })
-  gsap.fromTo('.tp-portrait__dim-item', { opacity: 0, x: 14 }, { opacity: 1, x: 0, stagger: 0.05, duration: 0.28, ease: 'power2.out', delay: 0.15 })
-  gsap.fromTo('.tp-portrait__tag', { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.03, duration: 0.22, ease: 'back.out(1.4)', delay: 0.25 })
-  gsap.fromTo('.tp-portrait__project-card', { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.08, duration: 0.3, ease: 'power2.out', delay: 0.3 })
-  gsap.fromTo('.tp-portrait__summary', { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.5,
-    onComplete: () => { if (portraitData.value) startTyping(portraitData.value.agentSummary) },
-  })
-}
-
+/* ═══ 建议（基于阶段 ref） ═══ */
 const portraitSuggestions = computed(() => {
-  if (!portraitData.value) return []
-  const dims = portraitData.value.dimensions
+  if (!phaseDimensions.value.length) return []
+  const dims = phaseDimensions.value
   const sorted = [...dims].sort((a, b) => a.score - b.score)
   const topDim = [...dims].sort((a, b) => b.score - a.score)[0]!
   const weak1 = sorted[0]!
@@ -231,9 +160,68 @@ const portraitSuggestions = computed(() => {
   ]
 })
 
-watch(radarEl, (el) => {
-  if (el && portraitData.value) initRadarChart()
-})
+/* ═══ 每阶段入场动画 ═══ */
+const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function animatePhase1() {
+  if (reducedMotion) return
+  gsap.fromTo('.tp-portrait__header', { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
+}
+
+function animatePhase2() {
+  if (reducedMotion) return
+  gsap.fromTo('.tp-portrait__radar-wrap', { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.2)' })
+  gsap.fromTo('.tp-portrait__dim-item', { opacity: 0, x: 14 }, { opacity: 1, x: 0, stagger: 0.05, duration: 0.28, ease: 'power2.out', delay: 0.1 })
+  gsap.fromTo('.tp-portrait__tag', { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, stagger: 0.03, duration: 0.22, ease: 'back.out(1.4)', delay: 0.2 })
+}
+
+function animatePhase3() {
+  if (reducedMotion) return
+  gsap.fromTo('.tp-portrait__honor-card', { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.06, duration: 0.3, ease: 'power2.out' })
+  gsap.fromTo('.tp-portrait__project-card', { opacity: 0, y: 10 }, { opacity: 1, y: 0, stagger: 0.08, duration: 0.3, ease: 'power2.out', delay: 0.12 })
+}
+
+function animatePhase4() {
+  if (reducedMotion) return
+  gsap.fromTo('.tp-portrait__summary', { opacity: 0 }, { opacity: 1, duration: 0.4 })
+  gsap.fromTo('.tp-portrait__step-guide', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35, delay: 0.15, ease: 'power2.out' })
+}
+
+/* ═══ 阶段回调处理 ═══ */
+function onPhaseReceived(data: PhaseData) {
+  if (portraitAgentLoading.value) {
+    portraitAgentLoading.value = false
+  }
+
+  switch (data.phase) {
+    case 'parsing':
+      phasePersonInfo.value = data.personInfo
+      phaseCompleteness.value = data.completenessScore
+      currentPhase.value = 'parsing'
+      nextTick(() => animatePhase1())
+      break
+    case 'evaluating':
+      phaseDimensions.value = data.dimensions
+      phaseCompetitiveness.value = data.competitivenessScore
+      phaseSkillTags.value = data.skillTags
+      currentPhase.value = 'evaluating'
+      nextTick(() => animatePhase2())
+      break
+    case 'analyzing':
+      phaseHonors.value = data.honors
+      phaseProjects.value = data.projects
+      currentPhase.value = 'analyzing'
+      nextTick(() => animatePhase3())
+      break
+    case 'summarizing':
+      currentPhase.value = 'summarizing'
+      nextTick(() => {
+        animatePhase4()
+        renderSummary(data.agentSummary)
+      })
+      break
+  }
+}
 
 onMounted(async () => {
   if (!resumeStore.isParsed) {
@@ -243,24 +231,24 @@ onMounted(async () => {
   await nextTick()
   portraitAgentLoading.value = true
   try {
-    portraitData.value = await callAgentPortrait({
-      resumeText: resumeStore.rawText || resumeStore.fileName,
-      parsedSkills: resumeStore.parsedSkills,
-      predictedRole: resumeStore.insights?.predictedRole ?? '前端开发',
-      confidence: resumeStore.insights?.confidence ?? 0.7,
-      matchedCareers: resumeStore.matchedCareers,
-    })
-    await nextTick()
-    setTimeout(initRadarChart, 80)
-    animatePortraitEntrance()
-  } finally {
+    portraitData.value = await callAgentPortraitStreaming(
+      {
+        resumeText: resumeStore.rawText || resumeStore.fileName,
+        parsedSkills: resumeStore.parsedSkills,
+        predictedRole: resumeStore.insights?.predictedRole ?? '前端开发',
+        confidence: resumeStore.insights?.confidence ?? 0.7,
+        matchedCareers: resumeStore.matchedCareers,
+      },
+      onPhaseReceived,
+    )
+    currentPhase.value = 'done'
+  } catch {
     portraitAgentLoading.value = false
   }
 })
 
 onBeforeUnmount(() => {
   if (typingTimer) clearInterval(typingTimer)
-  disposeRadarChart()
 })
 </script>
 
@@ -275,43 +263,63 @@ onBeforeUnmount(() => {
         <div class="tp-header-tag">个人能力画像</div>
       </div>
       <div class="tp-header__right">
-        <div class="tp-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
-        <span class="tp-username">{{ userStore.currentUser?.name || '同学' }}</span>
+        <UserInfoBar />
         <button class="tp-export-btn" @click="exportPortrait">
           <Icon icon="lucide:download" :width="12"/><span>导出报告</span>
         </button>
       </div>
     </header>
 
-    <!-- 加载中 -->
+    <!-- ═══ 阶段进度指示器 ═══ -->
+    <div v-if="phaseIndex >= 0 && currentPhase !== 'done'" class="tp-phase-bar">
+      <div
+        v-for="(pm, idx) in PHASE_META" :key="pm.key"
+        class="tp-phase-step"
+        :class="{
+          'tp-phase-step--done': phaseIndex > idx,
+          'tp-phase-step--active': phaseIndex === idx,
+          'tp-phase-step--waiting': phaseIndex < idx,
+        }"
+      >
+        <span class="tp-phase-dot">
+          <Icon v-if="phaseIndex > idx" icon="lucide:check" :width="9"/>
+          <Icon v-else-if="phaseIndex === idx" icon="lucide:loader-circle" :width="9" class="tp-loading-spin"/>
+          <span v-else class="tp-phase-num">{{ idx + 1 }}</span>
+        </span>
+        <span class="tp-phase-label">{{ pm.label }}</span>
+        <span v-if="idx < PHASE_META.length - 1" class="tp-phase-line" :class="{ 'tp-phase-line--done': phaseIndex > idx }"/>
+      </div>
+    </div>
+
+    <!-- 初始加载中（Phase 1 到达前） -->
     <div v-if="portraitAgentLoading" class="tp-loading-wrap">
       <div class="tp-loading-seal">
         <Icon icon="lucide:loader-circle" :width="34" class="tp-loading-spin" />
       </div>
-      <p class="tp-loading-msg">正在生成能力画像…</p>
+      <p class="tp-loading-msg">正在连接 Agent 分析服务…</p>
     </div>
 
-    <!-- 画像内容 -->
-    <div v-else-if="portraitData" class="tp-portrait">
+    <!-- 画像内容（按阶段渐进渲染） -->
+    <div v-else-if="phaseIndex >= 0" class="tp-portrait">
 
-      <!-- [A] 个人信息 + 评分横幅 -->
-      <div class="tp-portrait__header">
+      <!-- [A] 个人信息 + 评分横幅（Phase ① parsing） -->
+      <div v-if="phasePersonInfo" class="tp-portrait__header">
         <div class="tp-portrait__header-top">
-          <div class="tp-portrait__avatar">{{ portraitData.personInfo.name.charAt(0) }}</div>
+          <div class="tp-portrait__avatar">{{ phasePersonInfo.name.charAt(0) }}</div>
           <div class="tp-portrait__info">
             <div class="tp-portrait__name-row">
-              <span class="tp-portrait__name">{{ portraitData.personInfo.name }}</span>
-              <span class="tp-portrait__grade">{{ portraitData.personInfo.grade }}</span>
-              <span class="tp-portrait__target">{{ portraitData.personInfo.targetRole }}</span>
+              <span class="tp-portrait__name">{{ phasePersonInfo.name }}</span>
+              <span class="tp-portrait__grade">{{ phasePersonInfo.grade }}</span>
+              <span class="tp-portrait__target">{{ phasePersonInfo.targetRole }}</span>
             </div>
             <div class="tp-portrait__school-row">
               <Icon icon="lucide:school" :width="10" class="tp-portrait__meta-icon"/>
-              <span>{{ portraitData.personInfo.school }}</span>
+              <span>{{ phasePersonInfo.school }}</span>
               <span class="tp-portrait__sep">·</span>
-              <span>{{ portraitData.personInfo.major }}</span>
-              <template v-if="portraitData.personInfo.gpa">
+              <span>{{ phasePersonInfo.major }}</span>
+              <template v-if="phasePersonInfo.gpa">
                 <span class="tp-portrait__sep">·</span>
-                <span>GPA {{ portraitData.personInfo.gpa }}</span>
+                <span>GPA {{ phasePersonInfo.gpa }}</span>
               </template>
             </div>
           </div>
@@ -319,26 +327,31 @@ onBeforeUnmount(() => {
         <!-- 评分横幅 -->
         <div class="tp-portrait__score-banner">
           <div class="tp-portrait__score-card tp-portrait__score-card--completeness">
-            <span class="tp-portrait__score-val">{{ portraitData.completenessScore }}<em>%</em></span>
+            <span class="tp-portrait__score-val">{{ phaseCompleteness }}<em>%</em></span>
             <span class="tp-portrait__score-lbl">完整度</span>
           </div>
-          <div class="tp-portrait__score-card tp-portrait__score-card--competitiveness">
-            <span class="tp-portrait__score-val">{{ portraitData.competitivenessScore }}<em>分</em></span>
+          <div class="tp-portrait__score-card tp-portrait__score-card--competitiveness" :class="{ 'tp-portrait__score-card--pending': !phaseCompetitiveness }">
+            <template v-if="phaseCompetitiveness">
+              <span class="tp-portrait__score-val">{{ phaseCompetitiveness }}<em>分</em></span>
+            </template>
+            <template v-else>
+              <span class="tp-portrait__score-val tp-portrait__score-val--pending">--<em>分</em></span>
+            </template>
             <span class="tp-portrait__score-lbl">竞争力</span>
           </div>
           <div class="tp-portrait__score-card tp-portrait__score-card--honors">
             <div class="tp-portrait__honor-row">
               <span class="tp-portrait__honor-item">
                 <Icon icon="lucide:award" :width="11"/>
-                <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'cert').length }}</strong> 证书
+                <strong>{{ phasePersonInfo.honors.filter(h => h.type === 'cert').length }}</strong> 证书
               </span>
               <span class="tp-portrait__honor-item">
                 <Icon icon="lucide:briefcase" :width="11"/>
-                <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'intern').length }}</strong> 实习
+                <strong>{{ phasePersonInfo.honors.filter(h => h.type === 'intern').length }}</strong> 实习
               </span>
               <span class="tp-portrait__honor-item">
                 <Icon icon="lucide:trophy" :width="11"/>
-                <strong>{{ portraitData.personInfo.honors.filter(h => h.type === 'award').length }}</strong> 获奖
+                <strong>{{ phasePersonInfo.honors.filter(h => h.type === 'award').length }}</strong> 获奖
               </span>
             </div>
             <span class="tp-portrait__score-lbl">荣誉档案</span>
@@ -346,14 +359,14 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- [B+C] 雷达图 + 分项评分 -->
-      <div class="tp-portrait__viz-row">
+      <!-- [B+C] 雷达图 + 分项评分（Phase ② evaluating） -->
+      <div v-if="phaseDimensions.length" class="tp-portrait__viz-row">
         <div class="tp-portrait__radar-wrap">
-          <div ref="radarEl" class="tp-portrait__radar-chart"></div>
+          <D3RadarChart :data="radarData" :show-legend="false" />
         </div>
         <div class="tp-portrait__dims">
           <div
-            v-for="dim in portraitData.dimensions" :key="dim.key"
+            v-for="dim in phaseDimensions" :key="dim.key"
             class="tp-portrait__dim-item"
           >
             <div class="tp-portrait__dim-top">
@@ -380,11 +393,11 @@ onBeforeUnmount(() => {
             <p class="tp-portrait__dim-desc">{{ dim.desc }}</p>
           </div>
           <!-- 技能标签（内嵌于维度面板底部） -->
-          <div v-if="portraitData.skillTags.length" class="tp-portrait__tags-inline">
+          <div v-if="phaseSkillTags.length" class="tp-portrait__tags-inline">
             <span class="tp-portrait__tags-inline-lbl">技能清单</span>
             <div class="tp-portrait__tags">
               <span
-                v-for="tag in portraitData.skillTags" :key="tag.name"
+                v-for="tag in phaseSkillTags" :key="tag.name"
                 class="tp-portrait__tag"
                 :class="`tp-portrait__tag--${tag.category === '前端' ? 'fe' : tag.category === '后端' ? 'be' : tag.category === '测试' ? 'qa' : (tag.category === '数据' || tag.category === '机器学习') ? 'data' : 'gen'}`"
                 :style="{ opacity: 0.55 + tag.weight * 0.45, fontSize: (9 + tag.weight * 3) + 'px' }"
@@ -395,14 +408,14 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- [D] 经历亮点（证书 + 实习 + 项目合并） -->
-      <div class="tp-portrait__highlights">
+      <!-- [D] 经历亮点（Phase ③ analyzing） -->
+      <div v-if="phaseHonors.length || phaseProjects.length" class="tp-portrait__highlights">
         <span class="tp-portrait__section-lbl">经历亮点</span>
         <div class="tp-portrait__highlights-grid">
           <!-- 荣誉/证书/实习列 -->
           <div class="tp-portrait__highlights-col">
             <div
-              v-for="h in portraitData.personInfo.honors" :key="h.label"
+              v-for="h in phaseHonors" :key="h.label"
               class="tp-portrait__honor-card"
               :class="`tp-portrait__honor-card--${h.type}`"
             >
@@ -413,7 +426,7 @@ onBeforeUnmount(() => {
           <!-- 项目经历列 -->
           <div class="tp-portrait__highlights-col">
             <div
-              v-for="(proj, i) in portraitData.personInfo.projects" :key="i"
+              v-for="(proj, i) in phaseProjects" :key="i"
               class="tp-portrait__project-card"
             >
               <div class="tp-portrait__project-accent"></div>
@@ -429,13 +442,13 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- [E] AI 综合评语 + 建议 + 自我评价 -->
-      <div class="tp-portrait__summary">
+      <!-- [E] AI 综合评语 + 建议 + 自我评价（Phase ④ summarizing） -->
+      <div v-if="currentPhase === 'summarizing' || currentPhase === 'done'" class="tp-portrait__summary">
         <span class="tp-portrait__section-lbl">
           <Icon icon="lucide:bot" :width="10" style="vertical-align: middle; margin-right: 4px;"/>AI 综合评语
         </span>
         <p class="tp-portrait__summary-text" @click="stopTyping">
-          {{ displaySummary }}<span v-if="displaySummary.length < (portraitData.agentSummary?.length ?? 0)" class="tp-typing-cursor">|</span>
+          {{ displaySummary }}<span v-if="!summaryDone" class="tp-typing-cursor">|</span>
         </p>
         <!-- 三条具体建议 -->
         <div class="tp-portrait__suggestions">
@@ -448,15 +461,15 @@ onBeforeUnmount(() => {
             <span class="tp-portrait__suggestion-text">{{ s.text }}</span>
           </div>
         </div>
-        <template v-if="portraitData.personInfo.selfSummary">
+        <template v-if="phasePersonInfo?.selfSummary">
           <div class="tp-portrait__summary-divider"></div>
           <span class="tp-portrait__section-lbl" style="margin-top: 2px;">自我评价</span>
-          <p class="tp-portrait__self-summary">{{ portraitData.personInfo.selfSummary }}</p>
+          <p class="tp-portrait__self-summary">{{ phasePersonInfo.selfSummary }}</p>
         </template>
       </div>
 
-      <!-- [H] 操作区：保存 / 查看报告 / 制作简历 -->
-      <div class="tp-portrait__step-guide">
+      <!-- [H] 操作区（Phase ④ 完成后显示） -->
+      <div v-if="currentPhase === 'summarizing' || currentPhase === 'done'" class="tp-portrait__step-guide">
         <div class="tp-portrait__step-guide-inner">
           <div class="tp-portrait__step-guide-info">
             <span class="tp-portrait__step-guide-title">能力画像已生成 —— 下一步</span>
@@ -539,7 +552,15 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 .tp-header__left { display: flex; align-items: center; gap: 14px; }
-.tp-header__right { display: flex; align-items: center; gap: 8px; }
+.tp-header__right {
+  display: flex; align-items: center; gap: 8px;
+  --uib-icon-color: rgba(168,152,122,0.6);
+  --uib-icon-hover: rgba(220,170,130,0.9);
+  --uib-avatar-bg: rgba(139,37,0,0.22);
+  --uib-avatar-color: rgba(220,140,100,0.9);
+  --uib-name-color: rgba(220,220,220,0.85);
+  --uib-role-color: rgba(168,152,122,0.7);
+}
 
 .tp-back {
   display: flex; align-items: center; gap: 4px;
@@ -560,14 +581,6 @@ onBeforeUnmount(() => {
   padding: 3px 12px;
 }
 
-.tp-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(139,37,0,0.22);
-  border: 1.5px solid rgba(139,37,0,0.42);
-  display: grid; place-items: center;
-  font-size: 12px; font-weight: 600; color: rgba(220,140,100,0.9); flex-shrink: 0;
-}
-.tp-username { font-size: 12px; color: rgba(168,152,122,0.88); letter-spacing: 0.04em; }
 
 .tp-export-btn {
   display: flex; align-items: center; gap: 5px;
@@ -596,6 +609,68 @@ onBeforeUnmount(() => {
 .tp-loading-spin { color: rgba(200,80,40,0.9); animation: tp-spin 1.2s linear infinite; }
 @keyframes tp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .tp-loading-msg { font-size: 13px; color: rgba(200,200,200,0.88); letter-spacing: 0.02em; margin: 0; }
+
+/* ── Phase Progress Bar ── */
+.tp-phase-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 10px 28px;
+  background: rgba(10,10,10,0.85);
+  border-bottom: 1px solid rgba(212,201,181,0.08);
+  flex-shrink: 0;
+}
+.tp-phase-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.tp-phase-dot {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 700;
+  border: 1.5px solid rgba(212,201,181,0.18);
+  background: rgba(20,20,20,0.9);
+  color: rgba(168,152,122,0.5);
+  transition: all 0.35s ease;
+  flex-shrink: 0;
+}
+.tp-phase-step--done .tp-phase-dot {
+  border-color: rgba(139,105,20,0.6);
+  background: rgba(139,105,20,0.18);
+  color: rgba(196,170,90,0.95);
+}
+.tp-phase-step--active .tp-phase-dot {
+  border-color: rgba(192,52,24,0.7);
+  background: rgba(192,52,24,0.15);
+  color: rgba(220,100,60,0.95);
+  box-shadow: 0 0 8px rgba(192,52,24,0.3);
+}
+.tp-phase-num { font-size: 9px; }
+.tp-phase-label {
+  font-size: 11px; letter-spacing: 0.03em;
+  color: rgba(168,152,122,0.45);
+  transition: color 0.3s ease;
+  white-space: nowrap;
+}
+.tp-phase-step--done .tp-phase-label { color: rgba(196,170,90,0.8); }
+.tp-phase-step--active .tp-phase-label { color: rgba(220,170,130,0.95); font-weight: 600; }
+.tp-phase-line {
+  display: inline-block;
+  width: 28px; height: 1.5px;
+  background: rgba(212,201,181,0.12);
+  margin: 0 6px;
+  transition: background 0.35s ease;
+  flex-shrink: 0;
+}
+.tp-phase-line--done { background: rgba(139,105,20,0.45); }
+
+/* ── Pending score card ── */
+.tp-portrait__score-card--pending { opacity: 0.45; }
+.tp-portrait__score-val--pending { color: rgba(168,152,122,0.5) !important; }
 
 /* ══════════════════════════════════════════
    Portrait 主容器
@@ -687,10 +762,9 @@ onBeforeUnmount(() => {
 .tp-portrait__radar-wrap {
   background: rgba(237,229,214,0.03);
   border: 1px solid rgba(212,201,181,0.1);
-  border-radius: 8px; overflow: hidden;
+  border-radius: 8px; overflow: visible;
   height: 220px; flex-shrink: 0;
 }
-.tp-portrait__radar-chart { width: 100%; height: 100%; }
 
 .tp-portrait__dims { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
 .tp-portrait__dim-item { display: flex; flex-direction: column; gap: 2px; }

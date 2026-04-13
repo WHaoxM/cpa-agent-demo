@@ -3,14 +3,16 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { useUserStore } from '@/stores'
-import * as echarts from 'echarts'
-import 'echarts-gl'
+import { useLearningStore } from '@/stores'
+import UserInfoBar from '@/components/UserInfoBar.vue'
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { gsap } from '@/plugins/gsap'
 import { useResizeObserver } from '@/composables/useResizeObserver'
+import { CAREER_DOMAINS } from '@/composables/useCareerInsights'
 import {
-  getCourseSystemData, compute3DLayouts, computeNode3DPositions,
-  TIER_ORDER, TIER_LABELS, TIER_COLORS, TIER_GLOW,
+  getCourseSystemData,
+  TIER_ORDER, TIER_LABELS, TIER_COLORS,
   COURSE_GROUP_LABELS, COURSE_GROUP_COLORS,
   type CourseNode, type CourseEdge, type SkillTier,
   type CourseSystemData, type GraphCourseNode, type CourseGroup,
@@ -20,9 +22,26 @@ defineOptions({ name: 'CourseSystemGraph' })
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
+const learningStore = useLearningStore()
 
-const roleName = computed(() => (route.query.role as string) || '前端开发工程师')
+const roleName = computed(() => {
+  const qr = route.query.role as string | undefined
+  if (qr) return qr
+  if (learningStore.targetRoles.length > 0) return learningStore.targetRoles[0]!.role
+  return '前端开发'
+})
+
+function resolveJobNode(role: string): { domainId: string; jobIndex: number } | null {
+  for (const d of CAREER_DOMAINS) {
+    const ji = d.jobs.findIndex(j => j === role)
+    if (ji !== -1) return { domainId: d.id, jobIndex: ji }
+  }
+  for (const d of CAREER_DOMAINS) {
+    if (d.role === role || d.name === role) return { domainId: d.id, jobIndex: 0 }
+  }
+  return null
+}
+
 function goBack() { router.back() }
 function goToLearningCenter() {
   router.push({ name: 'student-learning', query: { role: roleName.value } })
@@ -31,7 +50,9 @@ function goToLearningCenter() {
 /* ═══ 状态 ═══ */
 const highlightTier = ref<SkillTier | null>(null)
 const selectedSkillId = ref<string | null>(null)
+const selectedCareerId = ref<string | null>(null)
 const showLabels = ref(false)
+const hoverTooltip = ref<{ name: string; tier: string; x: number; y: number } | null>(null)
 
 /* ═══ 数据 ═══ */
 const graphData = ref<CourseSystemData | null>(null)
@@ -43,63 +64,137 @@ const courseNodes = ref<GraphCourseNode[]>([])
 function toggleTierHighlight(tier: SkillTier) {
   highlightTier.value = highlightTier.value === tier ? null : tier
   selectedSkillId.value = null
-  rebuildChart()
-}
-function rebuildChart() {
-  if (!chart) return
-  chart.setOption(buildOption() as any, { replaceMerge: ['series'], lazyUpdate: true })
+  selectedCareerId.value = null
+  updateHighlight()
 }
 
 function selectPathNode(nodeId: string) {
   if (selectedSkillId.value === nodeId) return
   selectedSkillId.value = nodeId
-  rebuildChart()
+  selectedCareerId.value = null
+  updateHighlight()
 }
 
 function toggleLabels() {
   showLabels.value = !showLabels.value
-  rebuildChart()
+  for (const [id, div] of labelDivs) {
+    const mesh = nodeMeshes.get(id)
+    if (!mesh) continue
+    const n = mesh.userData.node as CourseNode
+    if (n.tier === 'job') continue
+    div.style.display = showLabels.value ? '' : 'none'
+  }
+  updateLabels()
 }
 
-/* ═══ ECharts ═══ */
-const chartEl = ref<HTMLElement>()
+/* ═══ Three.js 场景对象 ═══ */
+const canvasContainer = ref<HTMLDivElement>()
 const graphContainerEl = ref<HTMLElement>()
-let chart: echarts.ECharts | null = null
-let _blankClickTimer: ReturnType<typeof setTimeout> | null = null
+let renderer: THREE.WebGLRenderer | null = null
+let scene: THREE.Scene | null = null
+let camera: THREE.PerspectiveCamera | null = null
+let controls: OrbitControls | null = null
+let animFrameId = 0
+const nodeMeshes = new Map<string, THREE.Mesh>()
+const edgeMeshes: { mesh: THREE.Mesh; edge: CourseEdge }[] = []
+const labelDivs = new Map<string, HTMLDivElement>()
+let posMap3D = new Map<string, THREE.Vector3>()
 
-/* ═══ 古籍配色常量 ═══ */
-const PARCHMENT_BG = '#F5F5F3'
-const PLATFORM_FILL: Record<SkillTier, string> = {
-  foundation: 'rgba(205,178,144,0.60)',
-  junior:     'rgba(186,150,114,0.58)',
-  mid:        'rgba(164,122,84,0.54)',
-  senior:     'rgba(130,90,58,0.48)',
-  job:        'rgba(139,37,0,0.10)',
+/* ═══ 五域配色 ═══ */
+const DOMAIN_COLORS: Record<string, string> = {
+  frontend: '#F43F5E',
+  backend:  '#10B981',
+  qa:       '#06B6D4',
+  data:     '#F59E0B',
+  ml:       '#6366F1',
 }
-const PLATFORM_STROKE: Record<SkillTier, string> = {
-  foundation: 'rgba(135,98,58,0.42)',
-  junior:     'rgba(130,86,48,0.46)',
-  mid:        'rgba(120,72,38,0.50)',
-  senior:     'rgba(102,54,26,0.56)',
-  job:        'rgba(155,56,40,0.22)',
+function getNodeColor(node: CourseNode): string {
+  return DOMAIN_COLORS[node.domainId ?? 'backend'] ?? '#666'
 }
-const NODE_SIZE = 10
+
+/* ═══ 3D 常量 ═══ */
+const NODE_RADIUS_3D: Record<SkillTier, number> = {
+  foundation: 0.16, junior: 0.19, mid: 0.23, senior: 0.30, job: 0.50,
+}
+const TIER_Y_3D: Record<SkillTier, number> = {
+  foundation: 0, junior: 3.5, mid: 7, senior: 10.5, job: 14,
+}
+const PLATFORM_BASE_W = 6
+const PLATFORM_BASE_D = 3
+const TIER_PLATFORM_SCALE: Record<SkillTier, number> = {
+  job: 1.0, senior: 1.8, mid: 2.6, junior: 3.4, foundation: 4.2,
+}
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+
+function seededRand(seed: number): number {
+  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function compute3DPositions(allNodes: CourseNode[]): Map<string, THREE.Vector3> {
+  const map = new Map<string, THREE.Vector3>()
+  const tierBuckets = new Map<SkillTier, CourseNode[]>()
+  for (const n of allNodes) {
+    const arr = tierBuckets.get(n.tier) ?? []
+    arr.push(n)
+    tierBuckets.set(n.tier, arr)
+  }
+  for (const tier of TIER_ORDER) {
+    const bucket = tierBuckets.get(tier) ?? []
+    const y = TIER_Y_3D[tier]
+    const scale = TIER_PLATFORM_SCALE[tier]
+    const halfW = (PLATFORM_BASE_W * scale) * 0.42
+    const halfD = (PLATFORM_BASE_D * scale) * 0.42
+
+    if (tier === 'job') {
+      bucket.forEach(n => {
+        map.set(n.id, new THREE.Vector3(0, y, 0))
+      })
+      continue
+    }
+
+    const count = bucket.length
+    bucket.forEach((n, i) => {
+      const r = Math.sqrt((i + 0.5) / count)
+      const theta = i * GOLDEN_ANGLE
+      const seed = n.id.split('').reduce((s, c) => s + c.charCodeAt(0), 0)
+      const jx = (seededRand(seed) - 0.5) * 0.25
+      const jz = (seededRand(seed * 2.71) - 0.5) * 0.25
+      const x = r * Math.cos(theta) * halfW + jx
+      const z = r * Math.sin(theta) * halfD + jz
+      map.set(n.id, new THREE.Vector3(x, y, z))
+    })
+  }
+  return map
+}
 
 /* ═══ 成长路径追溯 ═══ */
 function computeGrowthPath(nodeId: string): CourseNode[] {
   const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
+  const node = nodeMap.get(nodeId)
+  if (!node) return []
+
+  // 如果选中了职业节点，路径是所有关联该职业的技能
+  if (node.tier === 'job') {
+    const related = nodes.value.filter(
+      n => n.relatedCareers?.includes(nodeId) || n.id === nodeId,
+    )
+    const tierIdx = (t: SkillTier) => TIER_ORDER.indexOf(t)
+    return related.sort((a, b) => tierIdx(a.tier) - tierIdx(b.tier))
+  }
+
+  // 普通技能节点：BFS 向上追溯
   const pathIds = new Set<string>()
   const path: CourseNode[] = []
 
-  // 向上追溯（source → target 表示 source 支撑 target）
   let upQueue = [nodeId]
   while (upQueue.length > 0) {
     const next: string[] = []
     for (const id of upQueue) {
       if (pathIds.has(id)) continue
       pathIds.add(id)
-      const node = nodeMap.get(id)
-      if (node) path.push(node)
+      const n = nodeMap.get(id)
+      if (n) path.push(n)
       edges.value
         .filter(e => e.source === id && e.isCareerPath)
         .forEach(e => { if (!pathIds.has(e.target)) next.push(e.target) })
@@ -107,7 +202,6 @@ function computeGrowthPath(nodeId: string): CourseNode[] {
     upQueue = next
   }
 
-  // 向下追溯（找前置基础）
   const downPath: CourseNode[] = []
   let downQueue: string[] = []
   edges.value
@@ -119,8 +213,8 @@ function computeGrowthPath(nodeId: string): CourseNode[] {
     for (const id of downQueue) {
       if (pathIds.has(id)) continue
       pathIds.add(id)
-      const node = nodeMap.get(id)
-      if (node) downPath.push(node)
+      const n = nodeMap.get(id)
+      if (n) downPath.push(n)
       edges.value
         .filter(e => e.target === id && e.isCareerPath)
         .forEach(e => { if (!pathIds.has(e.source)) next.push(e.source) })
@@ -129,9 +223,7 @@ function computeGrowthPath(nodeId: string): CourseNode[] {
   }
 
   const tierIdx = (t: SkillTier) => TIER_ORDER.indexOf(t)
-  const allPath = [...downPath, ...path]
-  allPath.sort((a, b) => tierIdx(a.tier) - tierIdx(b.tier))
-  return allPath
+  return [...downPath, ...path].sort((a, b) => tierIdx(a.tier) - tierIdx(b.tier))
 }
 
 /* ═══ 选中节点的计算属性 ═══ */
@@ -141,8 +233,9 @@ const selectedNode = computed(() => {
 })
 
 const growthPath = computed(() => {
-  if (!selectedSkillId.value) return []
-  return computeGrowthPath(selectedSkillId.value)
+  const id = selectedCareerId.value || selectedSkillId.value
+  if (!id) return []
+  return computeGrowthPath(id)
 })
 
 const relatedCourses = computed(() => {
@@ -165,380 +258,420 @@ const groupedCourses = computed(() => {
   return groups
 })
 
-/* ═══ 节点透明度 ═══ */
-function getNodeOpacity(tier: SkillTier, nodeId: string): number {
-  const ht = highlightTier.value
-  const sel = selectedSkillId.value
-
-  if (sel) {
-    const pathIds = new Set(growthPath.value.map(n => n.id))
-    if (nodeId === sel) return 1
-    if (pathIds.has(nodeId)) return 0.9
-    const isNeighbor = edges.value.some(e =>
-      (e.source === sel && e.target === nodeId) || (e.target === sel && e.source === nodeId)
-    )
-    if (isNeighbor) return 0.7
-    return 0.15
-  }
-  if (ht) return ht === tier ? 1 : 0.88
-  return tier === 'job' ? 1 : 0.88
-}
-
-/* ═══ 布局与位置缓存 ═══ */
-let _layouts: ReturnType<typeof compute3DLayouts> | null = null
-let _posMap: Map<string, { x: number; y: number; z: number }> | null = null
-function invalidateLayoutCache() { _layouts = null; _posMap = null }
-function getLayouts() {
-  if (!_layouts) _layouts = compute3DLayouts()
-  return _layouts
-}
-function getPosMap() {
-  const l = getLayouts()
-  if (!_posMap) _posMap = computeNode3DPositions(nodes.value, l)
-  return _posMap
-}
-
-/* ── 3D 贝塞尔曲线 ── */
-function makeCurve3D(
-  sp: { x: number; y: number; z: number },
-  tp: { x: number; y: number; z: number },
-  arcBoost = 1,
-  segments = 16,
-): number[][] {
-  const mx = (sp.x + tp.x) / 2, my = (sp.y + tp.y) / 2, mz = (sp.z + tp.z) / 2
-  const dy = Math.abs(tp.y - sp.y), dx = Math.abs(tp.x - sp.x), dz = Math.abs(tp.z - sp.z)
-  const arcH = Math.max(dy * 0.18, dx * 0.06, dz * 0.08, 5) * arcBoost
-  const cx = mx + (tp.z - sp.z) * 0.08
-  const cy = my + arcH
-  const cz = mz - (tp.x - sp.x) * 0.06
-  const pts: number[][] = []
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments, it = 1 - t
-    pts.push([
-      it * it * sp.x + 2 * it * t * cx + t * t * tp.x,
-      it * it * sp.y + 2 * it * t * cy + t * t * tp.y,
-      it * it * sp.z + 2 * it * t * cz + t * t * tp.z,
-    ])
-  }
-  return pts
-}
-
-/* ── 合并多条曲线为单 series（NaN 分隔） ── */
-function joinCurves(curves: number[][][]): number[][] {
-  const out: number[][] = []
-  curves.forEach((c, i) => { if (i > 0) out.push([NaN, NaN, NaN]); out.push(...c) })
-  return out
-}
-function mkLine3D(data: number[][], style: Record<string, unknown>, zlevel: number) {
-  return { type: 'line3D', coordinateSystem: 'cartesian3D', data, lineStyle: style,
-    symbol: 'none', label: { show: false }, zlevel, silent: true, animation: false }
-}
-
-/* ═══ 构建 ECharts GL option ═══ */
-function buildOption() {
-  const layouts = getLayouts()
-  const posMap = getPosMap()
-  const layoutMap = new Map(layouts.map(l => [l.tier, l]))
-  const ht = highlightTier.value
-  const sel = selectedSkillId.value
-  const labels = showLabels.value
-  const pathNodeIds = sel ? new Set(growthPath.value.map(n => n.id)) : new Set<string>()
-
-  /* ── 平台面（跳过 job 层，岗位节点独立悬浮） ── */
-  const surfaceSeries = layouts
-    .filter(lay => lay.tier !== 'job')
-    .map(lay => ({
-      type: 'surface',
-      coordinateSystem: 'cartesian3D',
-      parametric: true,
-      wireframe: ht === lay.tier
-        ? { show: true, lineStyle: { color: PLATFORM_STROKE[lay.tier], width: 1.5, opacity: 0.85 } }
-        : { show: false },
-      shading: 'lambert',
-      parametricEquation: {
-        u: { min: -lay.xHalf, max: lay.xHalf, step: lay.xHalf },
-        v: { min: -lay.zHalf, max: lay.zHalf, step: lay.zHalf },
-        x: (u: number) => u,
-        y: () => lay.yLevel,
-        z: (_u: number, v: number) => v,
-      },
-      itemStyle: {
-        color: ht === lay.tier
-          ? PLATFORM_FILL[lay.tier].replace(/([\.\d]+)\)$/, (_: string, v: string) => `${Math.min(parseFloat(v) + 0.30, 0.94)}`+ ')')
-          : PLATFORM_FILL[lay.tier],
-        opacity: 0.96,
-      },
-      zlevel: 1,
-      silent: true,
-    }))
-
-  /* ── 层级标签 ── */
-  const labelSeries = {
-    type: 'scatter3D',
-    coordinateSystem: 'cartesian3D',
-    symbolSize: 0,
-    data: layouts.filter(l => l.tier !== 'job').map(lay => ({
-      value: [-(lay.xHalf + 8), lay.yLevel, 0],
-      name: TIER_LABELS[lay.tier],
-      tier: lay.tier,
-    })),
-    label: {
-      show: true,
-      formatter: (p: any) => `{tierTag|${p.data.name as string}}`,
-      position: 'left',
-      rich: {
-        tierTag: {
-          fontSize: 12, fontWeight: 700,
-          color: '#5c1a00',
-          backgroundColor: 'rgba(247,242,232,0.96)',
-          borderColor: 'rgba(139,37,0,0.22)',
-          borderWidth: 1,
-          padding: [5, 10, 5, 10],
-          borderRadius: 2,
-          shadowBlur: 6,
-          shadowColor: 'rgba(26,20,16,0.04)',
-        },
-      },
-    },
-    emphasis: { scale: false },
-    zlevel: 4,
-    silent: true,
-  }
-
-  /* ── 技能节点（扁平色块 + 始终显示标签） ── */
-  const scatterSeries = TIER_ORDER.map(tier => {
-    const tierNodes = nodes.value.filter(n => n.tier === tier)
-    const lay = layoutMap.get(tier)
-    return {
-      type: 'scatter3D',
-      name: `skill-${tier}`,
-      coordinateSystem: 'cartesian3D',
-      data: tierNodes.map(n => {
-        const pos = posMap.get(n.id) ?? { x: 0, y: lay?.yLevel ?? 0, z: 0 }
-        const op = getNodeOpacity(tier, n.id)
-        const isSelected = sel === n.id
-        const isOnPath = pathNodeIds.has(n.id)
-        return {
-          value: [pos.x, pos.y, pos.z],
-          name: n.name,
-          tier,
-          nodeId: n.id,
-          itemStyle: {
-            opacity: op,
-            borderWidth: isSelected ? 2.5 : isOnPath ? 1.5 : 0,
-            borderColor: isSelected ? '#8B2500' : isOnPath ? '#B8860B' : 'transparent',
-          },
-        }
-      }),
-      symbolSize: tier === 'job' ? NODE_SIZE * 1.8 : (ht && ht === tier) ? NODE_SIZE * 1.5 : NODE_SIZE,
-      symbol: 'circle',
-      itemStyle: {
-        color: TIER_COLORS[tier],
-        shadowBlur: tier === 'job' ? 20 : 8,
-        shadowColor: TIER_GLOW[tier],
-        borderWidth: tier === 'job' ? 2 : 0,
-        borderColor: tier === 'job' ? 'rgba(255,210,140,0.85)' : 'transparent',
-      },
-      label: {
-        show: labels || tier === 'job',
-        formatter: (p: any) => tier === 'job' ? `目标职业｜${p.data.name as string}` : (p.data.name as string),
-        position: 'right',
-        distance: tier === 'job' ? 8 : 4,
-        textStyle: {
-          fontSize: tier === 'job' ? 11 : 9,
-          fontWeight: tier === 'job' ? 700 : 500,
-          color: '#5c1a00',
-          backgroundColor: tier === 'job' ? 'rgba(247,242,232,0.96)' : 'rgba(247,242,232,0.82)',
-          padding: tier === 'job' ? [4, 8] : [2, 4],
-          borderColor: tier === 'job' ? 'rgba(139,37,0,0.22)' : 'transparent',
-          borderWidth: tier === 'job' ? 1 : 0,
-          borderRadius: 2,
-        },
-      },
-      emphasis: {
-        label: {
-          show: true,
-          textStyle: {
-            fontSize: tier === 'job' ? 12 : 11, fontWeight: 700, color: '#5c1a00',
-            backgroundColor: 'rgba(247,242,232,0.96)',
-            padding: [3, 6], borderRadius: 2,
-            borderColor: 'rgba(139,37,0,0.18)', borderWidth: 1,
-          },
-        },
-        itemStyle: {
-          opacity: 1,
-          borderColor: 'rgba(92,26,0,0.3)',
-          borderWidth: 1.5,
-          shadowBlur: 12,
-          shadowColor: TIER_GLOW[tier],
-        },
-      },
-      blendMode: 'source-over',
-      zlevel: 3,
-    }
+/* ═══ 关联职业（面板用） ═══ */
+const JOB_NAME_MAP = new Map<string, { name: string; domainId: string }>(
+  CAREER_DOMAINS.flatMap(d =>
+    d.jobs.map((jobName, ji) => [`job-${d.id}-${ji}`, { name: jobName, domainId: d.id }] as const),
+  ),
+)
+const relatedCareers = computed(() => {
+  if (!selectedNode.value) return []
+  const careers = selectedNode.value.relatedCareers ?? []
+  return careers.map(cId => {
+    const info = JOB_NAME_MAP.get(cId)
+    const domainId = info?.domainId ?? cId.split('-').slice(1, -1).join('-')
+    return { id: cId, name: info?.name ?? cId, domainId, color: DOMAIN_COLORS[domainId] ?? '#666' }
   })
+})
 
-  /* ── 边：按类型收集曲线，最后合并为至多 4 个 series ── */
-  const pathCurves: number[][][] = []
-  const relCurves: number[][][] = []
-  const tierCurves: number[][][] = []
+/* ═══ 节点透明度 ═══ */
+function getNodeOpacity(node: CourseNode): number {
+  const ht = highlightTier.value
+  const selCareer = selectedCareerId.value
+  const selSkill = selectedSkillId.value
 
-  if (sel) {
-    edges.value.forEach(e => {
-      if (!e.isCareerPath || !pathNodeIds.has(e.source) || !pathNodeIds.has(e.target)) return
-      const sp = posMap.get(e.source), tp = posMap.get(e.target)
-      if (sp && tp) pathCurves.push(makeCurve3D(sp, tp, 1.28, 22))
+  if (selCareer) {
+    if (node.id === selCareer) return 1
+    if (node.relatedCareers?.includes(selCareer)) return 1
+    return 0.08
+  }
+  if (selSkill) {
+    const pathIds = new Set(growthPath.value.map(n => n.id))
+    if (node.id === selSkill) return 1
+    if (pathIds.has(node.id)) return 0.85
+    const isNeighbor = edges.value.some(e =>
+      (e.source === selSkill && e.target === node.id) || (e.target === selSkill && e.source === node.id)
+    )
+    if (isNeighbor) return 0.65
+    return 0.08
+  }
+  if (ht) return ht === node.tier ? 1 : 0.15
+  return node.tier === 'job' ? 1 : 0.82
+}
+
+/* ═══ 现代纹理背景 ═══ */
+function createModernBgTexture(): THREE.CanvasTexture {
+  const size = 1024
+  const canvas = document.createElement('canvas')
+  canvas.width = size; canvas.height = size
+  const ctx = canvas.getContext('2d')!
+
+  // 1) 较深暖灰→冷蓝渐变底（有明显色差）
+  const grad = ctx.createLinearGradient(0, 0, size, size)
+  grad.addColorStop(0, '#D6D0C8')
+  grad.addColorStop(0.45, '#CDD0D8')
+  grad.addColorStop(1, '#C4CAD6')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, size, size)
+
+  // 2) 左上暖光晕（明显高光区）
+  const r1 = ctx.createRadialGradient(size * 0.25, size * 0.2, 0, size * 0.25, size * 0.2, size * 0.55)
+  r1.addColorStop(0, 'rgba(248,240,225,0.55)')
+  r1.addColorStop(0.6, 'rgba(248,240,225,0.15)')
+  r1.addColorStop(1, 'rgba(248,240,225,0)')
+  ctx.fillStyle = r1
+  ctx.fillRect(0, 0, size, size)
+
+  // 3) 右下冷色晕（形成冷暖对比）
+  const r2 = ctx.createRadialGradient(size * 0.8, size * 0.85, 0, size * 0.8, size * 0.85, size * 0.5)
+  r2.addColorStop(0, 'rgba(170,190,220,0.4)')
+  r2.addColorStop(0.6, 'rgba(170,190,220,0.1)')
+  r2.addColorStop(1, 'rgba(170,190,220,0)')
+  ctx.fillStyle = r2
+  ctx.fillRect(0, 0, size, size)
+
+  // 4) 粗颗粒噪点（纸感）
+  const imgData = ctx.getImageData(0, 0, size, size)
+  const d = imgData.data
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (Math.random() - 0.5) * 36
+    d[i]! += n; d[i + 1]! += n; d[i + 2]! += n
+  }
+  ctx.putImageData(imgData, 0, 0)
+
+  // 5) 网格点阵（明显可见）
+  ctx.fillStyle = 'rgba(150,145,140,0.12)'
+  const step = 20
+  for (let gx = 0; gx < size; gx += step) {
+    for (let gy = 0; gy < size; gy += step) {
+      ctx.beginPath()
+      ctx.arc(gx, gy, 0.8, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  // 6) 几条淡对角装饰线
+  ctx.strokeStyle = 'rgba(160,155,150,0.08)'
+  ctx.lineWidth = 1
+  for (let k = 0; k < 8; k++) {
+    const offset = (k - 4) * size * 0.15
+    ctx.beginPath()
+    ctx.moveTo(offset, 0)
+    ctx.lineTo(size + offset, size)
+    ctx.stroke()
+  }
+
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.RepeatWrapping
+  tex.wrapT = THREE.RepeatWrapping
+  return tex
+}
+
+/* ═══ Three.js 场景初始化 ═══ */
+function initScene() {
+  const container = canvasContainer.value
+  if (!container) return
+  const w = container.clientWidth || 800
+  const h = container.clientHeight || 600
+
+  scene = new THREE.Scene()
+  scene.background = createModernBgTexture()
+
+  camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200)
+  camera.position.set(0, 12, 28)
+  camera.lookAt(0, 7, 0)
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+  renderer.setSize(w, h)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  container.appendChild(renderer.domElement)
+
+  const ambient = new THREE.AmbientLight(0xffffff, 0.7)
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.5)
+  dirLight.position.set(5, 15, 10)
+  scene.add(ambient, dirLight)
+
+  controls = new OrbitControls(camera, renderer.domElement)
+  controls.enableDamping = true
+  controls.dampingFactor = 0.08
+  controls.minDistance = 8
+  controls.maxDistance = 50
+  controls.maxPolarAngle = Math.PI * 0.48
+  controls.target.set(0, 7, 0)
+  controls.update()
+
+  renderer.domElement.addEventListener('click', handleClick)
+  renderer.domElement.addEventListener('mousemove', handleHover)
+  renderer.domElement.addEventListener('dblclick', handleDblClick)
+
+  const loop = () => {
+    animFrameId = requestAnimationFrame(loop)
+    controls?.update()
+    if (renderer && scene && camera) {
+      renderer.render(scene, camera)
+      updateLabels()
+    }
+  }
+  loop()
+}
+
+/* ═══ 构建分层平台 ═══ */
+function buildPlatforms() {
+  if (!scene) return
+  for (const tier of TIER_ORDER) {
+    if (tier === 'job') continue
+    const scale = TIER_PLATFORM_SCALE[tier]
+    const pw = PLATFORM_BASE_W * scale
+    const pd = PLATFORM_BASE_D * scale
+    const geo = new THREE.PlaneGeometry(pw, pd)
+    const color = new THREE.Color(TIER_COLORS[tier])
+    const mat = new THREE.MeshStandardMaterial({
+      color, transparent: true, opacity: 0.45,
+      emissive: color, emissiveIntensity: 0.20,
+      roughness: 0.5, metalness: 0.0, side: THREE.DoubleSide,
     })
-    edges.value.forEach(e => {
-      if ((e.source !== sel && e.target !== sel) || (pathNodeIds.has(e.source) && pathNodeIds.has(e.target))) return
-      const sp = posMap.get(e.source), tp = posMap.get(e.target)
-      if (sp && tp) relCurves.push(makeCurve3D(sp, tp, 0.84, 10))
-    })
-  } else if (ht) {
-    edges.value.forEach(e => {
-      const sn = nodes.value.find(n => n.id === e.source)
-      const tn = nodes.value.find(n => n.id === e.target)
-      if (sn?.tier !== ht && tn?.tier !== ht) return
-      const sp = posMap.get(e.source), tp = posMap.get(e.target)
-      if (sp && tp) tierCurves.push(makeCurve3D(sp, tp, 1.05, 12))
-    })
-  }
-
-  const edgeSeries: any[] = []
-  if (pathCurves.length) {
-    const d = joinCurves(pathCurves)
-    edgeSeries.push(mkLine3D(d, { width: 5.0, color: 'rgba(130,80,10,0.25)', opacity: 0.72 }, 3))
-    edgeSeries.push(mkLine3D(d, { width: 2.6, color: 'rgba(215,152,24,1)', opacity: 1 }, 4))
-  }
-  if (relCurves.length) {
-    edgeSeries.push(mkLine3D(joinCurves(relCurves), { width: 1.2, color: 'rgba(72,118,168,0.78)', opacity: 0.80 }, 3))
-  }
-  if (tierCurves.length) {
-    edgeSeries.push(mkLine3D(joinCurves(tierCurves), { width: 1.6, color: 'rgba(84,150,108,0.88)', opacity: 0.88 }, 3))
-  }
-
-  return {
-    animation: false,
-    backgroundColor: PARCHMENT_BG,
-    tooltip: {
-      show: true,
-      backgroundColor: 'rgba(255,255,255,0.98)',
-      borderColor: 'rgba(0,0,0,0.08)',
-      borderWidth: 1,
-      textStyle: { color: '#111', fontSize: 12 },
-      extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.06);',
-      formatter: (params: any) => {
-        const d = params.data
-        if (!d || !d.name) return ''
-        if (d.tier) {
-          const tier = d.tier as SkillTier
-          return `<span style="color:${TIER_COLORS[tier]};font-weight:600">${d.name}</span>`
-            + `<br/><span style="color:#666;font-size:11px">${TIER_LABELS[tier]}</span>`
-        }
-        return d.name
-      },
-    },
-    grid3D: {
-      boxWidth: 340,
-      boxHeight: 96,
-      boxDepth: 190,
-      show: false,
-      viewControl: {
-        alpha: 90, beta: 0, distance: 240,
-        minDistance: 130, maxDistance: 480,
-        rotateSensitivity: 0, zoomSensitivity: 0.55, panSensitivity: 0,
-        autoRotate: false,
-      },
-      light: {
-        main: { intensity: 0.72, shadow: false, alpha: 36, beta: 118 },
-        ambient: { intensity: 0.58 },
-      },
-      environment: PARCHMENT_BG,
-    },
-    xAxis3D: {
-      type: 'value', min: -190, max: 220,
-      axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisTick: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisLabel: { textStyle: { color: 'rgba(0,0,0,0)' } },
-      splitLine: { lineStyle: { opacity: 0 } }, splitArea: { show: false },
-    },
-    yAxis3D: {
-      type: 'value', min: -5, max: 105,
-      axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisTick: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisLabel: { textStyle: { color: 'rgba(0,0,0,0)' } },
-      splitLine: { lineStyle: { opacity: 0 } }, splitArea: { show: false },
-    },
-    zAxis3D: {
-      type: 'value', min: -95, max: 95,
-      axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisTick: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-      axisLabel: { textStyle: { color: 'rgba(0,0,0,0)' } },
-      splitLine: { lineStyle: { opacity: 0 } }, splitArea: { show: false },
-    },
-    series: [
-      ...surfaceSeries,
-      labelSeries,
-      ...scatterSeries,
-      ...edgeSeries,
-    ] as any[],
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.set(0, TIER_Y_3D[tier] - 0.05, 0)
+    mesh.receiveShadow = true
+    scene.add(mesh)
   }
 }
 
-/* ═══ 图表点击事件 ═══ */
-function handleChartClick(params: any) {
-  const d = params.data
-  if (!d) return
-  if (d.nodeId) {
-    selectedSkillId.value = selectedSkillId.value === d.nodeId ? null : d.nodeId
-    rebuildChart()
+/* ═══ 构建节点 ═══ */
+function buildNodes() {
+  if (!scene) return
+  const posMap = compute3DPositions(nodes.value)
+  const labelContainer = graphContainerEl.value
+  for (const n of nodes.value) {
+    const pos = posMap.get(n.id)
+    if (!pos) continue
+    const r = NODE_RADIUS_3D[n.tier]
+    const color = new THREE.Color(getNodeColor(n))
+    const geo = new THREE.SphereGeometry(r, 16, 12)
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: n.tier === 'job' ? 0.35 : 0.15,
+      roughness: 0.45, metalness: 0.08, transparent: true, opacity: 1,
+    })
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.position.copy(pos)
+    mesh.userData = { node: n }
+    scene.add(mesh)
+    nodeMeshes.set(n.id, mesh)
+
+    if (labelContainer) {
+      const div = document.createElement('div')
+      div.className = 'cs-3d-label'
+      div.textContent = n.name
+      if (n.tier === 'job') div.classList.add('is-job')
+      div.style.color = getNodeColor(n)
+      if (n.tier !== 'job' && !showLabels.value) div.style.display = 'none'
+      labelContainer.appendChild(div)
+      labelDivs.set(n.id, div)
+    }
   }
+  // Store positions for edges
+  posMap3D = posMap
+}
+
+/* ═══ 构建连线（默认隐藏，统一冰蓝光管） ═══ */
+const EDGE_COLOR = 0x38BDF8
+const TUBE_RADIUS = 0.025
+const TUBE_RADIUS_HL = 0.04
+function buildEdges() {
+  if (!scene) return
+  for (const e of edges.value) {
+    const sp = posMap3D.get(e.source)
+    const tp = posMap3D.get(e.target)
+    if (!sp || !tp) continue
+    const mid = new THREE.Vector3(
+      (sp.x + tp.x) / 2,
+      (sp.y + tp.y) / 2 + Math.abs(tp.y - sp.y) * 0.18,
+      (sp.z + tp.z) / 2,
+    )
+    const curve = new THREE.QuadraticBezierCurve3(sp.clone(), mid, tp.clone())
+    const geo = new THREE.TubeGeometry(curve, 12, TUBE_RADIUS, 5, false)
+    const mat = new THREE.MeshStandardMaterial({
+      color: EDGE_COLOR, emissive: EDGE_COLOR, emissiveIntensity: 0.3,
+      transparent: true, opacity: 0.7,
+      roughness: 0.3, metalness: 0.15,
+    })
+    const mesh = new THREE.Mesh(geo, mat)
+    mesh.visible = false
+    scene.add(mesh)
+    edgeMeshes.push({ mesh, edge: e })
+  }
+}
+
+/* ═══ 高亮更新 ═══ */
+function updateHighlight() {
+  const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
+  const selCareer = selectedCareerId.value
+  const selSkill = selectedSkillId.value
+  const ht = highlightTier.value
+  const pathIds = new Set(growthPath.value.map(n => n.id))
+
+  // Update node opacity
+  for (const [id, mesh] of nodeMeshes) {
+    const n = nodeMap.get(id)
+    if (!n) continue
+    const mat = mesh.material as THREE.MeshStandardMaterial
+    const op = getNodeOpacity(n)
+    gsap.to(mat, { opacity: op, duration: 0.3 })
+    const isSelected = id === selCareer || id === selSkill
+    mesh.scale.setScalar(isSelected ? 1.4 : 1)
+  }
+
+  // Update edge visibility & glow — only on node selection, not on tier highlight
+  const hasNodeSel = !!(selCareer || selSkill)
+  for (const { mesh: eMesh, edge: e } of edgeMeshes) {
+    if (!hasNodeSel) {
+      eMesh.visible = false
+      continue
+    }
+    const mat = eMesh.material as THREE.MeshStandardMaterial
+    let show = false
+    let intense = false
+
+    if (selCareer) {
+      const relatedIds = new Set(nodes.value.filter(n => n.relatedCareers?.includes(selCareer)).map(n => n.id))
+      relatedIds.add(selCareer)
+      if (relatedIds.has(e.source) && relatedIds.has(e.target)) {
+        show = true; intense = true
+      }
+    } else if (selSkill) {
+      const onPath = pathIds.has(e.source) && pathIds.has(e.target)
+      const isNeighbor = e.source === selSkill || e.target === selSkill
+      if (onPath) { show = true; intense = true }
+      else if (isNeighbor) { show = true }
+    }
+
+    eMesh.visible = show
+    if (show) {
+      mat.opacity = intense ? 0.9 : 0.5
+      mat.emissiveIntensity = intense ? 0.6 : 0.25
+    }
+  }
+
+  updateLabels()
+}
+
+/* ═══ 标签更新 ═══ */
+function updateLabels() {
+  if (!camera || !renderer) return
+  const w2 = renderer.domElement.clientWidth / 2
+  const h2 = renderer.domElement.clientHeight / 2
+  for (const [id, div] of labelDivs) {
+    const mesh = nodeMeshes.get(id)
+    if (!mesh) { div.style.display = 'none'; continue }
+    const n = mesh.userData.node as CourseNode
+    const show = n.tier === 'job' || showLabels.value
+    div.style.display = show ? '' : 'none'
+    if (!show) continue
+    const v = mesh.position.clone().project(camera)
+    const x = v.x * w2 + w2
+    const y = -(v.y * h2) + h2
+    const r3d = NODE_RADIUS_3D[n.tier] ?? 0.2
+    div.style.transform = `translate(${x + r3d * 30}px, ${y - 6}px)`
+    const op = (mesh.material as THREE.MeshStandardMaterial).opacity
+    div.style.opacity = String(Math.max(op, 0.1))
+  }
+}
+
+/* ═══ 交互：Raycaster ═══ */
+const raycaster = new THREE.Raycaster()
+const mouse = new THREE.Vector2()
+let hoveredMesh: THREE.Mesh | null = null
+
+function handleClick(event: MouseEvent) {
+  if (!camera || !scene) return
+  const rect = (event.target as HTMLElement).getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  raycaster.setFromCamera(mouse, camera)
+  const meshes = Array.from(nodeMeshes.values())
+  const hits = raycaster.intersectObjects(meshes, false)
+  if (hits.length > 0) {
+    const n = hits[0]!.object.userData.node as CourseNode
+    if (n.tier === 'job') {
+      if (selectedCareerId.value === n.id) {
+        selectedCareerId.value = null
+        selectedSkillId.value = null
+      } else {
+        selectedCareerId.value = n.id
+        selectedSkillId.value = n.id
+      }
+    } else {
+      selectedCareerId.value = null
+      selectedSkillId.value = selectedSkillId.value === n.id ? null : n.id
+    }
+    updateHighlight()
+  }
+}
+
+function handleHover(event: MouseEvent) {
+  if (!camera || !scene || !renderer) return
+  const rect = renderer.domElement.getBoundingClientRect()
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+  raycaster.setFromCamera(mouse, camera)
+  const meshes = Array.from(nodeMeshes.values())
+  const hits = raycaster.intersectObjects(meshes, false)
+  const newHover = hits.length > 0 ? (hits[0]!.object as THREE.Mesh) : null
+
+  if (hoveredMesh && hoveredMesh !== newHover) {
+    gsap.to(hoveredMesh.scale, { x: 1, y: 1, z: 1, duration: 0.15 })
+  }
+  if (newHover && newHover !== hoveredMesh) {
+    gsap.to(newHover.scale, { x: 1.35, y: 1.35, z: 1.35, duration: 0.15 })
+  }
+
+  // Tooltip
+  if (newHover) {
+    const n = newHover.userData.node as CourseNode
+    const pos = newHover.position.clone().project(camera)
+    const w2 = renderer.domElement.clientWidth / 2
+    const h2 = renderer.domElement.clientHeight / 2
+    hoverTooltip.value = {
+      name: n.name,
+      tier: TIER_LABELS[n.tier],
+      x: pos.x * w2 + w2,
+      y: -(pos.y * h2) + h2,
+    }
+  } else {
+    hoverTooltip.value = null
+  }
+
+  hoveredMesh = newHover
+  renderer.domElement.style.cursor = newHover ? 'pointer' : ''
+}
+
+function handleDblClick() {
+  selectedSkillId.value = null
+  selectedCareerId.value = null
+  highlightTier.value = null
+  updateHighlight()
 }
 
 function closePanel() {
   selectedSkillId.value = null
-  rebuildChart()
+  selectedCareerId.value = null
+  updateHighlight()
 }
 
-/* ═══ 初始化 & resize ═══ */
-function initChart() {
-  if (!chartEl.value) return
-  chart?.dispose()
-  try {
-    chart = echarts.init(chartEl.value)
-    chart.setOption(buildOption() as any)
-    // 节点点击：取消空白点击计时器，再处理选中
-    chart.on('click', (params: any) => {
-      if (_blankClickTimer !== null) {
-        clearTimeout(_blankClickTimer)
-        _blankClickTimer = null
-      }
-      handleChartClick(params)
-    })
-    // 空白点击：延迟执行，让 chart.on('click') 有机会先取消
-    chart.getZr().on('click', () => {
-      if (_blankClickTimer !== null) clearTimeout(_blankClickTimer)
-      _blankClickTimer = setTimeout(() => {
-        _blankClickTimer = null
-        if (selectedSkillId.value !== null || highlightTier.value !== null) {
-          selectedSkillId.value = null
-          highlightTier.value = null
-          rebuildChart()
-        }
-      }, 120)
-    })
-  } catch (err) {
-    console.error('[CourseSystemGraph] initChart error:', err)
-  }
-}
-
-function resizeChart() {
-  if (!chart) return
-  chart.resize()
-}
-
+/* ═══ resize ═══ */
 useResizeObserver(graphContainerEl, () => {
-  requestAnimationFrame(resizeChart)
+  requestAnimationFrame(() => {
+    const container = canvasContainer.value
+    if (!container || !renderer || !camera) return
+    const w = container.clientWidth
+    const h = container.clientHeight
+    renderer.setSize(w, h)
+    camera.aspect = w / h
+    camera.updateProjectionMatrix()
+  })
 }, { debounceMs: 150 })
 
 /* ═══ GSAP 入场 ═══ */
@@ -546,33 +679,74 @@ const shellRef = ref<HTMLElement>()
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
 function playEntrance() {
-  if (!shellRef.value) return
+  if (!shellRef.value || !camera) return
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const cam = camera
+  const startPos = { x: cam.position.x, y: cam.position.y + 8, z: cam.position.z + 12 }
+  cam.position.set(startPos.x, startPos.y, startPos.z)
   return gsap.context(() => {
+    gsap.to(cam.position, { x: 0, y: 12, z: 28, duration: 1.4, ease: 'power3.out' })
     gsap.from('.cs-header', { y: -28, opacity: 0, duration: 0.5, ease: 'power3.out' })
-    gsap.from('.cs-graph',  { opacity: 0, duration: 0.9, ease: 'power2.out', delay: 0.12 })
     gsap.from('.cs-legend', { y: 16, opacity: 0, duration: 0.5, ease: 'power2.out', delay: 0.55 })
   }, shellRef.value)
 }
 
+/* ═══ 清理 ═══ */
+function disposeScene() {
+  cancelAnimationFrame(animFrameId)
+  renderer?.domElement.removeEventListener('click', handleClick)
+  renderer?.domElement.removeEventListener('mousemove', handleHover)
+  renderer?.domElement.removeEventListener('dblclick', handleDblClick)
+  controls?.dispose()
+  for (const [, mesh] of nodeMeshes) {
+    (mesh.material as THREE.Material).dispose()
+    mesh.geometry.dispose()
+  }
+  nodeMeshes.clear()
+  for (const { mesh } of edgeMeshes) {
+    (mesh.material as THREE.Material).dispose()
+    mesh.geometry.dispose()
+  }
+  edgeMeshes.length = 0
+  for (const [, div] of labelDivs) div.remove()
+  labelDivs.clear()
+  renderer?.dispose()
+  renderer?.domElement.remove()
+  renderer = null; scene = null; camera = null; controls = null
+}
+
 /* ═══ 数据加载 ═══ */
 async function loadData() {
+  disposeScene()
   const data = await getCourseSystemData(roleName.value)
   graphData.value = data
-  nodes.value = data.nodes
-  edges.value = data.edges
+
+  const resolved = resolveJobNode(roleName.value)
+  const matchedJobId = resolved ? `job-${resolved.domainId}-${resolved.jobIndex}` : null
+
+  const filteredNodes = data.nodes.filter(n => {
+    if (n.tier !== 'job') return true
+    return n.id === matchedJobId
+  })
+  const nodeIdSet = new Set(filteredNodes.map(n => n.id))
+  const filteredEdges = data.edges.filter(e => nodeIdSet.has(e.source) && nodeIdSet.has(e.target))
+
+  nodes.value = filteredNodes
+  edges.value = filteredEdges
   courseNodes.value = data.courseNodes
-  invalidateLayoutCache()
   await nextTick()
-  initChart()
+  initScene()
+  buildPlatforms()
+  buildNodes()
+  buildEdges()
+  updateHighlight()
   gsapCtx = playEntrance() ?? null
 }
 
 onMounted(() => loadData())
 onBeforeUnmount(() => {
   gsapCtx?.revert()
-  chart?.dispose()
-  chart = null
+  disposeScene()
 })
 watch(roleName, () => loadData())
 
@@ -598,25 +772,28 @@ const importanceLabels: Record<string, string> = {
         </button>
         <div class="cs-brand">
           <span class="cs-brand__icon">谱</span>
-          <span class="cs-brand__title">职业发展中心 / 课程体系 · {{ roleName }}</span>
+          <span class="cs-brand__title">课程体系图谱 · {{ roleName }}</span>
         </div>
       </div>
       <div class="cs-header__right">
-        <span class="cs-scroll-label">卷1/3</span>
-        <div class="cs-user-info">
-          <div class="cs-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
-          <div class="cs-user-text">
-            <span class="cs-user-name">{{ userStore.currentUser?.name || '张同学' }}</span>
-            <span class="cs-user-role">学生</span>
-          </div>
-        </div>
+        <UserInfoBar />
       </div>
     </header>
 
     <!-- ═══ 主体 ═══ -->
     <div class="cs-body">
       <div ref="graphContainerEl" class="cs-graph">
-        <div ref="chartEl" class="cs-chart"></div>
+        <div ref="canvasContainer" class="cs-canvas-wrap"></div>
+
+        <!-- hover 浮窗 -->
+        <div
+          v-if="hoverTooltip"
+          class="cs-tooltip"
+          :style="{ transform: `translate(${hoverTooltip.x + 14}px, ${hoverTooltip.y - 18}px)` }"
+        >
+          <span class="cs-tooltip__name">{{ hoverTooltip.name }}</span>
+          <span class="cs-tooltip__tier">{{ hoverTooltip.tier }}</span>
+        </div>
 
         <div class="cs-tools">
           <button class="cs-tools__btn" :class="{ 'is-active': showLabels }" @click="toggleLabels">
@@ -647,23 +824,15 @@ const importanceLabels: Record<string, string> = {
           </button>
         </div>
 
-        <!-- 左下角连线说明图例 -->
+        <!-- 左下角领域图例 -->
         <div class="cs-legend">
-          <div class="cs-legend__title">连线说明</div>
+          <div class="cs-legend__title">领域配色</div>
           <div class="cs-legend__lines">
-            <div class="cs-legend__line-item">
-              <span class="cs-legend__line cs-legend__line--path"></span>
-              <span>成长路径：从基础能力到目标职业的主线</span>
+            <div v-for="dom in CAREER_DOMAINS" :key="dom.id" class="cs-legend__line-item">
+              <span class="cs-legend__dot" :style="{ background: DOMAIN_COLORS[dom.id] }"></span>
+              <span>{{ dom.name }}</span>
             </div>
-            <div class="cs-legend__line-item">
-              <span class="cs-legend__line cs-legend__line--related"></span>
-              <span>关联能力：与当前选中节点直接相关</span>
-            </div>
-            <div class="cs-legend__line-item">
-              <span class="cs-legend__line cs-legend__line--tier"></span>
-              <span>层级关系：当前高亮分层中的能力联系</span>
-            </div>
-            <div class="cs-legend__tip">点击最上方岗位节点，可查看完整成长路径。</div>
+            <div class="cs-legend__tip">点击岗位节点，高亮全链路技能。</div>
           </div>
         </div>
 
@@ -685,6 +854,23 @@ const importanceLabels: Record<string, string> = {
             </div>
 
             <div class="cs-panel__scroll">
+              <!-- 关联职业 -->
+              <div v-if="relatedCareers.length > 0 && selectedNode?.tier !== 'job'" class="cs-panel__section">
+                <div class="cs-panel__section-title">
+                  <Icon icon="lucide:briefcase" :width="13" />
+                  <span>关联职业</span>
+                </div>
+                <div class="cs-panel__careers">
+                  <span
+                    v-for="c in relatedCareers"
+                    :key="c.id"
+                    class="cs-panel__career-badge"
+                    :style="{ borderColor: c.color, color: c.color }"
+                    @click="selectedCareerId = c.id; updateHighlight()"
+                  >{{ c.name }}</span>
+                </div>
+              </div>
+
               <!-- 成长路径 -->
               <div v-if="growthPath.length > 1" class="cs-panel__section">
                 <div class="cs-panel__section-title">
@@ -743,7 +929,7 @@ const importanceLabels: Record<string, string> = {
         <!-- 操作提示 -->
         <div class="cs-hint">
           <Icon icon="lucide:mouse-pointer-2" :width="12" />
-          <span>滚轮缩放 · 点击节点查看详情 · 点击顶部岗位节点查看完整成长路径 · 点击图例高亮层级</span>
+          <span>拖拽旋转 · 滚轮缩放 · 右键平移 · 点击节点查看详情 · 点击岗位高亮全链路 · 双击重置</span>
         </div>
       </div>
     </div>
@@ -756,8 +942,8 @@ const importanceLabels: Record<string, string> = {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-100);
-  color: var(--text-100);
+  background: #FAFAF8;
+  color: #222;
   overflow: hidden;
 }
 
@@ -769,9 +955,10 @@ const importanceLabels: Record<string, string> = {
   align-items: center;
   justify-content: space-between;
   padding: 10px 22px;
-  background: var(--card-bg);
-  border-bottom: 2px solid var(--primary-100);
+  background: #fff;
+  border-bottom: 1px solid #e8e6e2;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .cs-header__left { display: flex; align-items: center; gap: 14px; }
 .cs-header__right { display: flex; align-items: center; gap: 16px; }
@@ -779,58 +966,93 @@ const importanceLabels: Record<string, string> = {
 .cs-back {
   display: inline-flex; align-items: center; gap: 5px;
   background: transparent;
-  border: 1px solid var(--bg-300);
-  color: var(--text-200); padding: 5px 12px;
+  border: 1px solid #ddd;
+  color: #555; padding: 5px 12px;
   font-family: inherit; font-size: 13px;
-  cursor: pointer; transition: border-color var(--transition-fast), color var(--transition-fast);
-  border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.15s;
+  border-radius: 6px;
 }
-.cs-back:hover { border-color: var(--primary-100); color: var(--primary-100); }
+.cs-back:hover { border-color: #aaa; color: #222; }
 
 .cs-brand { display: flex; align-items: center; gap: 9px; }
 .cs-brand__icon {
   width: 30px; height: 30px; display: grid; place-items: center;
-  border: 1.5px solid var(--primary-100); color: var(--primary-100);
-  font-size: 14px; font-weight: 600; transform: rotate(-3deg);
+  border: 1.5px solid #C04A2B; color: #C04A2B;
+  font-size: 14px; font-weight: 600; border-radius: 6px;
 }
 .cs-brand__title {
-  font-size: 14px; font-weight: 600; letter-spacing: 0.06em;
-  color: var(--text-100); white-space: nowrap;
+  font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+  color: #222; white-space: nowrap;
 }
 
-.cs-scroll-label {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--primary-100);
-  letter-spacing: 0.08em;
-  font-variant-numeric: tabular-nums;
-}
-
-.cs-user-info { display: flex; align-items: center; gap: 8px; }
-.cs-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: var(--primary-100);
-  color: #fff; display: grid; place-items: center;
-  font-size: 13px; font-weight: 600;
-}
-.cs-user-text { display: flex; flex-direction: column; }
-.cs-user-name { font-size: 13px; font-weight: 600; color: var(--text-100); line-height: 1.2; }
-.cs-user-role { font-size: 11px; color: var(--text-300); }
 
 /* ═══ 图谱主区 ═══ */
 .cs-body {
   flex: 1;
   min-height: 0;
-  background: var(--bg-100);
+  background: #FAFAF8;
 }
 .cs-graph {
   width: 100%; height: 100%;
   position: relative;
-  background: linear-gradient(180deg, #f8f4ec 0%, #f1eadf 100%);
+  background: #FAFAF8;
 }
-.cs-chart {
+.cs-canvas-wrap {
   width: 100%; height: 100%;
-  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+.cs-canvas-wrap canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
+  width: 100% !important;
+  height: 100% !important;
+}
+.cs-3d-label {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 2;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1;
+  text-shadow: 0 0 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.5);
+  transition: opacity 0.2s;
+}
+.cs-3d-label.is-job {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ═══ hover 浮窗 ═══ */
+.cs-tooltip {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #fff;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.cs-tooltip__name {
+  font-weight: 600;
+}
+.cs-tooltip__tier {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  padding-left: 4px;
+  border-left: 1px solid rgba(255,255,255,0.2);
 }
 
 /* ═══ 右上工具栏 ═══ */
@@ -841,23 +1063,13 @@ const importanceLabels: Record<string, string> = {
   gap: 6px;
   pointer-events: auto;
 }
-.cs-tools__btn--learning {
-  background: rgba(139,37,0,0.10);
-  border-color: rgba(139,37,0,0.30);
-  color: #5c1a00;
-  font-weight: 600;
-}
-.cs-tools__btn--learning:hover {
-  background: rgba(139,37,0,0.18);
-  border-color: rgba(139,37,0,0.45);
-}
 .cs-tools__btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px;
-  border: 1px solid rgba(139,37,0,0.16);
-  background: rgba(247,242,232,0.92);
-  color: rgba(92,26,0,0.65);
-  border-radius: var(--radius-sm);
+  border: 1px solid #ddd;
+  background: rgba(255,255,255,0.92);
+  color: #555;
+  border-radius: 6px;
   cursor: pointer;
   font-family: inherit;
   font-size: 11px;
@@ -865,14 +1077,24 @@ const importanceLabels: Record<string, string> = {
   backdrop-filter: blur(8px);
 }
 .cs-tools__btn:hover {
-  color: #5c1a00;
-  border-color: rgba(139,37,0,0.28);
-  background: rgba(247,242,232,0.98);
+  color: #222;
+  border-color: #bbb;
+  background: #fff;
 }
 .cs-tools__btn.is-active {
-  color: #5c1a00;
-  background: rgba(139,37,0,0.08);
-  border-color: rgba(139,37,0,0.22);
+  color: #C04A2B;
+  background: rgba(192,74,43,0.06);
+  border-color: rgba(192,74,43,0.3);
+}
+.cs-tools__btn--learning {
+  background: rgba(192,74,43,0.08);
+  border-color: rgba(192,74,43,0.25);
+  color: #C04A2B;
+  font-weight: 600;
+}
+.cs-tools__btn--learning:hover {
+  background: rgba(192,74,43,0.14);
+  border-color: rgba(192,74,43,0.4);
 }
 
 /* ═══ 左侧书签式分层控件 ═══ */
@@ -898,32 +1120,32 @@ const importanceLabels: Record<string, string> = {
   gap: 7px;
   padding: 8px 14px 8px 12px;
   border: none;
-  border-left: 3.5px solid var(--bm-color, #8B2500);
-  background: rgba(247,242,232,0.88);
-  color: rgba(26,20,16,0.72);
+  border-left: 3px solid var(--bm-color, #C04A2B);
+  background: rgba(255,255,255,0.88);
+  color: #666;
   font-family: inherit;
   font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   border-radius: 0 6px 6px 0;
   backdrop-filter: blur(8px);
-  box-shadow: 2px 2px 8px rgba(26,20,16,0.06);
+  box-shadow: 1px 1px 6px rgba(0,0,0,0.04);
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 .cs-bookmark:hover {
-  background: rgba(247,242,232,0.96);
-  color: rgba(26,20,16,0.92);
+  background: rgba(255,255,255,0.96);
+  color: #333;
   padding-right: 18px;
-  box-shadow: 3px 2px 12px rgba(26,20,16,0.1);
+  box-shadow: 2px 1px 10px rgba(0,0,0,0.06);
 }
 .cs-bookmark.is-active {
-  background: var(--bm-bg, #8B2500);
+  background: var(--bm-bg, #C04A2B);
   color: #fff;
   font-weight: 600;
   padding-right: 20px;
-  box-shadow: 3px 3px 14px rgba(0,0,0,0.10);
+  box-shadow: 2px 2px 12px rgba(0,0,0,0.08);
 }
 .cs-bookmark.is-active .cs-bookmark__dot {
   background: #fff !important;
@@ -939,66 +1161,51 @@ const importanceLabels: Record<string, string> = {
   line-height: 1;
 }
 
-/* ═══ 左下角连线说明图例 ═══ */
+/* ═══ 左下角领域图例 ═══ */
 .cs-legend {
   position: absolute;
   bottom: 20px; left: 20px; z-index: 5;
-  background: rgba(247,242,232,0.92);
-  border: 1px solid rgba(139,37,0,0.16);
-  border-left: 3px solid var(--primary-100);
-  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.92);
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
   padding: 10px 14px;
   pointer-events: auto;
   backdrop-filter: blur(10px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
 }
 .cs-legend__title {
   font-size: 10px; font-weight: 600;
-  color: rgba(92,26,0,0.62); letter-spacing: 0.12em;
+  color: #888; letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 6px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(139,37,0,0.1);
+  border-bottom: 1px solid #eee;
 }
 .cs-legend__lines {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 .cs-legend__line-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: rgba(26,20,16,0.72);
-  line-height: 1.45;
+  color: #555;
+  line-height: 1.4;
 }
-.cs-legend__line {
-  width: 24px;
-  height: 0;
-  margin-top: 7px;
+.cs-legend__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
-  border-top: 2px solid;
-  border-radius: 999px;
-}
-.cs-legend__line--path {
-  border-color: rgba(215,152,24,1);
-  box-shadow: 0 0 7px rgba(215,152,24,0.40);
-  border-width: 2.5px;
-}
-.cs-legend__line--related {
-  border-color: rgba(72,118,168,0.88);
-}
-.cs-legend__line--tier {
-  border-color: rgba(84,150,108,0.90);
 }
 .cs-legend__tip {
   margin-top: 4px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(139,37,0,0.12);
+  border-top: 1px dashed #ddd;
   font-size: 10px;
   line-height: 1.5;
-  color: rgba(92,26,0,0.55);
+  color: #999;
 }
 
 /* ═══ 右侧详情面板 ═══ */
@@ -1008,35 +1215,34 @@ const importanceLabels: Record<string, string> = {
   width: 280px;
   display: flex;
   flex-direction: column;
-  background: rgba(247,242,232,0.96);
-  border: 1px solid rgba(139,37,0,0.18);
-  border-top: 3px solid var(--primary-100);
-  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.96);
+  border: 1px solid #e0ddd8;
+  border-radius: 10px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 10px 32px rgba(26,20,16,0.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
   overflow: hidden;
 }
 .cs-panel__header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 16px 10px;
-  border-bottom: 1px solid rgba(139,37,0,0.1);
+  border-bottom: 1px solid #eee;
   flex-shrink: 0;
 }
 .cs-panel__title {
-  font-size: 15px; font-weight: 600; color: #5c1a00;
+  font-size: 15px; font-weight: 600; color: #222;
   line-height: 1.3;
 }
 .cs-panel__close {
   display: grid; place-items: center;
   width: 24px; height: 24px;
   border: none; background: transparent;
-  color: rgba(92,26,0,0.5); cursor: pointer;
-  border-radius: 3px; transition: all 0.15s;
+  color: #999; cursor: pointer;
+  border-radius: 4px; transition: all 0.15s;
   flex-shrink: 0;
 }
 .cs-panel__close:hover {
-  background: rgba(139,37,0,0.08);
-  color: #5c1a00;
+  background: #f0f0f0;
+  color: #333;
 }
 .cs-panel__meta {
   display: flex; align-items: center; gap: 8px;
@@ -1047,11 +1253,11 @@ const importanceLabels: Record<string, string> = {
   font-size: 11px; font-weight: 600;
   padding: 2px 8px;
   border: 1.5px solid;
-  border-radius: 3px;
-  background: rgba(139,37,0,0.04);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.02);
 }
 .cs-panel__heat {
-  font-size: 11px; color: var(--text-300);
+  font-size: 11px; color: #999;
 }
 .cs-panel__scroll {
   flex: 1;
@@ -1067,11 +1273,28 @@ const importanceLabels: Record<string, string> = {
 .cs-panel__section-title {
   display: flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 600;
-  color: rgba(92,26,0,0.65);
-  letter-spacing: 0.08em;
+  color: #888;
+  letter-spacing: 0.06em;
   margin-bottom: 10px;
   padding-bottom: 5px;
-  border-bottom: 1px solid rgba(139,37,0,0.08);
+  border-bottom: 1px solid #eee;
+}
+
+/* ── 关联职业 ── */
+.cs-panel__careers {
+  display: flex; flex-wrap: wrap; gap: 5px;
+}
+.cs-panel__career-badge {
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: rgba(0,0,0,0.01);
+}
+.cs-panel__career-badge:hover {
+  background: rgba(0,0,0,0.04);
 }
 
 /* ── 成长路径 ── */
@@ -1084,17 +1307,17 @@ const importanceLabels: Record<string, string> = {
   padding: 5px 4px 5px 16px;
   font-size: 12px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: background 0.15s;
 }
 .cs-panel__path-step:hover {
-  background: rgba(139,37,0,0.05);
+  background: rgba(0,0,0,0.03);
 }
 .cs-panel__path-step.is-current {
   font-weight: 600;
 }
 .cs-panel__path-step.is-current .cs-panel__path-name {
-  color: #5c1a00;
+  color: #222;
 }
 .cs-panel__path-dot {
   position: absolute;
@@ -1106,13 +1329,13 @@ const importanceLabels: Record<string, string> = {
   z-index: 1;
 }
 .cs-panel__path-name {
-  color: var(--text-200);
+  color: #555;
   flex: 1;
   min-width: 0;
 }
 .cs-panel__path-tier {
   font-size: 10px;
-  color: var(--text-300);
+  color: #999;
   flex-shrink: 0;
 }
 .cs-panel__path-line {
@@ -1121,36 +1344,36 @@ const importanceLabels: Record<string, string> = {
   top: calc(50% + 4px);
   width: 1px;
   height: calc(100% - 4px);
-  background: rgba(139,37,0,0.15);
+  background: #ddd;
 }
 
 /* ── 课程 ── */
 .cs-panel__course-group {
   display: flex; align-items: center; gap: 6px;
   font-size: 10px; font-weight: 600;
-  color: rgba(92,26,0,0.55);
-  letter-spacing: 0.06em;
+  color: #888;
+  letter-spacing: 0.04em;
   margin: 10px 0 4px;
 }
 .cs-panel__course-group:first-child {
   margin-top: 0;
 }
 .cs-panel__course-group-dot {
-  width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0;
+  width: 6px; height: 6px; border-radius: 2px; flex-shrink: 0;
 }
 .cs-panel__course-card {
   padding: 6px 8px;
   margin-bottom: 4px;
-  background: rgba(139,37,0,0.03);
-  border: 1px solid rgba(139,37,0,0.08);
-  border-radius: 3px;
+  background: rgba(0,0,0,0.015);
+  border: 1px solid #eee;
+  border-radius: 4px;
   transition: border-color 0.15s;
 }
 .cs-panel__course-card:hover {
-  border-color: rgba(139,37,0,0.18);
+  border-color: #ccc;
 }
 .cs-panel__course-name {
-  font-size: 12px; font-weight: 600; color: var(--text-100);
+  font-size: 12px; font-weight: 600; color: #222;
   margin-bottom: 3px;
 }
 .cs-panel__course-tags {
@@ -1159,15 +1382,15 @@ const importanceLabels: Record<string, string> = {
 .cs-panel__tag {
   font-size: 10px;
   padding: 1px 5px;
-  border-radius: 2px;
-  border: 1px solid rgba(139,37,0,0.12);
-  color: var(--text-300);
-  background: rgba(247,242,232,0.8);
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  color: #888;
+  background: #f9f9f7;
 }
 .cs-panel__tag--core {
-  border-color: rgba(139,37,0,0.25);
-  color: #8B2500;
-  background: rgba(139,37,0,0.06);
+  border-color: rgba(192,74,43,0.3);
+  color: #C04A2B;
+  background: rgba(192,74,43,0.05);
 }
 .cs-panel__tag--recommended {
   border-color: rgba(184,134,11,0.25);
@@ -1179,7 +1402,7 @@ const importanceLabels: Record<string, string> = {
 }
 .cs-panel__empty {
   display: flex; align-items: center; gap: 6px;
-  font-size: 12px; color: rgba(92,26,0,0.4);
+  font-size: 12px; color: #bbb;
   font-style: italic;
   padding: 8px 0;
 }
@@ -1205,12 +1428,12 @@ const importanceLabels: Record<string, string> = {
   position: absolute;
   bottom: 20px; right: 20px; z-index: 5;
   display: flex; align-items: center; gap: 5px;
-  font-size: 11px; color: rgba(92,26,0,0.48);
+  font-size: 11px; color: #999;
   pointer-events: none;
-  background: rgba(247,242,232,0.68);
-  border: 1px solid rgba(139,37,0,0.1);
+  background: rgba(255,255,255,0.72);
+  border: 1px solid #e8e6e2;
   padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
 }
 
 /* ═══ 响应式 ═══ */
@@ -1232,13 +1455,12 @@ const importanceLabels: Record<string, string> = {
   .cs-header { padding: 8px 12px; }
   .cs-back span { display: none; }
   .cs-brand__title { font-size: 12px; }
-  .cs-scroll-label { display: none; }
-  .cs-user-text { display: none; }
+  .uib__text { display: none; }
   .cs-legend { display: none; }
   .cs-panel {
     top: auto; bottom: 0; left: 0; right: 0;
     width: 100%; height: 50%;
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border-radius: 10px 10px 0 0;
   }
   .panel-slide-enter-from { transform: translateY(100%); }
   .panel-slide-leave-to { transform: translateY(100%); }

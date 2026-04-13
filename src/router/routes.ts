@@ -32,57 +32,6 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '技能提升', requiresAuth: true, roles: [UserRole.STUDENT] },
       },
       {
-        path: 'student/course/:id',
-        name: 'student-course-detail',
-        component: () => import('@/views/student/CourseWorkspace.vue'),
-        meta: { title: '课程工作台', requiresAuth: true, roles: [UserRole.STUDENT] },
-        redirect: { name: 'student-course-tasks' },
-        children: [
-          {
-            path: 'tasks',
-            name: 'student-course-tasks',
-            component: () => import('@/views/student/CourseTasks.vue'),
-            meta: { title: '课程任务', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'chapters',
-            name: 'student-course-chapters',
-            component: () => import('@/views/student/CourseChapters.vue'),
-            meta: { title: '课程章节', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'homework',
-            name: 'student-course-homework',
-            component: () => import('@/views/student/CourseHomework.vue'),
-            meta: { title: '课程作业', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'exam',
-            name: 'student-course-exam',
-            component: () => import('@/views/student/CourseExam.vue'),
-            meta: { title: '课程考试', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'resources',
-            name: 'student-course-resources',
-            component: () => import('@/views/student/CourseResources.vue'),
-            meta: { title: '课程资料', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'wrongbook',
-            name: 'student-course-wrongbook',
-            component: () => import('@/views/student/CourseWrongbook.vue'),
-            meta: { title: '课程错题集', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-          {
-            path: 'review',
-            name: 'student-course-review',
-            component: () => import('@/views/student/CourseReview.vue'),
-            meta: { title: '课程回顾', requiresAuth: true, roles: [UserRole.STUDENT] },
-          },
-        ],
-      },
-      {
         path: 'student/ai-assistant',
         name: 'student-ai-assistant',
         component: () => import('@/views/student/AIAssistant.vue'),

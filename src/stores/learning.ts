@@ -9,6 +9,7 @@ import {
   mockQuestions,
   mockAIMessages,
   mockAIResponses,
+  mockThinkingTemplates,
   mockSavedJobs,
   CURRENT_USER_ID,
 } from '@/mock/data'
@@ -432,32 +433,22 @@ export const useLearningStore = defineStore(
       return newMessage
     }
 
-    function getAIResponse(input: string): string {
-      // 模拟AI回复逻辑
+    function getAIResponseCategory(input: string): string {
       const lowerInput = input.toLowerCase()
+      if (lowerInput.includes('解题') || lowerInput.includes('怎么做') || lowerInput.includes('答案')) return '解题指导'
+      if (lowerInput.includes('薄弱') || lowerInput.includes('不足') || lowerInput.includes('差距') || lowerInput.includes('补齐') || lowerInput.includes('技能') || lowerInput.includes('方向')) return '能力补齐'
+      if (lowerInput.includes('建议') || lowerInput.includes('怎么学') || lowerInput.includes('提高') || lowerInput.includes('推荐') || lowerInput.includes('项目') || lowerInput.includes('准备')) return '学习建议'
+      if (lowerInput.includes('答疑') || lowerInput.includes('问题') || lowerInput.includes('课程') || lowerInput.includes('重点') || lowerInput.includes('梳理') || lowerInput.includes('概念')) return '课程答疑'
+      return '默认'
+    }
 
-      if (lowerInput.includes('解题') || lowerInput.includes('怎么做') || lowerInput.includes('答案')) {
-        const responses = mockAIResponses['解题指导']
-        return responses[Math.floor(Math.random() * responses.length)]
-      }
-
-      if (lowerInput.includes('薄弱') || lowerInput.includes('不足') || lowerInput.includes('差距') || lowerInput.includes('补齐') || lowerInput.includes('技能') || lowerInput.includes('方向')) {
-        const responses = mockAIResponses['能力补齐']
-        return responses[Math.floor(Math.random() * responses.length)]
-      }
-
-      if (lowerInput.includes('建议') || lowerInput.includes('怎么学') || lowerInput.includes('提高') || lowerInput.includes('推荐') || lowerInput.includes('项目') || lowerInput.includes('准备')) {
-        const responses = mockAIResponses['学习建议']
-        return responses[Math.floor(Math.random() * responses.length)]
-      }
-
-      if (lowerInput.includes('答疑') || lowerInput.includes('问题') || lowerInput.includes('课程') || lowerInput.includes('重点') || lowerInput.includes('梳理') || lowerInput.includes('概念')) {
-        const responses = mockAIResponses['课程答疑']
-        return responses[Math.floor(Math.random() * responses.length)]
-      }
-
-      // 默认回复
-      return '我已经收到你的问题。你可以继续围绕课程重点、解题思路、技能补齐顺序或目标方向的准备策略展开，我会按学习场景给你整理建议。'
+    function getAIResponse(input: string): { content: string; thinking: string[]; category: string } {
+      const category = getAIResponseCategory(input)
+      const responses = mockAIResponses[category] || mockAIResponses['默认']
+      const content = responses[Math.floor(Math.random() * responses.length)]
+      const thinkingPool = mockThinkingTemplates[category] || mockThinkingTemplates['默认']
+      const thinking = thinkingPool[Math.floor(Math.random() * thinkingPool.length)]
+      return { content, thinking, category }
     }
 
     function clearAIMessages(): void {

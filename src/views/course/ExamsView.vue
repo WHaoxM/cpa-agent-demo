@@ -1,11 +1,9 @@
 ﻿<!-- 页面：技能自评；路由：exams（exams）；角色：STUDENT -->
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import gsap from 'gsap'
 import { roleOptions, type CareerRole } from '@/composables/useCareerInsights'
-import D3CareerTree from '@/components/charts/D3CareerTree.vue'
 
 const router = useRouter()
 
@@ -131,7 +129,228 @@ const roleSkillDefs: Record<CareerRole, { id: string; name: string; required: nu
   ],
 }
 
-const currentSkills = computed(() => roleSkillDefs[selectedRole.value] ?? [])
+/* ─── 15 赛道专属题库 ─── */
+const trackSkillDefs: Record<string, { id: string; name: string; required: number }[]> = {
+  /* ── 前端开发 ── */
+  'Vue 前端工程师': [
+    { id: 'vue-composition', name: 'Composition API (ref / reactive / computed)', required: 94 },
+    { id: 'vue-router', name: 'Vue Router 路由守卫与动态路由', required: 90 },
+    { id: 'vue-pinia', name: 'Pinia 状态管理与持久化', required: 88 },
+    { id: 'vue-ts', name: 'TypeScript 在 Vue 中的类型标注', required: 86 },
+    { id: 'vue-component', name: '组件设计 (props / emit / provide-inject / slots)', required: 92 },
+    { id: 'vue-elementplus', name: 'Element Plus / Ant Design Vue 组件库使用', required: 80 },
+    { id: 'vue-vite', name: 'Vite 构建配置与插件开发', required: 76 },
+    { id: 'vue-css', name: 'CSS 预处理器与响应式布局 (Sass / Tailwind)', required: 82 },
+    { id: 'vue-test', name: '前端单元测试 (Vitest / Vue Test Utils)', required: 70 },
+    { id: 'vue-axios', name: 'HTTP 请求封装 (Axios 拦截器 / 错误处理)', required: 84 },
+    { id: 'vue-perf', name: '前端性能优化 (懒加载 / 虚拟列表 / Tree-shaking)', required: 78 },
+    { id: 'vue-git', name: 'Git 工作流与代码审查', required: 74 },
+  ],
+  'React 前端工程师': [
+    { id: 'react-hooks', name: 'React Hooks (useState / useEffect / useRef / useMemo)', required: 94 },
+    { id: 'react-router', name: 'React Router v6 路由与嵌套布局', required: 88 },
+    { id: 'react-state', name: 'Redux Toolkit / Zustand 状态管理', required: 86 },
+    { id: 'react-ts', name: 'TypeScript 与 React 组件类型', required: 88 },
+    { id: 'react-ui', name: 'Ant Design / MUI 组件库使用', required: 80 },
+    { id: 'react-nextjs', name: 'Next.js SSR / SSG / App Router', required: 82 },
+    { id: 'react-css', name: 'CSS-in-JS / Tailwind CSS / CSS Modules', required: 78 },
+    { id: 'react-test', name: 'Jest / React Testing Library 单元测试', required: 72 },
+    { id: 'react-perf', name: '性能优化 (React.memo / useMemo / 代码分割)', required: 80 },
+    { id: 'react-build', name: 'Webpack / Vite 打包配置与优化', required: 74 },
+    { id: 'react-error', name: '错误边界与 Suspense 异步渲染', required: 70 },
+    { id: 'react-git', name: 'Git 分支管理与 CI/CD', required: 74 },
+  ],
+  '可视化工程师': [
+    { id: 'viz-echarts', name: 'ECharts 配置项与自定义主题', required: 92 },
+    { id: 'viz-d3bindbindl', name: 'D3.js 数据绑定与 SVG 布局', required: 88 },
+    { id: 'viz-bindcanvas', name: 'Canvas 2D 渲染与高性能绑图', required: 82 },
+    { id: 'viz-bindgeo', name: '地图可视化 (GeoJSON / Mapbox / Leaflet)', required: 80 },
+    { id: 'viz-bindscreen', name: '大屏适配方案 (rem / scale / vw)', required: 78 },
+    { id: 'viz-bindanim', name: '数据动画与过渡 (GSAP / requestAnimationFrame)', required: 76 },
+    { id: 'viz-bindthree', name: 'Three.js 基础 3D 场景搭建', required: 72 },
+    { id: 'viz-bindinteract', name: '交互设计 (Tooltip / 联动 / 下钻)', required: 86 },
+    { id: 'viz-bindclean', name: '数据清洗与格式转换 (JSON / CSV / 聚合)', required: 80 },
+    { id: 'viz-bindperf', name: '渲染性能优化 (虚拟滚动 / WebWorker / LOD)', required: 74 },
+    { id: 'viz-bindcolor', name: '色彩理论与无障碍配色', required: 70 },
+    { id: 'viz-bindts', name: 'TypeScript 类型安全与图表组件封装', required: 76 },
+  ],
+  /* ── 后端开发 ── */
+  'Java 后端工程师': [
+    { id: 'java-spring', name: 'Spring Boot 核心注解与自动配置', required: 94 },
+    { id: 'java-mvc', name: 'Spring MVC RESTful API 设计', required: 90 },
+    { id: 'java-orm', name: 'MyBatis / JPA ORM 映射与事务管理', required: 88 },
+    { id: 'java-mysql', name: 'MySQL 索引设计与 SQL 调优', required: 90 },
+    { id: 'java-redis', name: 'Redis 缓存策略 (穿透 / 雪崩 / 击穿)', required: 82 },
+    { id: 'java-mq', name: 'RabbitMQ / Kafka 消息队列', required: 78 },
+    { id: 'java-docker', name: 'Docker 容器化与镜像构建', required: 72 },
+    { id: 'java-security', name: 'Spring Security / JWT 认证授权', required: 80 },
+    { id: 'java-test', name: '单元测试 (JUnit 5 / Mockito)', required: 74 },
+    { id: 'java-git', name: 'Git 分支管理与 CI/CD 流水线', required: 76 },
+    { id: 'java-jvm', name: 'JVM 调优与 GC 机制 (G1 / ZGC)', required: 78 },
+    { id: 'java-micro', name: '微服务拆分与 Nacos / Spring Cloud 注册发现', required: 76 },
+  ],
+  'Go 后端工程师': [
+    { id: 'go-goroutine', name: 'Goroutine 与 Channel 并发编程', required: 94 },
+    { id: 'go-gin', name: 'Gin / Echo HTTP 框架与中间件', required: 90 },
+    { id: 'go-gorm', name: 'GORM ORM 与数据库交互', required: 86 },
+    { id: 'go-grpc', name: 'gRPC 与 Protobuf 序列化', required: 84 },
+    { id: 'go-mysql', name: 'MySQL / PostgreSQL 查询优化与连接池', required: 88 },
+    { id: 'go-redis', name: 'Redis 分布式锁与缓存设计', required: 80 },
+    { id: 'go-docker', name: 'Docker / K8s 容器化部署', required: 76 },
+    { id: 'go-test', name: '单元测试与 Benchmark 性能基准', required: 78 },
+    { id: 'go-trace', name: '日志收集与链路追踪 (Jaeger / OpenTelemetry)', required: 72 },
+    { id: 'go-micro', name: '微服务治理 (Consul / etcd / 服务网格)', required: 78 },
+    { id: 'go-pprof', name: '性能分析 (pprof / trace / 内存逃逸)', required: 74 },
+    { id: 'go-git', name: 'Git 与 Makefile 工程化', required: 72 },
+  ],
+  'Python 后端工程师': [
+    { id: 'py-django', name: 'Django ORM / Admin 与 MTV 架构', required: 90 },
+    { id: 'py-fastapi', name: 'Flask / FastAPI 路由与中间件', required: 88 },
+    { id: 'py-sqlalchemy', name: 'SQLAlchemy 数据建模与迁移 (Alembic)', required: 84 },
+    { id: 'py-celery', name: 'Celery 异步任务队列与定时调度', required: 80 },
+    { id: 'py-redis', name: 'Redis 缓存与会话管理', required: 78 },
+    { id: 'py-docker', name: 'Docker 部署与 Gunicorn / Uvicorn', required: 76 },
+    { id: 'py-api', name: 'RESTful API 设计 (DRF / Pydantic 校验)', required: 88 },
+    { id: 'py-test', name: '单元测试 (pytest / mock / fixture)', required: 76 },
+    { id: 'py-log', name: '日志与异常处理 (logging / Sentry)', required: 72 },
+    { id: 'py-git', name: 'Git 与 CI/CD (GitHub Actions / GitLab CI)', required: 74 },
+    { id: 'py-async', name: 'Python 异步编程 (asyncio / aiohttp)', required: 78 },
+    { id: 'py-mysql', name: 'MySQL / PostgreSQL 数据库设计', required: 86 },
+  ],
+  /* ── 测试开发 ── */
+  '自动化测试工程师': [
+    { id: 'at-selenium', name: 'Selenium WebDriver 元素定位与操作', required: 88 },
+    { id: 'at-playwright', name: 'Playwright 浏览器自动化与录制', required: 86 },
+    { id: 'at-pytest', name: 'Python unittest / pytest 框架', required: 90 },
+    { id: 'at-api', name: '接口测试 (Requests / HTTPx / Postman)', required: 88 },
+    { id: 'at-design', name: '测试用例设计 (等价类 / 边界值 / 正交)', required: 92 },
+    { id: 'at-ddt', name: '数据驱动与参数化测试 (DDT / fixture)', required: 82 },
+    { id: 'at-pom', name: 'POM 页面对象模式与框架分层', required: 84 },
+    { id: 'at-mock', name: 'Mock 与桩服务 (WireMock / mitmproxy)', required: 76 },
+    { id: 'at-ci', name: 'Jenkins 持续集成与触发策略', required: 78 },
+    { id: 'at-report', name: 'Allure 测试报告与缺陷追踪', required: 80 },
+    { id: 'at-sql', name: 'SQL 测试数据构造与校验', required: 74 },
+    { id: 'at-git', name: 'Git 版本管理与分支策略', required: 72 },
+  ],
+  '质量平台工程师': [
+    { id: 'qp-cicd', name: 'CI/CD 流水线搭建 (Jenkins / GitLab CI)', required: 92 },
+    { id: 'qp-gate', name: '质量门禁规则设计与自动化执行', required: 90 },
+    { id: 'qp-sonar', name: '代码静态分析 (SonarQube / ESLint)', required: 86 },
+    { id: 'qp-jira', name: '缺陷管理与分析 (Jira / Tapd 流程)', required: 84 },
+    { id: 'qp-coverage', name: '自动化覆盖率度量与趋势分析', required: 82 },
+    { id: 'qp-env', name: '测试环境管理与隔离策略', required: 80 },
+    { id: 'qp-docker', name: 'Docker / K8s 测试环境编排', required: 78 },
+    { id: 'qp-monitor', name: '监控告警接入 (Prometheus / Grafana)', required: 76 },
+    { id: 'qp-factory', name: '测试数据工厂与造数平台', required: 74 },
+    { id: 'qp-contract', name: 'API 契约测试 (Pact / Swagger)', required: 72 },
+    { id: 'qp-report', name: '质量报表与看板可视化', required: 78 },
+  ],
+  '性能测试工程师': [
+    { id: 'pt-jmeter', name: 'JMeter 脚本编写与场景设计', required: 92 },
+    { id: 'pt-locust', name: 'Locust / Gatling 负载测试', required: 84 },
+    { id: 'pt-metric', name: '性能指标定义 (TPS / RT / P99 / 错误率)', required: 90 },
+    { id: 'pt-server', name: '服务端性能瓶颈定位 (CPU / 内存 / IO)', required: 88 },
+    { id: 'pt-sql', name: '数据库慢查询分析与索引优化', required: 86 },
+    { id: 'pt-jvm', name: 'JVM / GC 调优与线程分析', required: 80 },
+    { id: 'pt-network', name: '网络抓包与分析 (Wireshark / tcpdump)', required: 76 },
+    { id: 'pt-frontend', name: '前端性能诊断 (Lighthouse / WebVitals)', required: 74 },
+    { id: 'pt-report', name: '压测报告撰写与数据分析', required: 82 },
+    { id: 'pt-capacity', name: '容量规划与基线管理', required: 78 },
+    { id: 'pt-apm', name: 'APM 工具 (SkyWalking / Pinpoint / Arthas)', required: 80 },
+  ],
+  /* ── 数据分析 ── */
+  '商业数据分析师': [
+    { id: 'ba-metric', name: '指标体系搭建 (北极星 / AARRR 模型)', required: 92 },
+    { id: 'ba-sql', name: 'SQL 多表查询与窗口函数', required: 90 },
+    { id: 'ba-excel', name: 'Excel 数据透视表与高级函数 (VLOOKUP / INDEX)', required: 82 },
+    { id: 'ba-tableau', name: 'Tableau / Power BI 仪表盘搭建', required: 84 },
+    { id: 'ba-pandas', name: 'Python Pandas 数据清洗与处理', required: 80 },
+    { id: 'ba-stats', name: '统计学假设检验 (t 检验 / 卡方检验)', required: 78 },
+    { id: 'ba-ab', name: 'A/B 测试设计与效果评估', required: 80 },
+    { id: 'ba-rfm', name: '用户分群与 RFM 模型', required: 76 },
+    { id: 'ba-funnel', name: '漏斗分析与转化归因', required: 84 },
+    { id: 'ba-story', name: '数据故事化汇报与 PPT 呈现', required: 74 },
+    { id: 'ba-biz', name: '业务需求拆解与分析框架', required: 86 },
+    { id: 'ba-cohort', name: '留存分析与 Cohort 分群', required: 78 },
+  ],
+  '数据开发工程师': [
+    { id: 'de-hive', name: 'Hive / Spark SQL 离线计算', required: 92 },
+    { id: 'de-etl', name: 'ETL 流程设计与调度 (Airflow / DolphinScheduler)', required: 90 },
+    { id: 'de-model', name: '数仓分层建模 (ODS / DWD / DWS / ADS)', required: 90 },
+    { id: 'de-kafka', name: 'Kafka 实时数据接入与 Flink 消费', required: 82 },
+    { id: 'de-quality', name: '数据质量监控与校验规则', required: 80 },
+    { id: 'de-mysql', name: 'MySQL 索引优化与分库分表', required: 84 },
+    { id: 'de-python', name: 'Python 数据处理脚本', required: 78 },
+    { id: 'de-shell', name: 'Shell 脚本与 Crontab 定时任务', required: 74 },
+    { id: 'de-lineage', name: '数据血缘与元数据管理 (Atlas / DataHub)', required: 76 },
+    { id: 'de-olap', name: 'OLAP 引擎 (ClickHouse / Doris / StarRocks)', required: 80 },
+    { id: 'de-git', name: 'Git 与 DataOps 工程规范', required: 72 },
+    { id: 'de-dim', name: '维度建模与缓慢变化维', required: 82 },
+  ],
+  '增长分析师': [
+    { id: 'ga-ab', name: 'A/B 测试平台与统计显著性判断', required: 92 },
+    { id: 'ga-funnel', name: '转化漏斗深度分析与瓶颈诊断', required: 90 },
+    { id: 'ga-cohort', name: '用户分层与 Cohort 留存分析', required: 88 },
+    { id: 'ga-attr', name: '归因模型 (首次 / 末次 / 线性 / 时间衰减)', required: 82 },
+    { id: 'ga-channel', name: 'Push / 邮件 / 短信渠道效果分析', required: 78 },
+    { id: 'ga-sql', name: 'SQL 行为日志查询与特征提取', required: 86 },
+    { id: 'ga-python', name: 'Python 自动化分析脚本 (Pandas / Jupyter)', required: 80 },
+    { id: 'ga-experiment', name: '增长实验设计与优先级排序 (ICE / RICE)', required: 84 },
+    { id: 'ga-compete', name: '竞品数据监控与行业对标', required: 74 },
+    { id: 'ga-track', name: '数据埋点方案设计与校验', required: 86 },
+    { id: 'ga-viz', name: '汇报可视化 (Tableau / Superset / Metabase)', required: 76 },
+    { id: 'ga-lifecycle', name: '用户生命周期管理与召回策略', required: 80 },
+  ],
+  /* ── 机器学习工程师 ── */
+  '算法工程师': [
+    { id: 'ml-supervised', name: '监督学习 (回归 / 分类 / 集成方法)', required: 92 },
+    { id: 'ml-feature', name: '特征工程 (编码 / 选择 / 降维 / 交叉)', required: 90 },
+    { id: 'ml-eval', name: '模型评估 (AUC / F1 / 交叉验证 / 过拟合)', required: 90 },
+    { id: 'ml-xgb', name: 'XGBoost / LightGBM 调参与实战', required: 88 },
+    { id: 'ml-sklearn', name: 'Python Scikit-learn 建模流程', required: 86 },
+    { id: 'ml-math', name: '数学基础 (线性代数 / 概率论 / 最优化)', required: 88 },
+    { id: 'ml-preprocess', name: '数据预处理与不平衡样本处理 (SMOTE)', required: 82 },
+    { id: 'ml-online', name: 'A/B 测试与线上模型评估', required: 78 },
+    { id: 'ml-explain', name: '模型可解释性 (SHAP / LIME / 特征重要度)', required: 76 },
+    { id: 'ml-sql', name: 'SQL 特征提取与数据采样', required: 80 },
+    { id: 'ml-spark', name: 'Spark MLlib 分布式训练', required: 74 },
+    { id: 'ml-unsupervised', name: '无监督学习 (聚类 / 降维 / 异常检测)', required: 80 },
+  ],
+  '深度学习工程师': [
+    { id: 'dl-pytorch', name: 'PyTorch 张量操作与自动求导', required: 94 },
+    { id: 'dl-arch', name: 'CNN / RNN / Transformer 架构原理', required: 92 },
+    { id: 'dl-train', name: '模型训练 (损失函数 / 优化器 / 学习率调度)', required: 90 },
+    { id: 'dl-augment', name: '数据增强与预处理 Pipeline', required: 82 },
+    { id: 'dl-transfer', name: '迁移学习与预训练模型微调', required: 86 },
+    { id: 'dl-nlp', name: 'NLP (Tokenizer / BERT / GPT / Embedding)', required: 84 },
+    { id: 'dl-cv', name: 'CV (目标检测 / 语义分割 / YOLO / ResNet)', required: 84 },
+    { id: 'dl-compress', name: '模型量化与剪枝 (INT8 / 蒸馏)', required: 76 },
+    { id: 'dl-dist', name: '分布式训练 (DDP / DeepSpeed / FSDP)', required: 78 },
+    { id: 'dl-board', name: 'TensorBoard / Weights & Biases 实验可视化', required: 80 },
+    { id: 'dl-paper', name: '论文复现与开源模型适配', required: 74 },
+    { id: 'dl-gpu', name: 'GPU 资源管理与 CUDA 基础', required: 72 },
+  ],
+  'AI 应用工程师': [
+    { id: 'ai-deploy', name: '模型部署 (TorchServe / Triton / ONNX Runtime)', required: 92 },
+    { id: 'ai-docker', name: 'Docker / K8s 模型服务化', required: 88 },
+    { id: 'ai-api', name: 'API 设计与流量控制 (FastAPI / 限流 / 熔断)', required: 86 },
+    { id: 'ai-monitor', name: '模型监控与数据漂移检测', required: 82 },
+    { id: 'ai-mlops', name: 'MLOps 流水线 (MLflow / Kubeflow / Airflow)', required: 84 },
+    { id: 'ai-label', name: '数据标注平台搭建与质量管控', required: 76 },
+    { id: 'ai-ab', name: 'A/B 测试与灰度发布策略', required: 80 },
+    { id: 'ai-feature', name: '特征存储 (Feature Store / Feast)', required: 74 },
+    { id: 'ai-version', name: '模型版本管理与回滚', required: 80 },
+    { id: 'ai-web', name: 'Python Web 框架 (FastAPI / Flask)', required: 82 },
+    { id: 'ai-cost', name: '推理加速与成本优化 (TensorRT / 量化)', required: 78 },
+    { id: 'ai-git', name: 'Git 与 ML 工程化规范', required: 72 },
+  ],
+}
+
+const currentSkills = computed(() =>
+  (selectedTrack.value && trackSkillDefs[selectedTrack.value])
+    ? trackSkillDefs[selectedTrack.value]!
+    : roleSkillDefs[selectedRole.value] ?? []
+)
 const totalQuestions = computed(() => currentSkills.value.length)
 const currentSkill = computed(() => currentSkills.value[currentQuestionIndex.value])
 const currentTracks = computed(() => roleTrackMap[selectedRole.value] ?? [])
@@ -235,42 +454,6 @@ function goToNavigation() {
   router.push('/app/student/career-navigation')
 }
 
-/* ─── 视图切换 ─── */
-const viewMode = ref<'card' | 'tree'>('card')
-const cardViewRef = ref<HTMLElement | null>(null)
-const treeViewRef = ref<HTMLElement | null>(null)
-
-async function switchView(mode: 'card' | 'tree') {
-  if (viewMode.value === mode) return
-  const leaving = mode === 'tree' ? cardViewRef.value : treeViewRef.value
-  if (leaving) {
-    await gsap.to(leaving, {
-      opacity: 0,
-      y: mode === 'tree' ? -10 : 0,
-      duration: 0.15,
-      ease: 'power2.in',
-    })
-    gsap.set(leaving, { opacity: '', y: '' })
-  }
-  viewMode.value = mode
-  await nextTick()
-  const entering = mode === 'tree' ? treeViewRef.value : cardViewRef.value
-  if (!entering) return
-  if (mode === 'card') {
-    const cards = entering.querySelectorAll<HTMLElement>('.role-card, .subrole-card')
-    gsap.fromTo(
-      cards,
-      { opacity: 0, y: 16 },
-      { opacity: 1, y: 0, duration: 0.28, stagger: 0.04, ease: 'power2.out', clearProps: 'opacity,transform' },
-    )
-  } else {
-    gsap.fromTo(
-      entering,
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out', clearProps: 'opacity,transform' },
-    )
-  }
-}
 </script>
 
 <template>
@@ -283,17 +466,9 @@ async function switchView(mode: 'card' | 'tree') {
           <h1 class="page-hd__title">技能自评</h1>
           <p class="page-hd__sub">选择目标岗位方向，逐项回答能力问题，生成差距诊断报告</p>
         </div>
-        <button
-          class="view-toggle-btn"
-          :title="viewMode === 'card' ? '切换到关系图' : '切换到卡片'"
-          @click="switchView(viewMode === 'card' ? 'tree' : 'card')"
-        >
-          <Icon :icon="viewMode === 'card' ? 'lucide:git-fork' : 'lucide:layout-grid'" :width="18" />
-        </button>
       </div>
 
-      <!-- 卡片视图 -->
-      <div v-show="viewMode === 'card'" ref="cardViewRef" class="card-view">
+      <div class="card-view">
         <p class="select-hint">你目前最感兴趣或正在准备的方向：</p>
 
         <div class="role-grid">
@@ -343,19 +518,6 @@ async function switchView(mode: 'card' | 'tree') {
         </p>
       </div>
 
-      <!-- 关系图视图 -->
-      <div v-show="viewMode === 'tree'" ref="treeViewRef" class="tree-view">
-        <D3CareerTree
-          :roles="roleOptions as CareerRole[]"
-          :role-track-map="roleTrackMap"
-          :role-meta-map="roleMetaMap"
-          @select-role="(role, track) => selectRole(role, track)"
-        />
-        <p class="tip-row tree-tip-row">
-          <Icon icon="lucide:info" :width="13" />
-          点击大方向节点进行整体自评，点击细分节点直接进入对应赛道
-        </p>
-      </div>
     </div>
 
     <!-- ══ 阶段二：逐题问卷 ══ -->
@@ -545,31 +707,8 @@ async function switchView(mode: 'card' | 'tree') {
 }
 .page-hd__sub { font-size: 13px; color: var(--color-text-muted); margin: 0; }
 
-.view-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
-}
-.view-toggle-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-light);
-}
-.view-toggle-btn:active { transform: scale(0.9); }
-
 /* ─── 视图容器 ─── */
 .card-view { display: flex; flex-direction: column; gap: 20px; }
-.tree-view { display: flex; flex-direction: column; gap: 14px; }
-.tree-tip-row { justify-content: center; }
 
 /* ─── 方向选择 ─── */
 .select-hint { font-size: 13px; color: var(--color-text-muted); margin: 0; }
@@ -934,12 +1073,6 @@ async function switchView(mode: 'card' | 'tree') {
   .subrole-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .role-card,
   .subrole-card { min-height: unset; }
-  .view-toggle-btn { display: none; }
-  .tree-view { display: none !important; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .view-toggle-btn { transition: none; }
 }
 
 @media (max-width: 640px) {

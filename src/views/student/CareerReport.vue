@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useResumeStore } from '@/stores/resume'
 import { useUserStore } from '@/stores'
+import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useLearningStore } from '@/stores/learning'
 import { useReportStore } from '@/stores/report'
 import {
@@ -13,14 +14,12 @@ import {
   deriveStudentSevenDim, getGrowthPlan,
   type JobPortrait, type JobLevel,
 } from '@/mock/careerReportData'
-import * as echarts from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { TooltipComponent, LegendComponent } from 'echarts/components'
-import { SVGRenderer } from 'echarts/renderers'
+import D3RadarChart from '@/components/charts/D3RadarChart.vue'
+import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 import { gsap } from '@/plugins/gsap'
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
-
-echarts.use([RadarChart, TooltipComponent, LegendComponent, SVGRenderer])
+import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
+const parchmentBg = `url("${parchmentBaseUrl}")`
 
 const router = useRouter()
 const resumeStore = useResumeStore()
@@ -60,9 +59,7 @@ function saveCareerReport() {
 const activeMode = ref<'analysis' | 'report'>('analysis')
 const selectedJobId = ref<string>('')
 const reportTextEditable = ref('')
-const radarEl = ref<HTMLElement | null>(null)
 const climbingSvgEl = ref<SVGSVGElement | null>(null)
-let radarChart: echarts.ECharts | null = null
 let climbTimeline: gsap.core.Timeline | null = null
 const expandedStages = ref<Set<string>>(new Set())
 const checkResults = ref<Array<{ section: string; found: boolean }>>([])
@@ -70,55 +67,93 @@ const showCheckResults = ref(false)
 const polishLoading = ref(false)
 const polishDiff = ref<{ before: string; after: string } | null>(null)
 const showExportMenu = ref(false)
+const activeSkillEdge = ref<{ fromId: string; toId: string; skills: string[]; fromTitle: string; toTitle: string } | null>(null)
+const planLoading = ref(false)
+const planStages = ref<Array<{ phase: string; phaseLabel: string; goal: string; tasks: string[]; milestone: string }>>([])
+const radarLoading = ref(false)
+const radarReady = ref(false)
+let planTimers: ReturnType<typeof setTimeout>[] = []
 
 /* ══ 定常配置 ══ */
 const DIM_NAMES = ['专业技能', '证书资质', '创新能力', '学习能力', '抗压能力', '沟通能力', '实习经验'] as const
 
 const LINE_COLORS: Record<string, string> = {
-  frontend:    '#E85D3A',
-  data:        '#D4A017',
-  qa:          '#4A90D9',
-  fullstack:   '#3DB88C',
-  general:     '#9A8E72',
-  algorithm:   '#7BA3B5',
-  'data-analyst': '#D4A017',
-  backend:     '#3DA87A',
-  ai:          '#A96DB8',
-  bigdata:     '#D47A42',
-  ops:         '#6A8FC8',
-  embedded:    '#8A7A52',
-  security:    '#C04848',
-  cloud:       '#4A8BBE',
-  database:    '#6A9A5A',
-  support:     '#A89A72',
-  multimedia:  '#C07A42',
+  frontend:    '#C4622D',
+  data:        '#B8962E',
+  qa:          '#3A8A7A',
+  fullstack:   '#6A5B8A',
+  general:     '#7A6F5A',
+  algorithm:   '#5B7E91',
+  'data-analyst': '#B8962E',
+  backend:     '#2E7D5E',
+  ai:          '#8B4A9C',
+  bigdata:     '#C45E2A',
+  ops:         '#4A6FA5',
+  embedded:    '#6B5E3A',
+  security:    '#9C2E2E',
+  cloud:       '#2E6B9C',
+  database:    '#5A7A4A',
+  support:     '#8A7A5A',
+  multimedia:  '#9C5E2E',
 }
+
+/* ══ 攀岩墙白名单：只展示 CAREER_DOMAINS 15 职业的岗位 ══ */
+const CLIMB_JOB_IDS = new Set<string>([
+  /* 前端：Vue 前端工程师 */
+  'fe-intern', 'fe-junior', 'fe-mid', 'fe-senior', 'fe-lead',
+  /* 前端：React 前端工程师 */
+  'fe-react-intern', 'fe-react-junior', 'fe-react-mid', 'fe-react-senior',
+  /* 前端：可视化工程师 */
+  'fe-vis-junior', 'fe-vis-mid', 'fe-vis-senior',
+  /* 后端：Java 后端工程师 */
+  'be-java-intern', 'be-java-junior', 'be-java-mid', 'be-java-senior',
+  /* 后端：Go 后端工程师 */
+  'be-go-intern', 'be-go-junior', 'be-go-mid', 'be-go-senior',
+  /* 后端：Python 后端工程师 */
+  'be-python-intern', 'be-python-junior', 'be-python-mid', 'be-python-senior',
+  /* 测试：自动化测试工程师 */
+  'qa-intern', 'qa-junior', 'qa-mid', 'qa-senior',
+  /* 测试：质量平台工程师 */
+  'qa-plat-junior', 'qa-plat-mid', 'qa-plat-senior',
+  /* 测试：性能测试工程师 */
+  'qa-perf-intern', 'qa-perf-junior', 'qa-perf-mid', 'qa-perf-senior',
+  /* 数据：商业数据分析师 */
+  'da-biz-junior', 'da-biz-mid', 'da-biz-senior',
+  /* 数据：数据开发工程师 */
+  'da-dev-junior', 'da-dev-mid', 'da-dev-senior',
+  /* 数据：增长分析师 */
+  'da-growth-junior', 'da-growth-mid', 'da-growth-senior',
+  /* ML：推荐算法工程师 */
+  'algo-recsys-intern', 'algo-recsys-junior', 'algo-recsys-mid', 'algo-recsys-senior',
+  /* ML：深度学习工程师 */
+  'dl-junior', 'dl-mid', 'dl-senior',
+  /* ML：LLM 应用工程师 */
+  'ai-llm-intern', 'ai-llm-junior', 'ai-llm-mid', 'ai-llm-senior',
+])
 
 const LEVEL_ORDER: Record<JobLevel, number> = {
   intern: 0, junior: 1, mid: 2, senior: 3, lead: 4, expert: 5,
 }
 
-/* ══ 推荐岗位：优先展示 targetRoles 对应岗位 ══ */
+/* ══ 推荐岗位：优先展示 targetRoles 对应岗位（基于 CAREER_DOMAINS 15 职业）══ */
 const recommendedIds = computed<Set<string>>(() => {
   const matched = resumeStore.matchedCareers
   const roleToIds: Record<string, string[]> = {
-    '前端开发': ['fe-junior', 'fe-mid', 'fe-senior'],
-    '后端开发': ['fullstack', 'fe-mid'],
-    '测试开发': ['qa-junior', 'qa-senior'],
-    '数据分析': ['da-junior', 'da-mid'],
-    '机器学习工程师': ['ml-engineer', 'da-mid'],
+    '前端开发': ['fe-junior', 'fe-mid', 'fe-react-junior', 'fe-vis-junior'],
+    '后端开发': ['be-java-junior', 'be-java-mid', 'be-go-junior', 'be-python-junior'],
+    '测试开发': ['qa-junior', 'qa-mid', 'qa-plat-junior', 'qa-perf-junior'],
+    '数据分析': ['da-biz-junior', 'da-biz-mid', 'da-dev-junior', 'da-growth-junior'],
+    '机器学习工程师': ['algo-recsys-junior', 'algo-recsys-mid', 'dl-junior', 'ai-llm-junior'],
   }
   const ids = new Set<string>()
-  // 少优先展示 targetRoles 关注方向的岗位
   for (const role of effectiveTargetRoles.value) {
     ;(roleToIds[role] ?? []).forEach(id => ids.add(id))
   }
-  // 再补充 resumeStore 匹配到的其他岗位
   for (const c of matched.slice(0, 3)) {
     ;(roleToIds[c.role] ?? []).slice(0, 2).forEach(id => ids.add(id))
   }
   if (ids.size === 0) {
-    ;['fe-mid', 'fe-junior', 'da-junior', 'qa-junior', 'fullstack'].forEach(id => ids.add(id))
+    ;['fe-mid', 'fe-junior', 'be-java-junior', 'da-biz-junior', 'qa-junior'].forEach(id => ids.add(id))
   }
   return ids
 })
@@ -188,15 +223,17 @@ function tangentCircle(a: { x: number; y: number; r: number }, b: { x: number; y
 }
 
 const bubbleLayout = computed<BubbleItem[]>(() => {
+  /* 只从 15 职业白名单中选气泡，优先推荐岗位 */
   const weighted = [...JOB_PORTRAITS]
-    .map(j => ({ ...j, matchScore: recommendedIds.value.has(j.id) ? j.matchScore : j.matchScore * 0.65 }))
+    .filter(j => CLIMB_JOB_IDS.has(j.id))
+    .map(j => ({ ...j, matchScore: recommendedIds.value.has(j.id) ? Math.min(1, j.matchScore + 0.2) : j.matchScore }))
     .sort((a, b) => b.matchScore - a.matchScore)
 
-  // 过滤：matchScore > 0.5 优先，最多取 7 个；不足 7 个时按分数补足
-  const highScore = weighted.filter(j => j.matchScore > 0.5)
-  const sorted = highScore.length >= 7
-    ? highScore.slice(0, 7)
-    : weighted.slice(0, Math.min(7, weighted.length))
+  // 过滤：matchScore > 0.4 优先，最多取 8 个；不足时按分数补足
+  const highScore = weighted.filter(j => j.matchScore > 0.4)
+  const sorted = highScore.length >= 8
+    ? highScore.slice(0, 8)
+    : weighted.slice(0, Math.min(8, weighted.length))
 
   const circles = sorted.map(j => ({ id: j.id, r: Math.max(16, Math.round(12 + j.matchScore * 28)) }))
   const packed = circlePack(circles)
@@ -221,6 +258,25 @@ const bubbleLayout = computed<BubbleItem[]>(() => {
     }
   })
 })
+
+/* ══ 气泡图标签断行 ══ */
+function splitBubbleTitle(title: string, r: number): string[] {
+  const max = r >= 30 ? 7 : r >= 24 ? 5 : 4
+  if (title.length <= max) return [title]
+  let split = max
+  for (let i = Math.min(max, title.length); i >= 2; i--) {
+    const ch = title[i] ?? ''
+    const prev = title[i - 1] ?? ''
+    if (prev === ' ') { split = i; break }
+    if (/[a-zA-Z0-9]/.test(prev) && !/[a-zA-Z0-9]/.test(ch)) { split = i; break }
+    if (!/[a-zA-Z0-9\s]/.test(prev) && /[a-zA-Z]/.test(ch)) { split = i; break }
+  }
+  const line1 = title.slice(0, split).trimEnd()
+  const rest = title.slice(split).trimStart()
+  if (!rest) return [line1]
+  if (rest.length <= max) return [line1, rest]
+  return [line1, rest.slice(0, max - 1) + '…']
+}
 
 /* ══ D3 Force Simulation（气泡漂浮动画）══ */
 type SimNode = SimulationNodeDatum & { id: string; r: number; job: JobPortrait }
@@ -289,10 +345,10 @@ onBeforeUnmount(() => _sim?.stop())
 /* ══ 攀岩墙布局 ══ */
 type ClimbNode = { id: string; title: string; level: JobLevel; lineId: string; salaryRange: string; x: number; y: number }
 type ClimbHold = { x: number; y: number; label: string; mastered: boolean; edgeType: 'promote' | 'transfer' }
-type ClimbRope = { path: string; type: 'promote' | 'transfer'; fromId: string; toId: string; holds: ClimbHold[] }
+type ClimbRope = { path: string; type: 'promote' | 'transfer'; fromId: string; toId: string; holds: ClimbHold[]; allSkills: string[]; omittedCount: number }
 
-const CW_W = 400, CW_H = 720
-const CW_NODE_R = 22
+const CW_W = 400, CW_H = 900
+const CW_NODE_R = 28
 
 function strHash(s: string): number {
   let h = 0
@@ -316,49 +372,123 @@ function isSkillMastered(skill: string): boolean {
 
 const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
   if (!selectedJob.value) return { nodes: [], ropes: [] }
-  const lineId = selectedJob.value.lineId
-  const lineJobs = JOB_PORTRAITS.filter(j => j.lineId === lineId)
-    .sort((a, b) => (LEVEL_ORDER[a.level] ?? 0) - (LEVEL_ORDER[b.level] ?? 0))
+  const selId = selectedJob.value.id
+  const selLineId = selectedJob.value.lineId
 
-  const relatedEdges = CAREER_PATH_EDGES.filter(e => {
-    const from = JOB_PORTRAITS.find(j => j.id === e.fromId)
-    const to = JOB_PORTRAITS.find(j => j.id === e.toId)
-    return (from?.lineId === lineId || to?.lineId === lineId)
-  })
-
-  const allJobIds = new Set<string>()
-  lineJobs.forEach(j => allJobIds.add(j.id))
-  relatedEdges.forEach(e => { allJobIds.add(e.fromId); allJobIds.add(e.toId) })
-
-  const allJobs = [...allJobIds].map(id => JOB_PORTRAITS.find(j => j.id === id)!).filter(Boolean)
-  const mainIds = new Set(lineJobs.map(j => j.id))
-
-  const pad = 50
-  const levels = allJobs.map(j => LEVEL_ORDER[j.level] ?? 0)
-  const minLvl = Math.min(...levels), maxLvl = Math.max(...levels)
-  const range = Math.max(maxLvl - minLvl, 1)
-
-  const nodes: ClimbNode[] = allJobs.map(j => {
-    const lvl = LEVEL_ORDER[j.level] ?? 0
-    const t = (lvl - minLvl) / range
-    const isMain = mainIds.has(j.id)
-    /* x: 主线节点在中央±40px范围内散布，旁支节点散至两侧 */
-    const xJitter = isMain
-      ? (strHash(j.id + 'x') % 80) - 40
-      : (strHash(j.id) % 2 === 0 ? -1 : 1) * (80 + (strHash(j.id + 'x2') % 60))
-    const xBase = Math.max(CW_NODE_R + 12, Math.min(CW_W - CW_NODE_R - 12, Math.round(CW_W / 2 + xJitter)))
-    /* y: 同级节点上下±20px错落，呈现真实攀岩壁层次感 */
-    const yJitter = (strHash(j.id + 'y') % 40) - 20
-    return {
-      id: j.id, title: j.title, level: j.level, lineId: j.lineId, salaryRange: j.salaryRange,
-      x: xBase,
-      y: Math.round(CW_H - pad - t * (CW_H - pad * 2)) + yJitter,
+  /* ── 1. 收集同 lineId 内晋升链（BFS 向上 + 1 级向下）── */
+  const promoteAdj = new Map<string, Array<typeof CAREER_PATH_EDGES[0]>>()
+  for (const e of CAREER_PATH_EDGES) {
+    if (e.type !== 'promote' || !CLIMB_JOB_IDS.has(e.fromId) || !CLIMB_JOB_IDS.has(e.toId)) continue
+    const fj = JOB_PORTRAITS.find(j => j.id === e.fromId)
+    const tj = JOB_PORTRAITS.find(j => j.id === e.toId)
+    if (fj?.lineId !== selLineId || tj?.lineId !== selLineId) continue
+    if (!promoteAdj.has(e.fromId)) promoteAdj.set(e.fromId, [])
+    promoteAdj.get(e.fromId)!.push(e)
+  }
+  const promotionEdges: typeof CAREER_PATH_EDGES = []
+  const promotionIds = new Set<string>([selId])
+  const queue = [selId]
+  while (queue.length) {
+    const cur = queue.shift()!
+    for (const e of (promoteAdj.get(cur) ?? [])) {
+      if (!promotionIds.has(e.toId)) {
+        promotionIds.add(e.toId); promotionEdges.push(e); queue.push(e.toId)
+      }
     }
+  }
+  for (const e of CAREER_PATH_EDGES) {
+    if (e.type !== 'promote' || e.toId !== selId || !CLIMB_JOB_IDS.has(e.fromId)) continue
+    const fj = JOB_PORTRAITS.find(j => j.id === e.fromId)
+    if (fj?.lineId !== selLineId) continue
+    if (!promotionIds.has(e.fromId)) { promotionIds.add(e.fromId); promotionEdges.push(e) }
+  }
+
+  /* ── 2. 转岗边：每个晋升节点最多 2 条转岗（优先出边）── */
+  const transferEdges: typeof CAREER_PATH_EDGES = []
+  const usedTransferIds = new Set<string>()
+  const nodeTransferCount = new Map<string, number>()
+  // 收集所有可用转岗边
+  const allTransferCandidates: typeof CAREER_PATH_EDGES = []
+  for (const e of CAREER_PATH_EDGES) {
+    if (e.type !== 'transfer' || !CLIMB_JOB_IDS.has(e.fromId) || !CLIMB_JOB_IDS.has(e.toId)) continue
+    if (promotionIds.has(e.fromId) || promotionIds.has(e.toId)) allTransferCandidates.push(e)
+  }
+  // 优先出边（fromId 在晋升链内），每个节点最多 2 条
+  for (const e of allTransferCandidates) {
+    const srcId = promotionIds.has(e.fromId) ? e.fromId : e.toId
+    const tgtId = srcId === e.fromId ? e.toId : e.fromId
+    if ((nodeTransferCount.get(srcId) ?? 0) >= 2) continue
+    if (usedTransferIds.has(tgtId) || promotionIds.has(tgtId)) continue
+    transferEdges.push(e)
+    usedTransferIds.add(tgtId)
+    nodeTransferCount.set(srcId, (nodeTransferCount.get(srcId) ?? 0) + 1)
+  }
+
+  /* ── 3. 汇总节点 ── */
+  const allJobIds = new Set<string>(promotionIds)
+  for (const e of transferEdges) { allJobIds.add(e.fromId); allJobIds.add(e.toId) }
+  const allJobs = [...allJobIds].map(id => JOB_PORTRAITS.find(j => j.id === id)!).filter(Boolean)
+  const allEdges = [...promotionEdges, ...transferEdges]
+
+  /* ── 4. 布局：选中岗位底部居中，晋升链向上，转岗横向 ── */
+  const pad = 55
+  const mainLineJobs = allJobs.filter(j => j.lineId === selLineId)
+    .sort((a, b) => (LEVEL_ORDER[a.level] ?? 0) - (LEVEL_ORDER[b.level] ?? 0))
+  const transferJobs = allJobs.filter(j => !promotionIds.has(j.id))
+
+  const mainCount = mainLineJobs.length
+  const mainYStep = mainCount > 1 ? (CW_H - pad * 2) / (mainCount - 1) : 0
+  const nodes: ClimbNode[] = []
+
+  mainLineJobs.forEach((j, i) => {
+    nodes.push({
+      id: j.id, title: j.title, level: j.level, lineId: j.lineId, salaryRange: j.salaryRange,
+      x: Math.round(CW_W / 2),
+      y: Math.round(CW_H - pad - i * mainYStep),
+    })
   })
 
-  /* 岗位节点防重叠：多轮推离，直到节点圆心间距 ≥ 2r+10 */
-  const nodeMinDist = CW_NODE_R * 2 + 10
-  for (let iter = 0; iter < 8; iter++) {
+  // 为每个转岗节点找到其源晋升节点，放在源节点附近
+  // 按源节点分组，同源 2 个转岗 → 一左一右；1 个转岗 → hash 决定侧
+  const nodeMap0 = new Map(nodes.map(n => [n.id, n]))
+  const srcToTransfers = new Map<string, typeof transferJobs>()
+  for (const j of transferJobs) {
+    const edge = transferEdges.find(e => e.fromId === j.id || e.toId === j.id)
+    const srcId = edge ? (promotionIds.has(edge.fromId) ? edge.fromId : edge.toId) : selId
+    if (!srcToTransfers.has(srcId)) srcToTransfers.set(srcId, [])
+    srcToTransfers.get(srcId)!.push(j)
+  }
+  for (const [srcId, group] of srcToTransfers) {
+    const srcNode = nodeMap0.get(srcId)
+    const srcY = srcNode?.y ?? (CW_H / 2)
+    const xOff = 120
+    if (group.length >= 2) {
+      // 两个转岗：一左一右
+      group.forEach((j, gi) => {
+        const side = gi === 0 ? -1 : 1
+        const yJitter = (strHash(j.id) % 24) - 12
+        nodes.push({
+          id: j.id, title: j.title, level: j.level, lineId: j.lineId, salaryRange: j.salaryRange,
+          x: Math.max(CW_NODE_R + 8, Math.min(CW_W - CW_NODE_R - 8, Math.round(CW_W / 2 + side * xOff))),
+          y: Math.max(pad, Math.min(CW_H - pad, Math.round(srcY + yJitter))),
+        })
+      })
+    } else {
+      // 单个转岗：hash 决定侧
+      const j = group[0]!
+      const side = strHash(j.id) % 2 === 0 ? -1 : 1
+      const yJitter = (strHash(j.id) % 24) - 12
+      nodes.push({
+        id: j.id, title: j.title, level: j.level, lineId: j.lineId, salaryRange: j.salaryRange,
+        x: Math.max(CW_NODE_R + 8, Math.min(CW_W - CW_NODE_R - 8, Math.round(CW_W / 2 + side * xOff))),
+        y: Math.max(pad, Math.min(CW_H - pad, Math.round(srcY + yJitter))),
+      })
+    }
+  }
+
+  /* 防重叠 */
+  const nodeMinDist = CW_NODE_R * 2 + 14
+  for (let iter = 0; iter < 12; iter++) {
     for (let ai = 0; ai < nodes.length; ai++) {
       for (let bi = ai + 1; bi < nodes.length; bi++) {
         const a = nodes[ai]!, b = nodes[bi]!
@@ -367,9 +497,10 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
         if (dist < nodeMinDist && dist > 0.1) {
           const half = (nodeMinDist - dist) / 2 + 2
           const nx = ddx / dist, ny = ddy / dist
-          a.x = Math.max(CW_NODE_R + 12, Math.min(CW_W - CW_NODE_R - 12, Math.round(a.x - nx * half)))
+          const aMain = promotionIds.has(a.id), bMain = promotionIds.has(b.id)
+          if (!aMain) a.x = Math.max(CW_NODE_R + 8, Math.min(CW_W - CW_NODE_R - 8, Math.round(a.x - nx * half)))
           a.y = Math.max(pad, Math.min(CW_H - pad, Math.round(a.y - ny * half)))
-          b.x = Math.max(CW_NODE_R + 12, Math.min(CW_W - CW_NODE_R - 12, Math.round(b.x + nx * half)))
+          if (!bMain) b.x = Math.max(CW_NODE_R + 8, Math.min(CW_W - CW_NODE_R - 8, Math.round(b.x + nx * half)))
           b.y = Math.max(pad, Math.min(CW_H - pad, Math.round(b.y + ny * half)))
         }
       }
@@ -378,37 +509,29 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
 
   const nodeMap = new Map(nodes.map(n => [n.id, n]))
   const ropes: ClimbRope[] = []
-
-  /* 全局技能去重集合 & 已放置 hold 坐标（用于互斥推离） */
   const placedSkills = new Set<string>()
   const placedHoldPositions: Array<{ x: number; y: number }> = []
 
-  for (const edge of relatedEdges) {
-    const fn = nodeMap.get(edge.fromId)
-    const tn = nodeMap.get(edge.toId)
+  for (const edge of allEdges) {
+    const fn = nodeMap.get(edge.fromId), tn = nodeMap.get(edge.toId)
     if (!fn || !tn) continue
 
-    /* 路径 & 曲线求值函数 */
     let path: string
     let evalCurve: (t: number) => { x: number; y: number }
 
     if (edge.type === 'promote') {
-      /* 晋升：二次贝塞尔，轻微侧弯 */
       const midY = (fn.y + tn.y) / 2
-      const cpx = fn.x + (strHash(edge.fromId + edge.toId) % 30 - 15)
+      const cpx = fn.x + (strHash(edge.fromId + edge.toId) % 24 - 12)
       path = `M ${fn.x} ${fn.y} Q ${cpx} ${midY} ${tn.x} ${tn.y}`
       evalCurve = (t) => ({
         x: (1 - t) * (1 - t) * fn.x + 2 * (1 - t) * t * cpx + t * t * tn.x,
         y: (1 - t) * (1 - t) * fn.y + 2 * (1 - t) * t * midY + t * t * tn.y,
       })
     } else {
-      /* 转岗：三次贝塞尔，控制点向下偏移模拟绳子重力垂弧 */
       const dx = tn.x - fn.x
-      const sag = Math.max(35, Math.abs(dx) * 0.38)
-      const cx1 = fn.x + dx * 0.25
-      const cy1 = fn.y + sag
-      const cx2 = fn.x + dx * 0.75
-      const cy2 = tn.y + sag
+      const sag = Math.max(30, Math.abs(dx) * 0.35)
+      const cx1 = fn.x + dx * 0.25, cy1 = fn.y + sag
+      const cx2 = fn.x + dx * 0.75, cy2 = tn.y + sag
       path = `M ${fn.x} ${fn.y} C ${cx1} ${cy1} ${cx2} ${cy2} ${tn.x} ${tn.y}`
       evalCurve = (t) => ({
         x: (1-t)**3*fn.x + 3*(1-t)**2*t*cx1 + 3*(1-t)*t**2*cx2 + t**3*tn.x,
@@ -416,48 +539,43 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
       })
     }
 
-    /* 过滤掉已经出现过的技能 */
-    const uniqueSkills = edge.skills.filter(s => !placedSkills.has(s)).slice(0, 5)
-    uniqueSkills.forEach(s => placedSkills.add(s))
+    /* 技能抓手：每条边最多 3 个显示 */
+    const uniqueSkills = edge.skills.filter(s => !placedSkills.has(s))
+    const displaySkills = uniqueSkills.slice(0, 3)
+    displaySkills.forEach(s => placedSkills.add(s))
+    const omittedCount = Math.max(0, edge.skills.length - displaySkills.length)
 
-    const holds: ClimbHold[] = uniqueSkills.map((skill, si) => {
-      const t = (si + 1) / (uniqueSkills.length + 1)
+    const holds: ClimbHold[] = displaySkills.map((skill, si) => {
+      const slots = displaySkills.length + (omittedCount > 0 ? 1 : 0) + 1
+      const t = (si + 1) / slots
       const { x: bx, y: by } = evalCurve(t)
-      /* 用两个独立 hash 让 x/y 初始散布互不相关，范围更大 */
-      const hash = strHash(skill)
-      const hash2 = strHash(skill + '__scatter')
-      let ox = (hash % 160) - 80
-      let oy = (hash2 % 110) - 55
-      /* 多轮推离：岗位节点 + 已放置 hold */
-      for (let iter = 0; iter < 5; iter++) {
+      const hash = strHash(skill), hash2 = strHash(skill + '__scatter')
+      let ox = (hash % 100) - 50, oy = (hash2 % 70) - 35
+      for (let it = 0; it < 8; it++) {
         for (const nd of nodes) {
           const dx2 = (bx + ox) - nd.x, dy2 = (by + oy) - nd.y
-          const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2)
-          const minDist = CW_NODE_R + 18
-          if (dist < minDist && dist > 0.1) {
-            const push = (minDist - dist) + 8
-            ox += (dx2 / dist) * push
-            oy += (dy2 / dist) * push
+          const d = Math.sqrt(dx2 * dx2 + dy2 * dy2)
+          if (d < CW_NODE_R + 18 && d > 0.1) {
+            const p = (CW_NODE_R + 18 - d) + 8
+            ox += (dx2 / d) * p; oy += (dy2 / d) * p
           }
         }
         for (const ph of placedHoldPositions) {
           const dx3 = (bx + ox) - ph.x, dy3 = (by + oy) - ph.y
-          const dist3 = Math.sqrt(dx3 * dx3 + dy3 * dy3)
-          const minHoldDist = 42
-          if (dist3 < minHoldDist && dist3 > 0.1) {
-            const push3 = (minHoldDist - dist3) + 5
-            ox += (dx3 / dist3) * push3
-            oy += (dy3 / dist3) * push3
+          const d3 = Math.sqrt(dx3 * dx3 + dy3 * dy3)
+          if (d3 < 54 && d3 > 0.1) {
+            const p3 = (54 - d3) + 5
+            ox += (dx3 / d3) * p3; oy += (dy3 / d3) * p3
           }
         }
       }
-      const finalX = Math.max(14, Math.min(CW_W - 14, Math.round(bx + ox)))
-      const finalY = Math.max(14, Math.min(CW_H - 14, Math.round(by + oy)))
-      placedHoldPositions.push({ x: finalX, y: finalY })
-      return { x: finalX, y: finalY, label: skill, mastered: isSkillMastered(skill), edgeType: edge.type }
+      const fx = Math.max(14, Math.min(CW_W - 14, Math.round(bx + ox)))
+      const fy = Math.max(14, Math.min(CW_H - 14, Math.round(by + oy)))
+      placedHoldPositions.push({ x: fx, y: fy })
+      return { x: fx, y: fy, label: skill, mastered: isSkillMastered(skill), edgeType: edge.type }
     })
 
-    ropes.push({ path, type: edge.type, fromId: edge.fromId, toId: edge.toId, holds })
+    ropes.push({ path, type: edge.type, fromId: edge.fromId, toId: edge.toId, holds, allSkills: edge.skills, omittedCount })
   }
 
   return { nodes, ropes }
@@ -473,86 +591,16 @@ const dimGaps = computed(() => {
   })
 })
 
-/* ══ 雷达图 ══ */
-function buildRadarOption() {
+/* ══ D3 雷达图数据 ══ */
+const crRadarData = computed<RadarDatum[]>(() => {
   const job = selectedJob.value
-  if (!job) return null
-  return {
-    backgroundColor: 'transparent',
-    animationDuration: 700,
-    animationEasing: 'cubicOut' as const,
-    tooltip: {
-      trigger: 'item' as const,
-      formatter: (params: { name: string; value: number[] }) => {
-        const vals = params.value
-        return DIM_NAMES.map((n, i) => `<span style="color:#999">${n}</span> ${vals[i]}`).join('<br/>')
-      },
-    },
-    radar: {
-      indicator: DIM_NAMES.map(name => ({ name, max: 100 })),
-      /* 42% × 250px 容器 = 105px 半径，上下各留 ~20px 给标签，不再溢出 */
-      radius: '42%',
-      center: ['50%', '50%'],
-      splitNumber: 4,
-      nameGap: 6,
-      axisName: {
-        color: '#5C4A38',
-        fontSize: 10.5,
-        fontFamily: 'var(--font-ui)',
-        backgroundColor: 'rgba(255,255,255,0.75)',
-        borderRadius: 3,
-        padding: [2, 5],
-      },
-      splitLine: { lineStyle: { color: 'rgba(139,37,0,0.10)', width: 1 } },
-      splitArea: {
-        show: true,
-        areaStyle: {
-          color: [
-            'rgba(245,245,243,0.55)',
-            'rgba(240,240,238,0.40)',
-            'rgba(235,235,233,0.25)',
-            'rgba(230,230,228,0.12)',
-          ],
-        },
-      },
-      axisLine: { lineStyle: { color: 'rgba(139,37,0,0.12)' } },
-    },
-    series: [{
-      type: 'radar',
-      data: [
-        {
-          value: DIM_NAMES.map(n => studentDim.value[n]),
-          name: '我的能力',
-          symbol: 'circle',
-          symbolSize: 5,
-          lineStyle: { color: '#C0501A', width: 2 },
-          areaStyle: { color: 'rgba(192,80,26,0.20)' },
-          itemStyle: { color: '#C0501A', borderColor: '#fff', borderWidth: 1.5 },
-        },
-        {
-          value: DIM_NAMES.map(n => job.sevenDim[n]),
-          name: '岗位要求',
-          symbol: 'rect',
-          symbolSize: 4,
-          lineStyle: { color: '#2B6CB0', width: 1.8, type: 'dashed' as const },
-          areaStyle: { color: 'rgba(43,108,176,0.08)' },
-          itemStyle: { color: '#2B6CB0' },
-        },
-      ],
-    }],
-  }
-}
-
-function initRadarChart() {
-  if (!radarEl.value) return
-  radarChart?.dispose()
-  radarChart = echarts.init(radarEl.value, undefined, { renderer: 'svg' })
-  const opt = buildRadarOption()
-  if (opt) radarChart.setOption(opt)
-}
-
-watch(selectedJob, async () => { if (selectedJob.value) { await nextTick(); initRadarChart() } })
-watch(radarEl, el => { if (el && selectedJob.value) initRadarChart() })
+  if (!job) return []
+  return DIM_NAMES.map(name => ({
+    axis: name,
+    value: studentDim.value[name],
+    ref: job.sevenDim[name],
+  }))
+})
 
 /* ══ GSAP 攀岩墙动画 ══ */
 function animateClimbingWall() {
@@ -702,25 +750,65 @@ function exportDownload() {
 
 const wordCount = computed(() => (reportTextEditable.value || reportText.value).length)
 
-function selectJob(id: string) { selectedJobId.value = id }
+function selectJob(id: string) {
+  selectedJobId.value = id
+  activeSkillEdge.value = null
+  /* 延迟加载成长计划，模拟 Agent 分析过程 */
+  planTimers.forEach(t => clearTimeout(t))
+  planTimers = []
+  planStages.value = []
+  if (!id) { planLoading.value = false; radarLoading.value = false; radarReady.value = false; return }
+  planLoading.value = true
+  radarLoading.value = true
+  radarReady.value = false
+  planTimers.push(setTimeout(() => { radarReady.value = true }, 700))
+  planTimers.push(setTimeout(() => { radarLoading.value = false }, 1400))
+  const raw = getGrowthPlan(id)
+  if (!raw.length) { planLoading.value = false; return }
+  planTimers.push(setTimeout(() => {
+    if (raw[0]) planStages.value = [{ ...raw[0], tasks: [] }]
+  }, 900))
+  /* 短期任务逐条 */
+  if (raw[0]) {
+    raw[0].tasks.forEach((_, ti) => {
+      planTimers.push(setTimeout(() => {
+        if (planStages.value[0]) planStages.value[0].tasks = raw[0]!.tasks.slice(0, ti + 1)
+      }, 1100 + ti * 140))
+    })
+  }
+  const shortDone = 1100 + (raw[0]?.tasks.length ?? 0) * 140 + 400
+  /* 中期卡片 */
+  if (raw[1]) {
+    planTimers.push(setTimeout(() => {
+      planStages.value = [...planStages.value, { ...raw[1]!, tasks: [] }]
+    }, shortDone))
+    raw[1].tasks.forEach((_, ti) => {
+      planTimers.push(setTimeout(() => {
+        if (planStages.value[1]) planStages.value[1].tasks = raw[1]!.tasks.slice(0, ti + 1)
+      }, shortDone + 200 + ti * 140))
+    })
+    const midDone = shortDone + 200 + raw[1].tasks.length * 140 + 200
+    planTimers.push(setTimeout(() => { planLoading.value = false }, midDone))
+  } else {
+    planTimers.push(setTimeout(() => { planLoading.value = false }, shortDone))
+  }
+}
 function goBack() { router.push({ name: 'student-career-navigation' }) }
+function goToLearningCenter() {
+  if (!selectedJob.value) return
+  router.push({ name: 'student-learning', query: { role: selectedJob.value.title } })
+}
 function toggleStage(phase: string) {
   if (expandedStages.value.has(phase)) expandedStages.value.delete(phase)
   else expandedStages.value.add(phase)
 }
-function onResize() { radarChart?.resize() }
-
 onMounted(() => {
-  window.addEventListener('resize', onResize)
-  const defaultId = [...JOB_PORTRAITS].sort((a, b) => b.matchScore - a.matchScore)[0]?.id ?? ''
-  selectedJobId.value = defaultId
+  /* 不自动选中，引导用户主动点击气泡图 */
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', onResize)
-  radarChart?.dispose()
-  radarChart = null
   climbTimeline?.kill()
+  planTimers.forEach(t => clearTimeout(t))
 })
 </script>
 
@@ -752,7 +840,7 @@ onBeforeUnmount(() => {
           <Icon :icon="reportSaved ? 'lucide:check' : 'lucide:save'" :width="12"/>
           <span>{{ reportSaved ? '已保存' : '保存报告' }}</span>
         </button>
-        <span class="cr-username">{{ userStore.currentUser?.name ?? '同学' }}</span>
+        <UserInfoBar />
         <!-- 导出按钮（仅报告模式） -->
         <div v-if="activeMode === 'report'" class="cr-export-wrap">
           <button class="cr-export-btn" @click="showExportMenu = !showExportMenu">
@@ -793,17 +881,7 @@ onBeforeUnmount(() => {
             preserveAspectRatio="xMidYMid meet"
             fill="none"
           >
-            <!-- 墙面纹理 pattern -->
-            <defs>
-              <pattern id="cw-wall" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <rect width="20" height="20" fill="var(--bg-200)"/>
-                <circle cx="3" cy="7" r="0.6" fill="rgba(139,37,0,0.06)"/>
-                <circle cx="14" cy="3" r="0.4" fill="rgba(139,37,0,0.04)"/>
-                <circle cx="8" cy="16" r="0.5" fill="rgba(139,37,0,0.05)"/>
-                <circle cx="17" cy="12" r="0.3" fill="rgba(139,37,0,0.04)"/>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#cw-wall)"/>
+            <defs></defs>
 
             <!-- 绳索路径 -->
             <path
@@ -815,11 +893,14 @@ onBeforeUnmount(() => {
               stroke-linecap="round"
             />
 
-            <!-- 技能抓手 -->
+            <!-- 技能抓手 + 省略标记 -->
             <g v-for="rope in climbLayout.ropes" :key="'h'+rope.fromId+rope.toId">
-              <g v-for="hold in rope.holds" :key="hold.label" class="cw-hold" :transform="`translate(${hold.x},${hold.y})`">
+              <g v-for="hold in rope.holds" :key="hold.label" class="cw-hold"
+                :transform="`translate(${hold.x},${hold.y})`"
+                @click.stop="activeSkillEdge = { fromId: rope.fromId, toId: rope.toId, skills: rope.allSkills, fromTitle: JOB_PORTRAITS.find(j => j.id === rope.fromId)?.title ?? '', toTitle: JOB_PORTRAITS.find(j => j.id === rope.toId)?.title ?? '' }"
+              >
                 <ellipse
-                  rx="15" ry="10"
+                  rx="18" ry="12"
                   :fill="hold.mastered
                     ? (hold.edgeType === 'promote' ? 'rgba(62,184,140,0.88)' : 'rgba(74,144,217,0.85)')
                     : 'rgba(255,252,245,0.96)'"
@@ -831,7 +912,15 @@ onBeforeUnmount(() => {
                 <text y="3" text-anchor="middle" class="cw-hold-text">
                   {{ hold.label.length > 6 ? hold.label.slice(0,6) + '…' : hold.label }}
                 </text>
-                <title>{{ hold.label }}{{ hold.mastered ? ' ✓ 已掌握' : ' ✗ 未掌握' }}</title>
+                <title>{{ hold.label }}{{ hold.mastered ? ' ✓ 已掌握' : ' ✗ 未掌握' }}（点击查看全部技能）</title>
+              </g>
+              <g v-if="rope.omittedCount > 0 && rope.holds.length > 0" class="cw-hold cw-hold--more"
+                :transform="`translate(${(rope.holds[rope.holds.length - 1]?.x ?? 0) + 38},${rope.holds[rope.holds.length - 1]?.y ?? 0})`"
+                @click.stop="activeSkillEdge = { fromId: rope.fromId, toId: rope.toId, skills: rope.allSkills, fromTitle: JOB_PORTRAITS.find(j => j.id === rope.fromId)?.title ?? '', toTitle: JOB_PORTRAITS.find(j => j.id === rope.toId)?.title ?? '' }"
+              >
+                <ellipse rx="15" ry="10" fill="rgba(139,37,0,0.08)" stroke="rgba(139,37,0,0.25)" stroke-width="1.2" stroke-dasharray="3 2"/>
+                <text y="3" text-anchor="middle" class="cw-hold-text" style="fill:rgba(139,37,0,0.6)">+{{ rope.omittedCount }}</text>
+                <title>还有 {{ rope.omittedCount }} 项技能，点击查看</title>
               </g>
             </g>
 
@@ -842,13 +931,11 @@ onBeforeUnmount(() => {
               :transform="`translate(${node.x},${node.y})`"
               @click="selectJob(node.id)"
             >
-              <!-- 外圈光晕（选中态） -->
               <circle v-if="selectedJobId === node.id"
                 :r="CW_NODE_R + 6" fill="none"
                 :stroke="LINE_COLORS[node.lineId] ?? '#E85D3A'" stroke-width="1.5"
                 opacity="0.35"
               />
-              <!-- 主圆 -->
               <circle
                 :r="CW_NODE_R"
                 :fill="selectedJobId === node.id
@@ -857,7 +944,6 @@ onBeforeUnmount(() => {
                 :stroke="LINE_COLORS[node.lineId] ?? '#E85D3A'"
                 :stroke-width="selectedJobId === node.id ? 3 : 2"
               />
-              <!-- 内部高光 -->
               <circle
                 :r="CW_NODE_R - 6" fill="none"
                 :stroke="selectedJobId === node.id ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.05)'"
@@ -866,42 +952,59 @@ onBeforeUnmount(() => {
               <text y="-3" text-anchor="middle"
                 class="cw-node-title"
                 :class="{ 'cw-node-title--active': selectedJobId === node.id }">
-                {{ node.title.length > 4 ? node.title.slice(0,4) : node.title }}
+                {{ node.title.length > 6 ? node.title.slice(0,6) : node.title }}
               </text>
               <text y="8" text-anchor="middle"
                 class="cw-node-sub"
                 :class="{ 'cw-node-sub--active': selectedJobId === node.id }">
                 {{ node.salaryRange }}
               </text>
-              <!-- 完整标题悬浮提示 -->
               <title>{{ node.title }} · {{ node.salaryRange }}</title>
             </g>
 
-            <!-- 攀登者标记 -->
+            <!-- 攀登者标记 + 起点文字 -->
             <g v-if="selectedJob" class="cw-climber">
               <text
                 :x="climbLayout.nodes.find(n => n.id === selectedJobId)?.x ?? CW_W/2"
                 :y="(climbLayout.nodes.find(n => n.id === selectedJobId)?.y ?? CW_H - 50) + 24"
                 text-anchor="middle" font-size="16">🧗</text>
+              <text
+                :x="climbLayout.nodes.find(n => n.id === selectedJobId)?.x ?? CW_W/2"
+                :y="(climbLayout.nodes.find(n => n.id === selectedJobId)?.y ?? CW_H - 50) + 38"
+                text-anchor="middle" class="cw-origin-label">当前位置</text>
             </g>
 
-            <!-- 图例 -->
-            <g transform="translate(8,12)">
-              <line x1="0" y1="0" x2="16" y2="0" stroke="rgba(232,93,58,0.6)" stroke-width="2"/>
-              <text x="20" y="4" class="cw-legend-text">晋升路径</text>
-              <line x1="0" y1="14" x2="16" y2="14" stroke="rgba(74,144,217,0.6)" stroke-width="2"/>
-              <text x="20" y="18" class="cw-legend-text">转岗路径</text>
-              <ellipse cx="4" cy="30" rx="5" ry="3.5" fill="rgba(62,184,140,0.5)" stroke="#3DB88C" stroke-width="1"/>
-              <text x="20" y="33" class="cw-legend-text">已掌握</text>
-              <ellipse cx="4" cy="44" rx="5" ry="3.5" fill="rgba(237,229,214,0.5)" stroke="#E85D3A" stroke-width="1" stroke-dasharray="2 1"/>
-              <text x="20" y="47" class="cw-legend-text">未掌握</text>
-            </g>
           </svg>
 
-          <div v-else class="cr-cw-empty">
-            <Icon icon="lucide:mountain" :width="24"/>
-            <p>选择岗位后<br/>展示攀岩路径</p>
+          <!-- 图例（HTML 浮层，固定在容器左上角） -->
+          <div class="cw-legend-overlay">
+            <div class="cw-legend-item"><span class="cw-legend-line cw-legend-line--promote"></span><span>晋升路径</span></div>
+            <div class="cw-legend-item"><span class="cw-legend-line cw-legend-line--transfer"></span><span>转岗路径</span></div>
+            <div class="cw-legend-item"><span class="cw-legend-dot cw-legend-dot--mastered"></span><span>已掌握</span></div>
+            <div class="cw-legend-item"><span class="cw-legend-dot cw-legend-dot--unmastered"></span><span>未掌握</span></div>
           </div>
+
+          <!-- 技能详情浮动面板 -->
+          <div v-if="activeSkillEdge" class="cw-skill-panel" @click.stop>
+            <div class="cw-sp-header">
+              <span class="cw-sp-title">{{ activeSkillEdge.fromTitle }} → {{ activeSkillEdge.toTitle }}</span>
+              <button class="cw-sp-close" @click="activeSkillEdge = null"><Icon icon="lucide:x" :width="12"/></button>
+            </div>
+            <ul class="cw-sp-list">
+              <li v-for="skill in activeSkillEdge.skills" :key="skill" class="cw-sp-item">
+                <span class="cw-sp-dot" :class="isSkillMastered(skill) ? 'cw-sp-dot--ok' : 'cw-sp-dot--gap'"></span>
+                <span class="cw-sp-name">{{ skill }}</span>
+                <span v-if="isSkillMastered(skill)" class="cw-sp-tag cw-sp-tag--ok">已掌握</span>
+                <span v-else class="cw-sp-tag cw-sp-tag--gap">待提升</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- 未选岗位引导 -->
+          <div v-if="!selectedJob" class="cr-guide-overlay">
+            <Icon icon="lucide:mountain" :width="28" class="cr-guide-icon"/>
+            <p class="cr-guide-text">请先在右侧<br/><strong>点击岗位气泡</strong></p>
+            <Icon icon="lucide:arrow-right" :width="18" class="cr-guide-arrow"/></div>
         </div>
       </div>
 
@@ -925,6 +1028,10 @@ onBeforeUnmount(() => {
           <div class="cr-hero__info">
             <div class="cr-hero-job">{{ selectedJob.title }}</div>
             <div class="cr-hero-desc">{{ selectedJob.desc }}</div>
+            <button class="cr-hero-courses-btn" @click="goToLearningCenter">
+              <Icon icon="lucide:book-open" :width="13"/>
+              <span>查看岗位课程</span>
+            </button>
           </div>
         </div>
 
@@ -936,9 +1043,17 @@ onBeforeUnmount(() => {
             <div class="cr-panel-title">
               <Icon icon="lucide:circle-dot" :width="12"/>
               <span>岗位匹配气泡图</span>
-              <span class="cr-panel-sub">气泡越大匹配度越高</span>
+              <span v-if="selectedJob" class="cr-panel-sub">气泡越大匹配度越高</span>
+              <span v-else class="cr-panel-sub cr-panel-sub--hint">← 点击气泡选择目标岗位</span>
             </div>
             <svg :viewBox="`0 0 ${BB_W} ${BB_H}`" class="cr-bubble-svg">
+              <defs>
+                <radialGradient id="bb-warm" cx="50%" cy="50%" r="70%">
+                  <stop offset="0%" stop-color="rgba(196,150,80,0.06)"/>
+                  <stop offset="100%" stop-color="transparent"/>
+                </radialGradient>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#bb-warm)"/>
               <g
                 v-for="(item, i) in simNodes" :key="item.job.id"
                 class="cr-bubble-g"
@@ -952,14 +1067,18 @@ onBeforeUnmount(() => {
                 @click="selectJob(item.job.id)"
               >
                 <circle :r="item.r" class="cr-bubble-circle"/>
-                <text v-if="item.r >= 22" class="cr-bt" dy="-4">
-                  {{ item.job.title.length > 4 ? item.job.title.slice(0,4) : item.job.title }}
+                <text v-if="item.r >= 22 && splitBubbleTitle(item.job.title, item.r).length === 1" class="cr-bt" dy="-4">
+                  {{ splitBubbleTitle(item.job.title, item.r)[0] }}
                 </text>
-                <text v-if="item.r >= 22" class="cr-bp" dy="10">
+                <text v-else-if="item.r >= 22 && splitBubbleTitle(item.job.title, item.r).length >= 2" class="cr-bt">
+                  <tspan :x="0" dy="-8" text-anchor="middle">{{ splitBubbleTitle(item.job.title, item.r)[0] }}</tspan>
+                  <tspan :x="0" dy="11" text-anchor="middle">{{ splitBubbleTitle(item.job.title, item.r)[1] }}</tspan>
+                </text>
+                <text v-if="item.r >= 22" class="cr-bp" :dy="splitBubbleTitle(item.job.title, item.r).length >= 2 ? 16 : 10">
                   {{ Math.round(item.job.matchScore * 100) }}%
                 </text>
                 <text v-else-if="item.r >= 14" class="cr-ba" dy="4">
-                  {{ item.job.title.slice(0,3) }}
+                  {{ splitBubbleTitle(item.job.title, item.r)[0] }}
                 </text>
                 <title>{{ item.job.title }} · {{ Math.round(item.job.matchScore * 100) }}%</title>
               </g>
@@ -977,12 +1096,23 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <div v-if="!selectedJob" class="cr-radar-empty">
-              <p>选中岗位后<br/>展示能力对比</p>
+              <Icon icon="lucide:radar" :width="24" class="cr-guide-icon"/>
+              <p>点击气泡选择岗位<br/>即可查看能力差距</p>
             </div>
+            <!-- 骨架屏 -->
+            <div v-else-if="radarLoading && !radarReady" class="cr-radar-skeleton">
+              <div class="cr-skel-radar-circle"></div>
+              <div class="cr-skel-bar cr-skel-bar--text" style="width:70%;margin:8px auto 0"></div>
+              <div class="cr-skel-bar cr-skel-bar--text cr-skel-bar--short" style="width:50%;margin:4px auto 0"></div>
+            </div>
+            <!-- 雷达图淡入 -->
             <template v-else>
-              <div ref="radarEl" class="cr-radar"></div>
-              <div class="cr-gap-bars">
-                <div v-for="item in dimGaps" :key="item.name" class="cr-gap-row">
+              <div class="cr-plan-fadein cr-radar-chart-area">
+                <D3RadarChart :data="crRadarData" :show-legend="true" :height="280" />
+              </div>
+              <div v-if="!radarLoading" class="cr-gap-bars">
+                <div v-for="(item, gi) in dimGaps" :key="item.name" class="cr-gap-row cr-task-fadein"
+                  :style="{ animationDelay: gi * 0.08 + 's' }">
                   <span class="cr-gap-dim">{{ item.name }}</span>
                   <div class="cr-gap-track">
                     <div class="cr-gap-bar--mine" :style="{ width: item.mine + '%' }"></div>
@@ -1002,16 +1132,37 @@ onBeforeUnmount(() => {
           <div class="cr-planning">
             <div class="cr-panel-title">
               <Icon icon="lucide:calendar-check" :width="12"/>
-              <span>个性化成长计划</span>
-              <span v-if="!selectedJob" class="cr-panel-sub">选中岗位后生成</span>
+              <template v-if="planLoading">
+                <span>AI 正在分析 {{ selectedJob?.title }} 成长路径</span>
+                <Icon icon="lucide:loader-2" :width="12" class="cr-spin" style="margin-left:4px; color:var(--primary-100)"/>
+              </template>
+              <template v-else>
+                <span>个性化成长计划</span>
+                <span v-if="!selectedJob" class="cr-panel-sub">选中岗位后生成</span>
+              </template>
             </div>
-            <div v-if="!selectedJob || !growthPlan.length" class="cr-planning-empty">
-              <Icon icon="lucide:sparkles" :width="20"/>
-              <p>在上方选择目标岗位<br/>即可生成分阶段成长计划</p>
+
+            <!-- 未选岗位 -->
+            <div v-if="!selectedJob" class="cr-planning-empty">
+              <Icon icon="lucide:sparkles" :width="20" class="cr-guide-icon"/>
+              <p>选择目标岗位后<br/>AI 将生成专属成长方案</p>
             </div>
-            <div v-else class="cr-plan-stages">
-              <div v-for="(stage, si) in growthPlan" :key="stage.phase" class="cr-plan-stage"
-                :class="`cr-plan-stage--${stage.phase}`">
+
+            <!-- 骨架屏（已选岗位但计划还没加载出来） -->
+            <div v-else-if="planLoading && !planStages.length" class="cr-plan-skeleton">
+              <div class="cr-skel-card" v-for="n in 2" :key="n">
+                <div class="cr-skel-bar cr-skel-bar--title"></div>
+                <div class="cr-skel-bar cr-skel-bar--text"></div>
+                <div class="cr-skel-bar cr-skel-bar--text cr-skel-bar--short"></div>
+                <div class="cr-skel-bar cr-skel-bar--text"></div>
+              </div>
+            </div>
+
+            <!-- 逐步显示的计划卡片 -->
+            <div v-else-if="planStages.length" class="cr-plan-stages">
+              <div v-for="(stage, si) in planStages" :key="stage.phase" class="cr-plan-stage cr-plan-fadein"
+                :class="`cr-plan-stage--${stage.phase}`"
+                :style="{ animationDelay: si * 0.15 + 's' }">
                 <div class="cr-ps-head" @click="toggleStage(stage.phase)">
                   <Icon :icon="stage.phase === 'short' ? 'lucide:target' : 'lucide:rocket'" :width="14" class="cr-ps-icon"/>
                   <span class="cr-ps-label">{{ stage.phaseLabel }}</span>
@@ -1019,18 +1170,17 @@ onBeforeUnmount(() => {
                 </div>
                 <span class="cr-ps-goal">{{ stage.goal }}</span>
                 <ul class="cr-ps-list" :class="{ 'cr-ps-list--collapsed': !expandedStages.has(stage.phase) }">
-                  <li v-for="(t, ti) in stage.tasks" :key="ti">
+                  <li v-for="(t, ti) in stage.tasks" :key="ti" class="cr-task-fadein" :style="{ animationDelay: ti * 0.08 + 's' }">
                     <Icon icon="lucide:circle" :width="8" class="cr-ps-bullet"/>{{ t }}
                   </li>
                 </ul>
                 <button v-if="!expandedStages.has(stage.phase) && stage.tasks.length > 3" class="cr-ps-expand" @click="toggleStage(stage.phase)">
                   展开全部 ({{ stage.tasks.length }}项)
                 </button>
-                <div class="cr-ps-milestone">
+                <div v-if="stage.milestone && !planLoading" class="cr-ps-milestone">
                   <Icon icon="lucide:flag" :width="10"/>{{ stage.milestone }}
                 </div>
-                <!-- 阶段之间的箭头 -->
-                <div v-if="si < growthPlan.length - 1" class="cr-ps-arrow">
+                <div v-if="si < planStages.length - 1" class="cr-ps-arrow">
                   <Icon icon="lucide:arrow-right" :width="16"/>
                 </div>
               </div>
@@ -1133,7 +1283,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 2px 16px rgba(26,20,16,0.09);
 }
 .cr-header__left  { display: flex; align-items: center; gap: 10px; }
-.cr-header__tabs  { display: flex; align-items: center; gap: 0; }
+.cr-header__tabs  { display: flex; align-items: center; gap: 0; position: absolute; left: 50%; transform: translateX(-50%); }
 .cr-header__right { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
 .cr-back {
   display: flex; align-items: center; gap: 4px; background: transparent;
@@ -1153,7 +1303,6 @@ onBeforeUnmount(() => {
   border-bottom: 2px solid var(--primary-100);
 }
 .cr-tab:hover:not(.cr-tab--active) { color: var(--text-200); }
-.cr-username { font-size: 12px; font-weight: 600; color: var(--primary-100); font-family: var(--font-title); }
 .cr-report-btn {
   display: flex; align-items: center; gap: 5px; cursor: pointer;
   background: var(--primary-100); border: 1px solid var(--primary-100);
@@ -1222,7 +1371,7 @@ onBeforeUnmount(() => {
 
 /* ══ 分析模式主布局 ══ */
 .cr-main {
-  flex: 1; display: grid; grid-template-columns: 360px 1fr;
+  flex: 1; display: grid; grid-template-columns: 420px 1fr;
   overflow: hidden; min-height: 0; position: relative; z-index: 1;
 }
 
@@ -1236,27 +1385,92 @@ onBeforeUnmount(() => {
 .cr-cw-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
   display: flex; justify-content: center; padding: 4px;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 40%, transparent 0%, rgba(26,20,16,0.08) 100%),
+    radial-gradient(circle at 18% 25%, rgba(139,37,0,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 75% 60%, rgba(139,37,0,0.03) 0%, transparent 45%),
+    radial-gradient(circle at 45% 80%, rgba(139,105,20,0.025) 0%, transparent 40%),
+    var(--bg-200);
 }
 .cr-cw-wrap::-webkit-scrollbar { width: 3px; }
 .cr-cw-wrap::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
 .cr-cw-svg { display: block; width: 100%; height: auto; cursor: default; }
 .cw-job-node { cursor: pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.22)); }
 .cw-job-node:hover circle { filter: brightness(1.1); }
-.cw-node-title { font-size: 10.5px; fill: #333; font-weight: 600; pointer-events: none; }
+.cw-node-title { font-size: 12px; fill: #333; font-weight: 600; pointer-events: none; }
 .cw-node-title--active { fill: #fff; }
-.cw-node-sub { font-size: 8.5px; fill: #5C4A38; pointer-events: none; }
+.cw-node-sub { font-size: 10px; fill: #5C4A38; pointer-events: none; }
 .cw-node-sub--active { fill: rgba(255,255,255,0.9); }
-.cw-hold { cursor: help; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.18)); }
+.cw-hold { cursor: pointer; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.18)); }
 .cw-hold:hover ellipse { filter: brightness(1.2); }
-.cw-hold-text { font-size: 9px; fill: #3D2B1A; pointer-events: none; font-weight: 600; }
-.cw-legend-text { font-size: 9px; fill: #5C4A38; font-weight: 600; }
+.cw-hold--more { cursor: pointer; opacity: 0.85; }
+.cw-hold--more:hover { opacity: 1; }
+.cw-hold-text { font-size: 10px; fill: #3D2B1A; pointer-events: none; font-weight: 600; }
+.cw-origin-label { font-size: 9px; fill: var(--primary-100, #8B2500); font-weight: 600; font-family: var(--font-ui); }
+.cw-legend-overlay {
+  position: absolute; top: 4px; left: 4px; z-index: 2;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 6px 10px; border-radius: 6px;
+  background: rgba(245,240,232,0.88); backdrop-filter: blur(4px);
+  border: 1px solid rgba(139,37,0,0.08);
+  pointer-events: none;
+}
+.cw-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #5C4A38; font-family: var(--font-ui); white-space: nowrap; }
+.cw-legend-line { display: inline-block; width: 20px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.cw-legend-line--promote { background: rgba(232,93,58,0.6); }
+.cw-legend-line--transfer { background: rgba(74,144,217,0.6); }
+.cw-legend-dot { display: inline-block; width: 12px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.cw-legend-dot--mastered { background: rgba(62,184,140,0.5); border: 1.4px solid #3DB88C; }
+.cw-legend-dot--unmastered { background: rgba(237,229,214,0.5); border: 1.4px dashed #E85D3A; }
 .cw-rope-path { transition: stroke-width 300ms ease; }
 .cw-rope-path:hover { stroke-width: 3; }
-.cr-cw-empty {
-  flex: 1; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 10px; color: var(--bg-400);
-  font-size: 11px; text-align: center; line-height: 1.6;
+/* ── 引导覆盖层 ── */
+.cr-guide-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(237,229,214,0.55); backdrop-filter: blur(2px);
+  color: var(--text-300); text-align: center;
 }
+.cr-guide-text { font-size: 12px; line-height: 1.6; color: var(--text-200); }
+.cr-guide-text strong { color: var(--primary-100); }
+.cr-guide-icon { color: var(--bg-400); opacity: 0.6; }
+.cr-guide-arrow {
+  color: var(--primary-100); animation: cr-pulse-arrow 1.6s ease-in-out infinite;
+}
+@keyframes cr-pulse-arrow {
+  0%, 100% { transform: translateX(0); opacity: 0.6; }
+  50% { transform: translateX(6px); opacity: 1; }
+}
+.cr-panel-sub--hint {
+  color: var(--primary-100); font-weight: 500;
+  animation: cr-pulse-arrow 2s ease-in-out infinite;
+}
+
+/* ── 技能详情浮动面板 ── */
+.cw-skill-panel {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 180px; max-height: 280px; overflow-y: auto;
+  background: rgba(255,252,245,0.96); border: 1px solid rgba(139,37,0,0.2);
+  border-radius: 8px; box-shadow: 0 4px 16px rgba(26,20,16,0.15);
+  padding: 10px 12px; z-index: 10; backdrop-filter: blur(6px);
+}
+.cw-sp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cw-sp-title { font-size: 10px; font-weight: 600; color: var(--text-100); font-family: var(--font-title); line-height: 1.3; }
+.cw-sp-close {
+  flex-shrink: 0; background: none; border: none; cursor: pointer;
+  color: var(--text-300); padding: 2px; display: flex; align-items: center;
+}
+.cw-sp-close:hover { color: var(--primary-100); }
+.cw-sp-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+.cw-sp-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-200); }
+.cw-sp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.cw-sp-dot--ok { background: #3DB88C; }
+.cw-sp-dot--gap { background: #E85D3A; }
+.cw-sp-name { flex: 1; min-width: 0; font-family: var(--font-ui); }
+.cw-sp-tag { font-size: 9px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; font-family: var(--font-ui); }
+.cw-sp-tag--ok { background: rgba(62,184,140,0.15); color: #2A9D6E; }
+.cw-sp-tag--gap { background: rgba(232,93,58,0.12); color: #B8421A; }
 
 /* ══ 中栏 ══ */
 .cr-center { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
@@ -1276,17 +1490,38 @@ onBeforeUnmount(() => {
 .cr-hero__info { flex: 1; min-width: 0; }
 .cr-hero-job { font-size: 16px; font-weight: 600; color: var(--primary-300); font-family: var(--font-title); letter-spacing: 0.02em; }
 .cr-hero-desc { font-size: 11px; color: var(--text-300); margin-top: 4px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-hero-courses-btn {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 8px;
+  padding: 4px 12px; border: 1px solid var(--primary-200, #C0501A); border-radius: 14px;
+  background: transparent; color: var(--primary-200, #C0501A); font-size: 11px;
+  cursor: pointer; transition: all 0.2s;
+}
+.cr-hero-courses-btn:hover {
+  background: var(--primary-200, #C0501A); color: #fff;
+}
 /* ── 中栏上：气泡 + 雷达 ── */
 .cr-center-top {
-  flex: 0 0 380px; display: grid; grid-template-columns: 1fr 1fr;
+  flex: 0 0 420px; display: grid; grid-template-columns: 1fr 1fr;
   border-bottom: 1px solid var(--bg-300); overflow: hidden;
 }
 .cr-bubble-panel, .cr-radar-panel { display: flex; flex-direction: column; overflow: hidden; }
-.cr-bubble-panel { border-right: 1px solid var(--bg-300); background: linear-gradient(180deg, var(--bg-100) 0%, color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%) 100%); }
-.cr-radar-panel { background: var(--bg-100); }
+.cr-bubble-panel { border-right: 1px solid var(--bg-300); background: linear-gradient(180deg, var(--bg-100) 0%, color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%) 100%); position: relative; }
+.cr-bubble-panel::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; opacity: 0.14;
+  background-image: v-bind(parchmentBg);
+  background-size: cover; background-position: center;
+}
+.cr-radar-panel { background: var(--bg-100); position: relative; }
+.cr-radar-panel::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  pointer-events: none; opacity: 0.16;
+  background-image: v-bind(parchmentBg);
+  background-size: cover; background-position: center;
+}
 
 /* ── 气泡图 SVG ── */
-.cr-bubble-svg { display: block; width: 100%; flex: 1; }
+.cr-bubble-svg { display: block; width: 100%; flex: 1; position: relative; z-index: 1; }
 .cr-bubble-g { cursor: pointer; }
 .cr-bubble-g:hover .cr-bubble-circle {
   fill: color-mix(in srgb, var(--c) 48%, var(--bg-100) 52%);
@@ -1329,25 +1564,29 @@ onBeforeUnmount(() => {
 .cr-bubble-g--sel .cr-ba { fill: #fff; }
 
 /* ── ② 雷达图 + 差距条 ── */
+.cr-radar-chart-area { flex: 1; min-height: 0; overflow: hidden; transition: flex-basis 0.5s ease, height 0.5s ease; }
 .cr-radar-empty {
   flex: 1; display: flex; align-items: center; justify-content: center;
   color: var(--bg-400); font-size: 11px; text-align: center; line-height: 1.7;
 }
 .cr-radar { flex-shrink: 0; width: 100%; height: 250px; }
 .cr-radar-legend {
-  display: flex; align-items: center; gap: 6px; margin-left: auto;
-  font-size: 10px; color: var(--text-300); font-family: var(--font-ui);
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  font-size: 11px; font-weight: 600; color: var(--text-200); font-family: var(--font-ui);
+  background: rgba(139,37,0,0.04); padding: 2px 10px; border-radius: 12px;
 }
 .cr-legend-dot {
-  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-  flex-shrink: 0;
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0; box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
 }
 .cr-legend-dot--dashed {
   background: transparent !important;
-  border: 1.5px dashed;
-  border-radius: 2px;
+  border: 2px dashed;
+  border-radius: 3px;
+  width: 10px; height: 10px;
 }
-.cr-gap-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 4px 8px 6px; }
+.cr-gap-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 4px 8px 6px; animation: cr-gap-enter 0.5s ease both; }
+@keyframes cr-gap-enter { from { opacity: 0; max-height: 0; padding: 0 8px; } to { opacity: 1; max-height: 200px; padding: 4px 8px 6px; } }
 .cr-gap-row  { display: flex; align-items: center; gap: 4px; }
 .cr-gap-dim  { font-size: 9.5px; color: var(--text-200); width: 44px; flex-shrink: 0; font-family: var(--font-ui); }
 .cr-gap-track { flex: 1; height: 7px; background: var(--bg-300); position: relative; overflow: hidden; border-radius: 4px; }
@@ -1419,6 +1658,56 @@ onBeforeUnmount(() => {
 .cr-ps-arrow {
   position: absolute; right: -18px; top: 50%; transform: translateY(-50%);
   color: var(--bg-400); z-index: 2;
+}
+
+/* ── 雷达骨架屏 ── */
+.cr-radar-skeleton {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px; padding: 20px;
+}
+.cr-skel-radar-circle {
+  width: 140px; height: 140px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--bg-300) 25%, rgba(139,37,0,0.04) 50%, var(--bg-300) 75%);
+  background-size: 200% 200%;
+  animation: cr-shimmer 1.5s ease-in-out infinite;
+}
+
+/* ── 骨架屏 ── */
+.cr-plan-skeleton {
+  flex: 1; display: flex; gap: 14px; padding: 14px 16px; overflow: hidden;
+}
+.cr-skel-card {
+  flex: 1; min-width: 200px; padding: 16px; border-radius: 8px;
+  background: var(--bg-200); display: flex; flex-direction: column; gap: 12px;
+}
+.cr-skel-bar {
+  height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-300) 25%, rgba(139,37,0,0.06) 50%, var(--bg-300) 75%);
+  background-size: 200% 100%;
+  animation: cr-shimmer 1.5s ease-in-out infinite;
+}
+.cr-skel-bar--title { width: 50%; height: 14px; margin-bottom: 4px; }
+.cr-skel-bar--text  { width: 85%; }
+.cr-skel-bar--short { width: 60%; }
+@keyframes cr-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── 计划卡片淡入 ── */
+.cr-plan-fadein {
+  animation: cr-slide-up 0.45s ease-out both;
+}
+@keyframes cr-slide-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.cr-task-fadein {
+  animation: cr-task-in 0.3s ease-out both;
+}
+@keyframes cr-task-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 /* ══ 公用面板标题 ══ */

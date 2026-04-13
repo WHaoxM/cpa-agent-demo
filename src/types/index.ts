@@ -48,6 +48,7 @@ export interface Course {
   title: string
   description: string
   skillTags?: string[]  // 对应岗位画像技能维度
+  externalUrl?: string  // 外部课程链接（B站/慕课网等）
   cover: string
   categoryId: string
   teacherId: string
@@ -216,6 +217,9 @@ export interface AIMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  thinking?: string
+  thinkingDuration?: number
+  status?: 'streaming' | 'thinking' | 'done'
 }
 
 // ─── 知识图谱 & 多Agent ───

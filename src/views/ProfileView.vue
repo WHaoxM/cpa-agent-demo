@@ -1,8 +1,9 @@
 ﻿<!-- 页面：个人中心；路由：profile（profile） -->
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { EditPen } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores'
 import jiImg from '@/assets/ji.png'
@@ -20,6 +21,37 @@ const profile = computed(() => {
     }
   )
 })
+
+/* ══ 头像上传 ══ */
+const MAX_AVATAR_KB = 512
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarUrl = computed(() => userStore.currentUser?.avatar || profile.value.avatar || '')
+
+function triggerAvatarUpload() {
+  avatarInput.value?.click()
+}
+
+function onAvatarChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (file.size > MAX_AVATAR_KB * 1024) {
+    ElMessage.warning(`头像文件不能超过 ${MAX_AVATAR_KB}KB，请压缩后重试`)
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => {
+    const base64 = reader.result as string
+    userStore.updateUserInfo({ avatar: base64 })
+    ElMessage.success('头像已更新')
+  }
+  reader.readAsDataURL(file)
+  // 重置 input 以便再次选同一文件
+  if (avatarInput.value) avatarInput.value.value = ''
+}
 
 const roleName = computed(() => {
   if (userStore.isStudent) return '学生'
@@ -47,7 +79,14 @@ function onSave() {
       <aside class="rail">
         <div class="panel rail__panel">
           <div class="user">
-            <el-avatar :size="56" :src="profile.avatar" />
+            <div class="user__avatar-wrap" @click="triggerAvatarUpload" title="点击更换头像">
+              <el-avatar :size="56" :src="avatarUrl" />
+              <div class="user__avatar-overlay">
+                <Icon icon="lucide:camera" :width="18" />
+                <span>更换</span>
+              </div>
+            </div>
+            <input ref="avatarInput" type="file" accept="image/*" class="sr-only" @change="onAvatarChange" />
             <div class="user__meta">
               <div class="user__name">{{ profile.nickname }}</div>
               <div class="user__account">{{ profile.account }}</div>
@@ -299,10 +338,50 @@ function onSave() {
   border-top: 1px solid var(--card-divider);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .user {
   display: flex;
   gap: 14px;
   align-items: center;
+}
+
+.user__avatar-wrap {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.user__avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.user__avatar-wrap:hover .user__avatar-overlay {
+  opacity: 1;
 }
 
 .user__name {

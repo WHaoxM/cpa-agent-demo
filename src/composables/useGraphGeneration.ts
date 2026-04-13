@@ -88,7 +88,7 @@ export function useGraphGeneration(
 
   /**
    * 启动模拟生成流程
-   * 5 个阶段，总耗时约 8-10 秒
+   * 6 个阶段（含前置连接），总耗时约 8 秒
    */
   function start() {
     stop()
@@ -122,36 +122,49 @@ export function useGraphGeneration(
 
     let delay = 0
 
-    // ── 阶段 1：简历解析（~1.5s）──
-    delay += 300
+    // ── 阶段 0：连接后端（~0.5s）──
+    delay += 180
     timers.push(window.setTimeout(() => {
-      startPhase('简历解析', 10)
+      startPhase('连接服务', 5)
+      addLog({ level: 'info', agent: 'System', message: '正在连接能力图谱服务…', ts: nowTs() })
+    }, delay))
+
+    delay += 320
+    timers.push(window.setTimeout(() => {
+      addLog({ level: 'success', agent: 'System', message: '后端连接成功，开始处理请求', ts: nowTs() })
+      progress.value = 8
+    }, delay))
+
+    // ── 阶段 1：简历解析（~0.9s）──
+    delay += 270
+    timers.push(window.setTimeout(() => {
+      startPhase('简历解析', 12)
       addLog({ level: 'info', agent: 'JobParsingAgent', message: '职位解析完成', ts: nowTs() })
     }, delay))
 
-    delay += 600
+    delay += 360
     timers.push(window.setTimeout(() => {
       addLog({ level: 'info', agent: 'ResumeParsingAgent', message: '简历解析中…', ts: nowTs() })
     }, delay))
 
-    delay += 500
+    delay += 450
     timers.push(window.setTimeout(() => {
-      addLog({ level: 'success', agent: 'ResumeParsingAgent', message: '关键信息提取成功 ✅', ts: nowTs() })
+      addLog({ level: 'success', agent: 'ResumeParsingAgent', message: '关键信息提取成功', ts: nowTs() })
       // 中心节点出现
       addNodes(centerNode.map(n => n.id))
       progress.value = 20
     }, delay))
 
-    // ── 阶段 2：技能识别（~1.5s）──
-    delay += 400
+    // ── 阶段 2：技能识别（~1.0s）──
+    delay += 360
     timers.push(window.setTimeout(() => {
       startPhase('技能识别', 30)
       addLog({ level: 'info', agent: 'MatchingAgent', message: '开始匹配分析…', ts: nowTs() })
     }, delay))
 
-    delay += 800
+    delay += 720
     timers.push(window.setTimeout(() => {
-      addLog({ level: 'success', agent: 'MatchingAgent', message: '识别 4 大技能板块 ✅', ts: nowTs() })
+      addLog({ level: 'success', agent: 'MatchingAgent', message: '识别 4 大技能板块，进入展开阶段', ts: nowTs() })
       // 板块节点 + belong 边
       addNodes(boardNodes.map(n => n.id))
       const boardBelong = belongEdges.filter(e =>
@@ -161,8 +174,8 @@ export function useGraphGeneration(
       progress.value = 40
     }, delay))
 
-    // ── 阶段 3：子技能展开（~3s，逐板块）──
-    delay += 500
+    // ── 阶段 3：子技能展开（逐板块，~630ms/板块）──
+    delay += 450
     timers.push(window.setTimeout(() => {
       startPhase('子技能展开', 50)
       addLog({ level: 'info', agent: 'SkillExpandAgent', message: '逐板块展开子技能…', ts: nowTs() })
@@ -172,7 +185,7 @@ export function useGraphGeneration(
     for (const board of boardNodes) {
       const children = childByBoard.get(board.id) || []
       if (children.length === 0) continue
-      delay += 600
+      delay += 630
       const bi = boardIdx
       timers.push(window.setTimeout(() => {
         addNodes(children.map(c => c.id))
@@ -181,7 +194,7 @@ export function useGraphGeneration(
         addLog({
           level: 'success',
           agent: 'SkillExpandAgent',
-          message: `${board.name}：展开 ${children.length} 个子技能 ✅`,
+          message: `${board.name}：展开 ${children.length} 个子技能`,
           ts: nowTs(),
         })
         progress.value = 50 + Math.round((bi + 1) / boardNodes.length * 25)
@@ -189,8 +202,8 @@ export function useGraphGeneration(
       boardIdx++
     }
 
-    // ── 阶段 4：关系推理（~1.5s）──
-    delay += 600
+    // ── 阶段 4：关系推理（~1.6s）──
+    delay += 630
     timers.push(window.setTimeout(() => {
       startPhase('关系推理', 80)
       addLog({ level: 'info', agent: 'RelationAgent', message: '推理跨板块关系线…', ts: nowTs() })
@@ -202,14 +215,14 @@ export function useGraphGeneration(
       addLog({
         level: 'success',
         agent: 'RelationAgent',
-        message: `发现 ${crossEdges.length} 条跨板块关系 ✅`,
+        message: `发现 ${crossEdges.length} 条跨板块关系，应用完成`,
         ts: nowTs(),
       })
       progress.value = 92
     }, delay))
 
-    // ── 阶段 5：完成（~0.6s）──
-    delay += 600
+    // ── 阶段 5：完成（~0.7s）──
+    delay += 720
     timers.push(window.setTimeout(() => {
       startPhase('渲染完成', 100)
       addLog({

@@ -3,7 +3,7 @@
 import { ref, computed, provide, onMounted, onBeforeUnmount, watch, nextTick, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { useUserStore } from '@/stores'
+import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useResumeStore } from '@/stores/resume'
 import { init as echartsInit } from 'echarts/core'
 import {
@@ -11,6 +11,7 @@ import {
   GROUP_COLORS, GROUP_LABELS, RELATION_STYLES,
   type AbilityNode, type AbilityEdge, type AbilityGroup, type OrbitalNode,
 } from '@/composables/useAbilityGraph'
+import { useGraphGeneration, edgeId } from '@/composables/useGraphGeneration'
 import { useResizeObserver } from '@/composables/useResizeObserver'
 import type { LayoutMode } from '@/types'
 import CareerAbilityGraph from './CareerAbilityGraph.vue'
@@ -21,7 +22,6 @@ defineOptions({ name: 'CareerAbilityShell' })
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
 const resumeStore = useResumeStore()
 
 /* 已掌握技能集合（供子组件高亮用） */
@@ -34,7 +34,7 @@ const roleName = computed(() => (route.query.role as string) || '前端开发')
 function goBack() { router.back() }
 
 /* ═══ 布局模式：同一路由内切换，不依赖子路由 ═══ */
-const layoutMode = ref<LayoutMode>('single')
+const layoutMode = ref<LayoutMode>('split')
 const isSplit = computed(() => layoutMode.value === 'split')
 const isWorkspace = computed(() => layoutMode.value === 'workspace')
 
@@ -56,6 +56,7 @@ let animStartTime = 0
 let tick = 0
 let skipUntil = 0
 const orbitalMap = new Map<string, OrbitalNode>()
+const gen = useGraphGeneration(allNodes, allEdges)
 const CX = 400, CY = 400
 const FRAME_MS = 50
 const ORBIT_AMP = 0.22
@@ -64,27 +65,40 @@ let dragOffsets = new Map<string, { dx: number; dy: number }>()
 
 /* ═══ 数据加载 ═══ */
 async function loadData() {
+  gen.stop()
   const data = await getAbilityGraphData(roleName.value)
   allNodes.value = data.nodes
   allEdges.value = data.edges
   collapsedBoards.value = new Set()
-  rebuildOrbital()
+  orbitalMap.clear()
   tick = 0
   animStartTime = performance.now()
   await nextTick()
   initChart()
+  gen.start()
 }
 
-/* ═══ 可见节点/边 ═══ */
+/* ═══ 可见节点/边（受渐进生成 + 折叠双重过滤） ═══ */
 const visibleNodes = computed(() => {
   const c = collapsedBoards.value
-  if (c.size === 0) return allNodes.value
-  return allNodes.value.filter(n => n.level <= 1 || !c.has(n.parentId || ''))
+  const revealed = gen.visibleNodeIds.value
+  const done = gen.isDone.value
+  return allNodes.value.filter(n => {
+    if (!done && !revealed.has(n.id)) return false
+    if (c.size > 0 && n.level > 1 && c.has(n.parentId || '')) return false
+    return true
+  })
 })
 const visibleNodeIds = computed(() => new Set(visibleNodes.value.map(n => n.id)))
 const visibleEdges = computed(() => {
   const ids = visibleNodeIds.value
-  return allEdges.value.filter(e => ids.has(e.source) && ids.has(e.target))
+  const revealedEdges = gen.visibleEdgeIds.value
+  const done = gen.isDone.value
+  return allEdges.value.filter(e => {
+    if (!ids.has(e.source) || !ids.has(e.target)) return false
+    if (!done && !revealedEdges.has(edgeId(e))) return false
+    return true
+  })
 })
 
 /* ═══ 轨道布局 ═══ */
@@ -281,12 +295,26 @@ function refreshLayout() {
     skipUntil = performance.now() + 500
   }
 }
+/* ═══ 渐进生成 → 每批节点/边到达时重算布局 + 入场动画 ═══ */
+watch([() => gen.visibleNodeIds.value, () => gen.visibleEdgeIds.value], () => {
+  rebuildOrbital()
+  if (chart) {
+    chart.setOption({
+      animationDurationUpdate: 400,
+      animationEasingUpdate: 'cubicOut',
+      series: [{ data: buildNodes(tick), links: buildLinks() }],
+    } as any)
+    skipUntil = performance.now() + 400
+  }
+})
+
 /* ═══ Provide 共享状态给嵌入的子组件 ═══ */
 provide('shared-graph', {
   allNodes, allEdges, visibleNodes, visibleEdges, roleName,
   showEdgeLabels, collapsedBoards,
   refreshLayout, layoutMode, toggleLayout,
   masteredSkillNames,
+  gen,
 })
 
 /* ═══ useResizeObserver：监听图容器尺寸变化 → chart.resize() ═══ */
@@ -316,6 +344,7 @@ onMounted(async () => {
   await loadData()
 })
 onBeforeUnmount(() => {
+  gen.stop()
   stopAnimation()
   if (layoutTransitionRaf != null) { cancelAnimationFrame(layoutTransitionRaf); layoutTransitionRaf = null }
   chart?.dispose(); chart = null
@@ -368,13 +397,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 
       <div class="shell-header__right">
         <span class="shell-scroll-label">卷2/3</span>
-        <div class="shell-user-info">
-          <div class="shell-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
-          <div class="shell-user-text">
-            <span class="shell-user-name">{{ userStore.currentUser?.name || '张同学' }}</span>
-            <span class="shell-user-role">学生</span>
-          </div>
-        </div>
+        <UserInfoBar />
       </div>
     </header>
 
@@ -474,16 +497,6 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
   letter-spacing: 0.08em; font-variant-numeric: tabular-nums;
 }
 
-.shell-user-info { display: flex; align-items: center; gap: 10px; }
-.shell-avatar {
-  width: 34px; height: 34px; border-radius: 50%;
-  display: grid; place-items: center; color: #fff;
-  font-size: 14px; font-weight: 600;
-  background: var(--primary-100);
-}
-.shell-user-text { display: flex; flex-direction: column; line-height: 1.3; }
-.shell-user-name { font-size: 13px; font-weight: 600; color: var(--text-100); }
-.shell-user-role { font-size: 11px; color: var(--text-300, #999); }
 
 /* ═══ 内容区 ═══ */
 .shell-body {

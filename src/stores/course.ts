@@ -9,13 +9,14 @@ import {
   mockUsers,
   CURRENT_USER_ID,
 } from '@/mock/data'
+import { careerCourses, careerCategories } from '@/mock/careerCourses'
 
 export const useCourseStore = defineStore(
   'course',
   () => {
     // State
-    const courses = ref<Course[]>([...mockCourses])
-    const categories = ref<Category[]>([...mockCategories])
+    const courses = ref<Course[]>([...mockCourses, ...careerCourses])
+    const categories = ref<Category[]>([...mockCategories, ...careerCategories])
     const progress = ref<LearningProgress[]>([...mockLearningProgress])
     const favorites = ref<string[]>([])
 

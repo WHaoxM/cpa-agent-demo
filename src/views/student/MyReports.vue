@@ -8,7 +8,6 @@ import type { ReportRecord } from '@/types'
 import { mockReportRecords } from '@/mock/data'
 import BookshelfScene from '@/components/bookshelf/BookshelfScene.vue'
 import BookOpenOverlay from '@/components/bookshelf/BookOpenOverlay.vue'
-import SealStamp from '@/components/book/SealStamp.vue'
 
 const router = useRouter()
 
@@ -53,10 +52,11 @@ onMounted(async () => {
 <template>
   <div class="bookcase-page page page--compact">
     <div class="bookcases-layout">
-      <section class="bookcase-unit corner-ornament">
+      <section class="bookcase-unit">
         <div class="bookcase-label">
-          <SealStamp text="个人" :size="20" shape="square" :delay="0.1" />
-          <Icon icon="lucide:user-circle" :width="15" />
+          <span class="section-badge section-badge--portrait">
+            <Icon icon="lucide:user-circle" :width="14" />
+          </span>
           个人能力画像
           <span class="section-count">{{ portraitList.length }}</span>
           <button class="label-entry label-entry--portrait" @click="router.push({ name: 'student-career-navigation' })">
@@ -68,10 +68,11 @@ onMounted(async () => {
         <BookshelfScene :books="portraitList" type="portrait" @book-fly-out="onBookFlyOut" />
       </section>
 
-      <section class="bookcase-unit corner-ornament">
+      <section class="bookcase-unit">
         <div class="bookcase-label">
-          <SealStamp text="生涯" :size="20" shape="square" :delay="0.15" />
-          <Icon icon="lucide:briefcase" :width="15" />
+          <span class="section-badge section-badge--career">
+            <Icon icon="lucide:briefcase" :width="14" />
+          </span>
           职业生涯发展
           <span class="section-count">{{ careerList.length }}</span>
           <button class="label-entry label-entry--career" @click="router.push({ name: 'student-career-report' })">
@@ -127,12 +128,9 @@ onMounted(async () => {
   gap: 0.6rem;
   padding: 0.55rem 0.58rem 0.62rem;
   border-radius: var(--radius-md);
-  border: 1px solid var(--parchment-400);
-  border-top: 2px solid var(--color-primary);
-  background: var(--parchment-100);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 4px rgba(245, 235, 215, 0.55);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   position: relative;
 }
 
@@ -140,22 +138,21 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-family: var(--font-title);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--ink-700);
-  letter-spacing: 0.08em;
-  border-bottom: 1px solid var(--gold-300);
+  color: var(--color-text);
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 0.4rem;
 }
 
 .section-count {
   font-size: 0.68rem;
-  background: transparent;
-  border: 1px solid var(--parchment-400);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 0.08rem 0.4rem;
-  color: var(--ink-300);
+  color: var(--color-text-muted);
   font-family: var(--font-latin, monospace);
   letter-spacing: 0.04em;
 }
@@ -166,10 +163,9 @@ onMounted(async () => {
   align-items: center;
   gap: 0.28rem;
   font-size: 0.72rem;
-  font-family: var(--font-title);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   border: 1px solid currentColor;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   padding: 0.15rem 0.5rem;
   cursor: pointer;
   background: transparent;
@@ -182,19 +178,23 @@ onMounted(async () => {
 }
 
 .label-entry--portrait {
-  color: var(--vermilion-500);
+  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .label-entry--portrait:hover {
-  background: color-mix(in srgb, var(--vermilion-500) 8%, transparent);
+  opacity: 0.88;
 }
 
 .label-entry--career {
-  color: var(--indigo-500);
+  color: #fff;
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
 }
 
 .label-entry--career:hover {
-  background: color-mix(in srgb, var(--indigo-500) 8%, transparent);
+  opacity: 0.88;
 }
 
 .empty-hint {
@@ -204,10 +204,9 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 0.45rem;
   padding: 0.38rem 0.5rem;
-  border: 1px dashed var(--parchment-400);
-  color: var(--ink-300);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
   font-size: 0.75rem;
-  font-family: var(--font-title);
   letter-spacing: 0.04em;
 }
 
@@ -219,10 +218,9 @@ onMounted(async () => {
 .hint-btn {
   border: 1px solid var(--color-primary);
   background: var(--color-primary);
-  color: var(--parchment-100);
+  color: #fff;
   border-radius: var(--radius-sm);
   font-size: 0.72rem;
-  font-family: var(--font-title);
   padding: 0.22rem 0.62rem;
   display: inline-flex;
   align-items: center;
@@ -235,8 +233,27 @@ onMounted(async () => {
 
 .hint-btn--ghost {
   background: transparent;
-  color: var(--ink-500);
-  border-color: var(--parchment-400);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+}
+
+.section-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.section-badge--portrait {
+  background: var(--color-primary);
+}
+
+.section-badge--career {
+  background: var(--color-secondary);
 }
 
 @media (max-width: 1024px) {

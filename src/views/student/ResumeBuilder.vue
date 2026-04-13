@@ -627,7 +627,7 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 /* ══ 页面容器 ══ */
 .rb-page {
   --accent: #8B2500;
-  min-height: 100vh; display: flex; flex-direction: column;
+  height: 100%; display: flex; flex-direction: column;
   background: #151515; color: rgba(220,220,220,0.9);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
 }

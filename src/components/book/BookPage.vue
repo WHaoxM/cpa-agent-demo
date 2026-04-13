@@ -25,7 +25,7 @@ const pageRef = ref<HTMLElement | null>(null)
 
 .book-page__body {
   flex: 1;
-  padding: 20px 24px;
+  padding: 0;
   position: relative;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -40,9 +40,4 @@ const pageRef = ref<HTMLElement | null>(null)
   background: var(--parchment-400);
 }
 
-@media (max-width: 768px) {
-  .book-page__body {
-    padding: 14px 16px;
-  }
-}
 </style>

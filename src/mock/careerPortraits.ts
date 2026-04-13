@@ -966,4 +966,272 @@ export const JOB_PORTRAITS: JobPortrait[] = [
     sevenDim: { 专业技能: 88, 证书资质: 50, 创新能力: 78, 学习能力: 70, 抗压能力: 80, 沟通能力: 70, 实习经验: 80 },
     matchScore: 0.26,
   },
+
+  /* ══ 以下为 CAREER_DOMAINS 15 职业补充条目 ══ */
+
+  /* ── 前端：React 前端工程师 补实习/中级 ── */
+  {
+    id: 'fe-react-intern', title: 'React 前端工程师（实习）', level: 'intern', lineId: 'frontend', stack: 'React',
+    salaryRange: '4K–8K', desc: '参与 React 业务页面开发，熟悉组件化与 Hooks 基础',
+    keySkills: ['React 基础（JSX/函数组件）', 'useState/useEffect Hooks', 'React Router 基础', 'CSS Modules 基础', 'Git', 'ES6+ 语法'],
+    sevenDim: { 专业技能: 32, 证书资质: 12, 创新能力: 30, 学习能力: 82, 抗压能力: 52, 沟通能力: 56, 实习经验: 15 },
+    matchScore: 0.72,
+  },
+  {
+    id: 'fe-react-mid', title: 'React 前端工程师（中级）', level: 'mid', lineId: 'frontend', stack: 'React',
+    salaryRange: '18K–28K', desc: '主导 React 核心模块架构，熟练性能调优与跨端方案',
+    keySkills: ['React 18 Concurrent Mode', 'TypeScript 高级泛型', 'Redux Toolkit / Zustand 状态设计', 'React Query / SWR 数据层', '前端性能优化（Profiler/Code Splitting）', 'Webpack/Vite 深度配置', 'CI/CD 流水线'],
+    sevenDim: { 专业技能: 74, 证书资质: 38, 创新能力: 62, 学习能力: 76, 抗压能力: 70, 沟通能力: 72, 实习经验: 65 },
+    matchScore: 0.60,
+  },
+
+  /* ── 前端：可视化工程师（全新职业）── */
+  {
+    id: 'fe-vis-junior', title: '可视化工程师（初级）', level: 'junior', lineId: 'frontend', stack: '可视化',
+    salaryRange: '12K–20K', desc: '使用 ECharts/D3.js 实现数据大屏与报表，掌握 SVG/Canvas 基础',
+    keySkills: ['ECharts 5 配置与事件', 'D3.js 基础（scale/axis/shape）', 'SVG 与 Canvas 绘图原理', 'TypeScript', 'Vue 3 组件封装', 'Axios 数据对接', 'Git'],
+    sevenDim: { 专业技能: 58, 证书资质: 22, 创新能力: 55, 学习能力: 80, 抗压能力: 58, 沟通能力: 62, 实习经验: 45 },
+    matchScore: 0.65,
+  },
+  {
+    id: 'fe-vis-mid', title: '可视化工程师（中级）', level: 'mid', lineId: 'frontend', stack: '可视化',
+    salaryRange: '18K–30K', desc: '主导可视化组件库建设，承担复杂图表与地图可视化方案',
+    keySkills: ['D3.js 高级布局（力导向/层级/地理）', 'WebGL/Three.js 三维可视化', 'ECharts 自定义系列与渲染器', 'GeoJSON/TopoJSON 地图处理', '数据驱动动画（GSAP/Transition）', 'Canvas 性能优化', '可视化组件库设计规范'],
+    sevenDim: { 专业技能: 74, 证书资质: 35, 创新能力: 72, 学习能力: 76, 抗压能力: 65, 沟通能力: 68, 实习经验: 62 },
+    matchScore: 0.52,
+  },
+  {
+    id: 'fe-vis-senior', title: '可视化工程师（高级）', level: 'senior', lineId: 'frontend', stack: '可视化',
+    salaryRange: '26K–42K', desc: '负责大规模数据可视化平台架构，引领图形渲染与交互方案',
+    keySkills: ['自研渲染引擎（WebGPU/WebGL2 Instancing）', 'Apache ECharts 源码级定制', 'AntV G2/G6 高级图分析', '大数据可视化（虚拟化/LOD 策略）', '实时数据流可视化（WebSocket + requestAnimationFrame）', '可视化叙事（Scrollytelling）', '性能分析（Frame Budget/GPU 火焰图）'],
+    sevenDim: { 专业技能: 88, 证书资质: 48, 创新能力: 88, 学习能力: 72, 抗压能力: 75, 沟通能力: 74, 实习经验: 78 },
+    matchScore: 0.38,
+  },
+
+  /* ── 后端：Java 后端工程师 补实习/中级 ── */
+  {
+    id: 'be-java-intern', title: 'Java 后端工程师（实习）', level: 'intern', lineId: 'backend', stack: 'Java',
+    salaryRange: '4K–8K', desc: '参与 Java 业务接口开发，熟悉 Spring Boot 框架基础',
+    keySkills: ['Java SE 基础（集合/多线程入门）', 'Spring Boot 基础', 'MySQL CRUD', 'Maven 构建', 'Git', 'Postman 接口测试'],
+    sevenDim: { 专业技能: 35, 证书资质: 14, 创新能力: 28, 学习能力: 80, 抗压能力: 52, 沟通能力: 55, 实习经验: 12 },
+    matchScore: 0.68,
+  },
+  {
+    id: 'be-java-mid', title: 'Java 后端工程师（中级）', level: 'mid', lineId: 'backend', stack: 'Java',
+    salaryRange: '18K–30K', desc: '负责核心业务模块与中间件集成，具备一定架构意识',
+    keySkills: ['Spring Cloud 微服务基础', 'Redis 分布式缓存', 'Kafka 消息队列入门', 'MySQL 索引与事务深度', 'Docker 容器化', 'RESTful API 规范设计', 'JUnit/Mockito 单元测试'],
+    sevenDim: { 专业技能: 72, 证书资质: 38, 创新能力: 55, 学习能力: 72, 抗压能力: 70, 沟通能力: 68, 实习经验: 62 },
+    matchScore: 0.50,
+  },
+
+  /* ── 后端：Go 后端工程师 补实习/中级 ── */
+  {
+    id: 'be-go-intern', title: 'Go 后端工程师（实习）', level: 'intern', lineId: 'backend', stack: 'Go',
+    salaryRange: '4K–8K', desc: '参与 Go 服务接口开发，熟悉协程并发模型基础',
+    keySkills: ['Go 语言基础（goroutine/channel 入门）', 'Gin 框架路由与中间件', 'GORM 基础查询', 'MySQL', 'Git', 'Linux 基础命令'],
+    sevenDim: { 专业技能: 35, 证书资质: 12, 创新能力: 30, 学习能力: 84, 抗压能力: 55, 沟通能力: 55, 实习经验: 12 },
+    matchScore: 0.65,
+  },
+  {
+    id: 'be-go-mid', title: 'Go 后端工程师（中级）', level: 'mid', lineId: 'backend', stack: 'Go',
+    salaryRange: '20K–32K', desc: '负责 Go 核心服务开发与性能调优，掌握微服务基础架构',
+    keySkills: ['Go 并发模型深度（sync/atomic/context）', 'gRPC 服务间通信', 'Redis 缓存策略', 'Kafka 消息驱动', 'Docker + Compose', 'Prometheus 基础监控', 'OpenAPI 规范'],
+    sevenDim: { 专业技能: 72, 证书资质: 35, 创新能力: 55, 学习能力: 76, 抗压能力: 70, 沟通能力: 66, 实习经验: 62 },
+    matchScore: 0.48,
+  },
+
+  /* ── 后端：Python 后端工程师 补实习/中级 ── */
+  {
+    id: 'be-python-intern', title: 'Python 后端工程师（实习）', level: 'intern', lineId: 'backend', stack: 'Python',
+    salaryRange: '4K–7K', desc: '参与 Python Web 服务开发，熟悉 Flask/FastAPI 基础',
+    keySkills: ['Python 3 基础', 'Flask/FastAPI 路由', 'SQLAlchemy 基础', 'MySQL', 'Git', 'Postman'],
+    sevenDim: { 专业技能: 32, 证书资质: 12, 创新能力: 32, 学习能力: 82, 抗压能力: 50, 沟通能力: 56, 实习经验: 10 },
+    matchScore: 0.66,
+  },
+  {
+    id: 'be-python-mid', title: 'Python 后端工程师（中级）', level: 'mid', lineId: 'backend', stack: 'Python',
+    salaryRange: '16K–28K', desc: '负责 Python 异步服务与 AI 模型集成，具备工程化意识',
+    keySkills: ['FastAPI 异步编程（async/await）', 'Celery 任务队列', 'Redis 缓存与 Pub/Sub', 'PostgreSQL 进阶', 'Docker 容器化', 'AI 模型 API 集成（OpenAI/HF）', 'Pydantic 数据校验'],
+    sevenDim: { 专业技能: 70, 证书资质: 32, 创新能力: 58, 学习能力: 76, 抗压能力: 65, 沟通能力: 66, 实习经验: 60 },
+    matchScore: 0.48,
+  },
+
+  /* ── 测试：自动化测试工程师 补实习/中级 ── */
+  {
+    id: 'qa-intern', title: '自动化测试工程师（实习）', level: 'intern', lineId: 'qa', stack: 'Selenium',
+    salaryRange: '4K–7K', desc: '执行功能测试与基础接口测试，维护简单测试用例',
+    keySkills: ['黑盒测试基础', 'Postman 接口测试', 'Python 基础', 'Git', 'Excel 测试报告', 'Bug 提交（Jira）'],
+    sevenDim: { 专业技能: 32, 证书资质: 14, 创新能力: 26, 学习能力: 76, 抗压能力: 55, 沟通能力: 62, 实习经验: 14 },
+    matchScore: 0.65,
+  },
+  {
+    id: 'qa-mid', title: '自动化测试工程师（中级）', level: 'mid', lineId: 'qa', stack: 'Selenium',
+    salaryRange: '14K–22K', desc: '独立搭建自动化测试框架，推动接口与 UI 测试落地',
+    keySkills: ['Python pytest 自动化框架', 'Selenium/Playwright UI 测试', 'Allure 测试报告', 'Jenkins CI 集成', 'Docker 测试环境', 'Charles/Fiddler 抓包', 'SQL 数据验证'],
+    sevenDim: { 专业技能: 66, 证书资质: 35, 创新能力: 50, 学习能力: 72, 抗压能力: 65, 沟通能力: 68, 实习经验: 56 },
+    matchScore: 0.48,
+  },
+
+  /* ── 测试：质量平台工程师（全新职业）── */
+  {
+    id: 'qa-plat-junior', title: '质量平台工程师（初级）', level: 'junior', lineId: 'qa', stack: '质量平台',
+    salaryRange: '12K–20K', desc: '参与测试平台功能开发，实现用例管理与报告可视化',
+    keySkills: ['Python/Go 后端开发', 'Vue 3 前端基础', 'MySQL 数据建模', 'RESTful API 设计', 'Jenkins/GitLab CI 基础', 'Docker 部署', 'Git'],
+    sevenDim: { 专业技能: 58, 证书资质: 22, 创新能力: 48, 学习能力: 80, 抗压能力: 58, 沟通能力: 65, 实习经验: 42 },
+    matchScore: 0.58,
+  },
+  {
+    id: 'qa-plat-mid', title: '质量平台工程师（中级）', level: 'mid', lineId: 'qa', stack: '质量平台',
+    salaryRange: '18K–30K', desc: '主导测试平台核心功能设计，实现测试调度与质量度量体系',
+    keySkills: ['分布式测试调度（Celery/K8s Job）', '质量度量体系（缺陷密度/用例覆盖率）', 'ECharts 质量看板可视化', '测试数据管理平台', 'AI 辅助用例生成（基础）', 'Prometheus 监控集成', '多项目多语言测试框架适配'],
+    sevenDim: { 专业技能: 72, 证书资质: 38, 创新能力: 65, 学习能力: 74, 抗压能力: 68, 沟通能力: 72, 实习经验: 62 },
+    matchScore: 0.42,
+  },
+  {
+    id: 'qa-plat-senior', title: '质量平台工程师（高级）', level: 'senior', lineId: 'qa', stack: '质量平台',
+    salaryRange: '25K–42K', desc: '主导全公司质量工程平台架构，推动测试效能与智能化建设',
+    keySkills: ['测试平台微服务架构', 'AI 测试生成（GPT/CodeBERT）', '全链路质量门禁体系', '代码覆盖率深度分析（差量覆盖）', '变异测试（PIT）', '混沌工程集成（质量维度）', '跨部门质量文化推广'],
+    sevenDim: { 专业技能: 84, 证书资质: 52, 创新能力: 78, 学习能力: 70, 抗压能力: 75, 沟通能力: 78, 实习经验: 78 },
+    matchScore: 0.30,
+  },
+
+  /* ── 测试：性能测试工程师 补实习/中级 ── */
+  {
+    id: 'qa-perf-intern', title: '性能测试工程师（实习）', level: 'intern', lineId: 'qa', stack: '性能测试',
+    salaryRange: '4K–7K', desc: '辅助执行性能测试，学习 JMeter 基础操作与数据分析',
+    keySkills: ['JMeter 基础操作', 'HTTP 协议基础', 'Linux 基础命令', 'Excel 数据统计', 'Git', 'SQL 基础'],
+    sevenDim: { 专业技能: 28, 证书资质: 12, 创新能力: 25, 学习能力: 76, 抗压能力: 52, 沟通能力: 56, 实习经验: 12 },
+    matchScore: 0.62,
+  },
+  {
+    id: 'qa-perf-mid', title: '性能测试工程师（中级）', level: 'mid', lineId: 'qa', stack: '性能测试',
+    salaryRange: '14K–24K', desc: '独立完成压测方案设计与性能瓶颈定位，推动优化落地',
+    keySkills: ['JMeter 分布式压测集群', 'Gatling Scala 脚本', 'Grafana 性能监控大屏', 'APM 工具（SkyWalking/Pinpoint）', 'MySQL 慢查询分析', 'JVM 基础调优（堆/GC）', 'Linux 性能诊断（vmstat/sar）'],
+    sevenDim: { 专业技能: 65, 证书资质: 35, 创新能力: 50, 学习能力: 72, 抗压能力: 68, 沟通能力: 68, 实习经验: 56 },
+    matchScore: 0.48,
+  },
+
+  /* ── 数据：商业数据分析师（全新职业）── */
+  {
+    id: 'da-biz-junior', title: '商业数据分析师（初级）', level: 'junior', lineId: 'data-analyst', stack: '商业分析',
+    salaryRange: '8K–15K', desc: '使用 SQL 与 BI 工具分析业务数据，产出洞察报告辅助决策',
+    keySkills: ['SQL（窗口函数/多表联查）', 'Tableau/PowerBI 可视化', 'Excel 高级函数（VLOOKUP/数据透视表）', '业务指标体系理解（DAU/MAU/GMV）', '用户漏斗与留存分析', 'Python Pandas 基础', 'PPT 分析报告'],
+    sevenDim: { 专业技能: 52, 证书资质: 22, 创新能力: 42, 学习能力: 78, 抗压能力: 55, 沟通能力: 72, 实习经验: 38 },
+    matchScore: 0.62,
+  },
+  {
+    id: 'da-biz-mid', title: '商业数据分析师（中级）', level: 'mid', lineId: 'data-analyst', stack: '商业分析',
+    salaryRange: '16K–28K', desc: '主导业务专题分析项目，建立数据化增长决策体系',
+    keySkills: ['A/B 实验设计（假设检验/样本量估算）', '用户分群与 RFM 模型', 'Python 商业统计（Prophet 时序预测）', 'LTV 与 Cohort 留存模型', '业务数据看板搭建（Metabase/Superset）', '竞品数据分析方法论', '跨部门需求沟通与洞察输出'],
+    sevenDim: { 专业技能: 70, 证书资质: 38, 创新能力: 62, 学习能力: 74, 抗压能力: 65, 沟通能力: 80, 实习经验: 62 },
+    matchScore: 0.45,
+  },
+  {
+    id: 'da-biz-senior', title: '商业数据分析师（高级）', level: 'senior', lineId: 'data-analyst', stack: '商业分析',
+    salaryRange: '22K–38K', desc: '引领公司数据分析方法论建设，驱动业务战略决策',
+    keySkills: ['因果推断（DID/IV/RCT 设计）', '北极星指标体系与 OKR 数据化', '机器学习驱动分析（客户流失/价值预测）', '数据产品化（自助分析平台建设）', '高管数据汇报与叙事表达', '数据伦理与隐私合规', '培训与分析文化推广'],
+    sevenDim: { 专业技能: 80, 证书资质: 50, 创新能力: 75, 学习能力: 70, 抗压能力: 72, 沟通能力: 88, 实习经验: 78 },
+    matchScore: 0.32,
+  },
+
+  /* ── 数据：数据开发工程师（全新职业）── */
+  {
+    id: 'da-dev-junior', title: '数据开发工程师（初级）', level: 'junior', lineId: 'data-analyst', stack: '数据开发',
+    salaryRange: '10K–18K', desc: '负责数仓 ETL 开发与调度任务维护，保障数据链路稳定',
+    keySkills: ['Hive SQL / Spark SQL', '数仓分层建模（ODS/DWD/ADS）', 'DataX/Sqoop 数据同步', 'Shell 脚本自动化', 'Azkaban/DolphinScheduler 调度', 'MySQL', 'Linux 基础'],
+    sevenDim: { 专业技能: 58, 证书资质: 24, 创新能力: 40, 学习能力: 78, 抗压能力: 60, 沟通能力: 60, 实习经验: 42 },
+    matchScore: 0.56,
+  },
+  {
+    id: 'da-dev-mid', title: '数据开发工程师（中级）', level: 'mid', lineId: 'data-analyst', stack: '数据开发',
+    salaryRange: '16K–28K', desc: '主导数仓核心模型设计与数据治理，推动数据质量提升',
+    keySkills: ['Spark 离线计算调优', 'Flink CDC 实时数据同步', '数据质量监控（Great Expectations）', '维度建模方法论（Kimball）', 'Delta Lake/Iceberg 湖仓格式', 'Airflow DAG 编排', '元数据管理（Atlas）'],
+    sevenDim: { 专业技能: 72, 证书资质: 38, 创新能力: 55, 学习能力: 74, 抗压能力: 68, 沟通能力: 65, 实习经验: 62 },
+    matchScore: 0.42,
+  },
+  {
+    id: 'da-dev-senior', title: '数据开发工程师（高级）', level: 'senior', lineId: 'data-analyst', stack: '数据开发',
+    salaryRange: '22K–40K', desc: '主导企业级数据中台架构，建立数据资产管理与流批一体体系',
+    keySkills: ['数据中台架构设计（OneData 方法论）', '流批一体（Flink + Spark 混合架构）', '湖仓一体（Hudi + Trino 联邦查询）', '数据血缘与影响分析', 'DataOps 与 CI/CD for Data', 'FinOps 大数据成本治理', '跨域数据标准化推广'],
+    sevenDim: { 专业技能: 86, 证书资质: 52, 创新能力: 68, 学习能力: 70, 抗压能力: 78, 沟通能力: 74, 实习经验: 80 },
+    matchScore: 0.28,
+  },
+
+  /* ── 数据：增长分析师（全新职业）── */
+  {
+    id: 'da-growth-junior', title: '增长分析师（初级）', level: 'junior', lineId: 'data-analyst', stack: '增长分析',
+    salaryRange: '9K–16K', desc: '支持增长实验数据分析，追踪获客与转化漏斗指标',
+    keySkills: ['SQL 获客数据查询', 'A/B 测试基础（流量分组/显著性）', '渠道归因分析（Last Click/Multi-touch）', 'Python 数据处理基础', 'Google Analytics / Mixpanel 基础', 'Excel 数据整理', '增长实验文档撰写'],
+    sevenDim: { 专业技能: 50, 证书资质: 18, 创新能力: 48, 学习能力: 82, 抗压能力: 55, 沟通能力: 70, 实习经验: 35 },
+    matchScore: 0.62,
+  },
+  {
+    id: 'da-growth-mid', title: '增长分析师（中级）', level: 'mid', lineId: 'data-analyst', stack: '增长分析',
+    salaryRange: '16K–28K', desc: '主导增长实验设计与用户生命周期分析，驱动业务增长',
+    keySkills: ['增长实验全流程（假设→设计→上线→评估）', '用户生命周期模型（CLV/Churn）', 'AARRR 漏斗精细化分析', 'Segment/Amplitude 用户行为平台', 'Python 增长统计建模', '个性化推荐逻辑分析', '增长黑客方法论（Sean Ellis）'],
+    sevenDim: { 专业技能: 68, 证书资质: 32, 创新能力: 70, 学习能力: 76, 抗压能力: 65, 沟通能力: 76, 实习经验: 60 },
+    matchScore: 0.45,
+  },
+  {
+    id: 'da-growth-senior', title: '增长分析师（高级）', level: 'senior', lineId: 'data-analyst', stack: '增长分析',
+    salaryRange: '22K–40K', desc: '建立公司增长分析体系，打通产品/营销/数据决策闭环',
+    keySkills: ['因果推断与增量价值评估（Uplift Modeling）', '增长飞轮模型构建', 'LTV 最大化策略（定价/促销/补贴）', '实时个性化分析系统', '跨渠道归因模型（MMM）', '增长数据治理与指标体系', '增长团队跨职能协作'],
+    sevenDim: { 专业技能: 80, 证书资质: 45, 创新能力: 82, 学习能力: 72, 抗压能力: 72, 沟通能力: 85, 实习经验: 76 },
+    matchScore: 0.28,
+  },
+
+  /* ── ML：算法工程师 补实习/中级 ── */
+  {
+    id: 'algo-recsys-intern', title: '推荐算法工程师（实习）', level: 'intern', lineId: 'algorithm', stack: '推荐算法',
+    salaryRange: '5K–9K', desc: '参与推荐系统特征开发与离线实验，熟悉推荐基础框架',
+    keySkills: ['Python 数据处理', '协同过滤原理理解', 'SQL 特征查询', 'Pandas/NumPy', 'A/B 测试基础', 'Git', 'Linux 基础'],
+    sevenDim: { 专业技能: 38, 证书资质: 16, 创新能力: 40, 学习能力: 84, 抗压能力: 55, 沟通能力: 55, 实习经验: 14 },
+    matchScore: 0.60,
+  },
+  {
+    id: 'algo-recsys-mid', title: '推荐算法工程师（中级）', level: 'mid', lineId: 'algorithm', stack: '推荐算法',
+    salaryRange: '22K–38K', desc: '独立完成推荐链路优化，具备端到端模型研发与上线能力',
+    keySkills: ['深度召回模型（DSSM/Two-tower）', 'Transformer 精排（BST/SIM）', '实时特征工程（Redis/Flink）', 'TensorFlow/PyTorch 训练优化', 'MLflow 实验管理', '在线 A/B 实验全流程', '推荐效果评估指标体系'],
+    sevenDim: { 专业技能: 78, 证书资质: 45, 创新能力: 72, 学习能力: 74, 抗压能力: 72, 沟通能力: 68, 实习经验: 70 },
+    matchScore: 0.38,
+  },
+
+  /* ── ML：深度学习工程师（全新职业）── */
+  {
+    id: 'dl-junior', title: '深度学习工程师（初级）', level: 'junior', lineId: 'ai', stack: '深度学习',
+    salaryRange: '16K–28K', desc: '参与深度学习模型训练与调优，掌握主流框架与实验管理',
+    keySkills: ['PyTorch 神经网络构建与训练', '反向传播与优化器（Adam/SGD）', 'CNN/RNN/Transformer 基础架构', '数据增强与 DataLoader', 'GPU 环境配置（CUDA/cuDNN）', 'Weights & Biases 实验追踪', 'Git/DVC 版本管理'],
+    sevenDim: { 专业技能: 62, 证书资质: 26, 创新能力: 58, 学习能力: 84, 抗压能力: 62, 沟通能力: 60, 实习经验: 46 },
+    matchScore: 0.50,
+  },
+  {
+    id: 'dl-mid', title: '深度学习工程师（中级）', level: 'mid', lineId: 'ai', stack: '深度学习',
+    salaryRange: '26K–42K', desc: '主导模型架构研究与工程化落地，具备端侧/云端部署能力',
+    keySkills: ['Transformer 深度定制（注意力机制/位置编码）', '模型蒸馏与量化（PTQ/QAT）', 'ONNX 跨框架导出', 'TensorRT 推理加速', '混合精度训练（AMP）', '分布式训练（DDP/DeepSpeed）', '模型评估与误差分析体系'],
+    sevenDim: { 专业技能: 80, 证书资质: 48, 创新能力: 80, 学习能力: 74, 抗压能力: 75, 沟通能力: 66, 实习经验: 72 },
+    matchScore: 0.35,
+  },
+  {
+    id: 'dl-senior', title: '深度学习工程师（高级）', level: 'senior', lineId: 'ai', stack: '深度学习',
+    salaryRange: '38K–65K', desc: '引领大规模深度学习系统研发，覆盖模型创新到生产交付全链路',
+    keySkills: ['Foundation Model 预训练（GPT/BERT/ViT 级别）', '大规模分布式训练（Megatron/FSDP）', '自研网络架构搜索（NAS）', '多任务/迁移学习系统设计', 'MLOps 全链路（训练→评估→部署→监控）', '模型安全与对抗样本防御', 'AI 研究方向把握与论文追踪'],
+    sevenDim: { 专业技能: 92, 证书资质: 65, 创新能力: 92, 学习能力: 70, 抗压能力: 82, 沟通能力: 70, 实习经验: 84 },
+    matchScore: 0.22,
+  },
+
+  /* ── ML：AI 应用工程师 补实习/中级 ── */
+  {
+    id: 'ai-llm-intern', title: 'LLM 应用工程师（实习）', level: 'intern', lineId: 'ai', stack: 'LLM应用',
+    salaryRange: '5K–9K', desc: '参与 AI 应用功能开发，熟悉大模型 API 调用与 Prompt 设计',
+    keySkills: ['Python 基础', 'OpenAI/通义 API 调用', 'Prompt 设计基础', 'LangChain 入门', 'FastAPI 基础', 'Git', 'Markdown 文档'],
+    sevenDim: { 专业技能: 35, 证书资质: 14, 创新能力: 50, 学习能力: 88, 抗压能力: 52, 沟通能力: 60, 实习经验: 12 },
+    matchScore: 0.65,
+  },
+  {
+    id: 'ai-llm-mid', title: 'LLM 应用工程师（中级）', level: 'mid', lineId: 'ai', stack: 'LLM应用',
+    salaryRange: '28K–45K', desc: '主导 LLM 应用核心功能研发，具备 RAG 系统和 Agent 构建能力',
+    keySkills: ['RAG 系统全链路（Embedding/检索/生成）', 'LangChain/LlamaIndex 高级用法', '向量数据库选型与优化（Milvus/Weaviate）', 'Function Calling & Tool Use', 'LLM 评估体系（RAGAS/HellaSwag）', 'Prompt 工程进阶（Chain-of-Thought/Few-shot）', '流式输出与多轮对话状态管理'],
+    sevenDim: { 专业技能: 75, 证书资质: 38, 创新能力: 78, 学习能力: 80, 抗压能力: 68, 沟通能力: 70, 实习经验: 62 },
+    matchScore: 0.42,
+  },
 ]

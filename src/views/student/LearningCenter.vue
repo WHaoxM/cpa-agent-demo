@@ -3,11 +3,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore, useCourseStore } from '@/stores'
-import { getCourseSystemData, COURSE_GROUP_LABELS } from '@/composables/useCourseSystem'
-import type { CourseSystemData } from '@/composables/useCourseSystem'
 import type { Course } from '@/types'
+import { JOB_PORTRAITS } from '@/mock/careerPortraits'
 import D3Treemap from '@/components/charts/D3Treemap.vue'
 import type { TreemapCategory, TreemapCourse } from '@/components/charts/D3Treemap.vue'
 import D3ChordDiagram from '@/components/charts/D3ChordDiagram.vue'
@@ -20,14 +19,7 @@ const courseStore = useCourseStore()
 /* ═══ 来源岗位（从 CourseSystemGraph 跳转时携带 ?role=xxx） ═══ */
 const fromRole = computed<string>(() => (route.query.role as string) || '')
 
-/* ═══ 课程体系数据（用于弦图） ═══ */
-const graphData = ref<CourseSystemData | null>(null)
-onMounted(() => loadGraphData())
-watch(fromRole, () => loadGraphData())
-async function loadGraphData() {
-  const role = fromRole.value || '前端开发工程师'
-  graphData.value = await getCourseSystemData(role)
-}
+/* ═══ 弦图数据将在下方 computed 中直接构建 ═══ */
 
 /* ═══ 搜索 & 筛选 ═══ */
 const keyword = ref('')
@@ -48,25 +40,74 @@ function selectCategory(catId: string) {
   page.value = 1
 }
 
-/* ═══ 岗位相关课程 ID 集合（高亮用） ═══ */
+/* ═══ CAREER_DOMAINS 职业名 → JOB_PORTRAITS lineId + 可选 stack 过滤 ═══ */
+const ROLE_LINE_MAP: Record<string, { lineIds: string[]; stacks?: string[] }> = {
+  // 五大方向（大类）
+  '前端开发':       { lineIds: ['frontend'] },
+  '后端开发':       { lineIds: ['backend', 'general'] },
+  '测试开发':       { lineIds: ['qa'] },
+  '数据分析':       { lineIds: ['data-analyst', 'data', 'bigdata'] },
+  '机器学习工程师': { lineIds: ['algorithm', 'ai', 'data'] },
+  // 前端三细分
+  'Vue 前端工程师':    { lineIds: ['frontend'], stacks: ['Vue'] },
+  'React 前端工程师':  { lineIds: ['frontend'], stacks: ['React'] },
+  '可视化工程师':      { lineIds: ['frontend'], stacks: ['可视化'] },
+  // 后端三细分
+  'Java 后端工程师':   { lineIds: ['backend', 'general'], stacks: ['Java'] },
+  'Go 后端工程师':     { lineIds: ['backend', 'general'], stacks: ['Go'] },
+  'Python 后端工程师': { lineIds: ['backend', 'general'], stacks: ['Python'] },
+  // 测试三细分
+  '自动化测试工程师': { lineIds: ['qa'], stacks: ['Selenium'] },
+  '质量平台工程师':   { lineIds: ['qa'], stacks: ['质量平台'] },
+  '性能测试工程师':   { lineIds: ['qa'], stacks: ['性能测试'] },
+  // 数据三细分
+  '商业数据分析师': { lineIds: ['data-analyst'], stacks: ['商业分析'] },
+  '数据开发工程师': { lineIds: ['data-analyst', 'bigdata'], stacks: ['数据开发'] },
+  '增长分析师':     { lineIds: ['data-analyst'], stacks: ['增长分析'] },
+  // ML 三细分
+  '算法工程师':     { lineIds: ['algorithm'] },
+  '深度学习工程师': { lineIds: ['ai'], stacks: ['深度学习'] },
+  'AI 应用工程师':  { lineIds: ['ai'], stacks: ['LLM应用'] },
+}
+
+/* ═══ 岗位相关课程 ID 集合（基于 skillTags ∩ keySkills 匹配） ═══ */
 const roleCourseIds = computed<Set<string>>(() => {
-  if (!graphData.value || !fromRole.value) return new Set()
-  const courseIds = new Set<string>()
-  const skillEdges = graphData.value.skillCourseEdges
-  const gcNodes = graphData.value.courseNodes
-  for (const edge of skillEdges) {
-    const gcNode = gcNodes.find(n => n.id === edge.courseId)
-    if (!gcNode) continue
-    // Map GraphCourseNode title to real course by substring match
-    const match = courseStore.courses.find(c =>
-      c.title.includes(gcNode.title.substring(0, 4)) ||
-      gcNode.title.includes(c.title.substring(0, 4))
-    )
-    if (match) courseIds.add(match.id)
+  if (!fromRole.value) return new Set()
+  const roleSkills = new Set<string>()
+
+  // 1. 优先：命中 ROLE_LINE_MAP（覆盖 CAREER_DOMAINS 所有职业名）
+  const lineFilter = ROLE_LINE_MAP[fromRole.value]
+  if (lineFilter) {
+    JOB_PORTRAITS.filter(j => {
+      if (!lineFilter.lineIds.includes(j.lineId)) return false
+      if (lineFilter.stacks && lineFilter.stacks.length > 0) {
+        return lineFilter.stacks.some(s => j.stack?.includes(s))
+      }
+      return true
+    }).forEach(j => j.keySkills.forEach(s => roleSkills.add(s)))
+  } else {
+    // 2. 兜底：按 title 精确匹配，再按 lineId 聚合；否则按名称模糊匹配
+    const exactMatch = JOB_PORTRAITS.find(j => j.title === fromRole.value)
+    const lineId = exactMatch?.lineId
+    if (lineId) {
+      JOB_PORTRAITS.filter(j => j.lineId === lineId).forEach(j =>
+        j.keySkills.forEach(s => roleSkills.add(s)),
+      )
+    } else {
+      JOB_PORTRAITS.filter(j =>
+        j.title.includes(fromRole.value) || fromRole.value.includes(j.title),
+      ).forEach(j => j.keySkills.forEach(s => roleSkills.add(s)))
+    }
   }
-  // Also directly map course_001~course_005 via courseSkillMap
-  const ROLE_COURSE_IDS = ['course_001', 'course_002', 'course_003', 'course_004', 'course_005']
-  ROLE_COURSE_IDS.forEach(id => courseIds.add(id))
+
+  if (roleSkills.size === 0) return new Set()
+  // 3. 遍历所有课程，skillTags 与 roleSkills 有交集则命中
+  const courseIds = new Set<string>()
+  for (const c of courseStore.courses) {
+    if (c.skillTags?.some(tag => roleSkills.has(tag))) {
+      courseIds.add(c.id)
+    }
+  }
   return courseIds
 })
 
@@ -113,11 +154,28 @@ function toggleFavorite(courseId: string, e: Event) {
 }
 
 function viewCourse(course: Course) {
-  router.push(`/app/student/course/${course.id}`)
+  if (course.externalUrl) {
+    ElMessageBox.confirm(
+      `即将前往外部平台学习「${course.title}」`,
+      '前往学习',
+      {
+        confirmButtonText: '前往',
+        cancelButtonText: '取消',
+        type: 'info',
+      },
+    ).then(() => {
+      window.open(course.externalUrl, '_blank', 'noopener,noreferrer')
+    }).catch(() => { /* 用户取消 */ })
+  } else {
+    ElMessage({ message: '该课程暂无外部学习链接', type: 'warning', duration: 2000 })
+  }
 }
 
 function viewCourseById(id: string) {
-  router.push(`/app/student/course/${id}`)
+  const course = courseStore.courses.find(c => c.id === id)
+  if (course) {
+    viewCourse(course)
+  }
 }
 
 function formatDuration(minutes: number): string {
@@ -140,38 +198,104 @@ const treemapCourses = computed<TreemapCourse[]>(() =>
   }))
 )
 
-/* ═══ D3 弦图数据 ═══ */
-interface ChordLink { source: string; target: string; value: number }
+/* ═══ D3 弦图数据（技能亲和力 — 基于岗位 keySkills 共现） ═══ */
 
-const chordData = computed<ChordLink[]>(() => {
-  if (!graphData.value) return []
-  const { courseNodes, edges } = graphData.value
+const SKILL_NORM: Record<string, string> = {
+  'Vue 3': 'Vue', 'Vue 基础': 'Vue', 'Vue3/React': 'Vue', 'Vue 3 / React': 'Vue',
+  'React 18 Hooks': 'React', 'React Router 6': 'React',
+  'TypeScript 强类型': 'TypeScript',
+  'Python 3': 'Python', 'Python/PyTorch': 'Python', 'Python/Java': 'Python',
+  'Go 语言基础': 'Go', 'Go 语言特性（goroutine/channel）': 'Go',
+  'Gin/Echo 框架': 'Go', 'Gin/Fiber 框架': 'Go',
+  'Docker 基础': 'Docker', 'Docker 容器化': 'Docker', 'Docker/K8s 部署': 'Docker',
+  'Docker 容器化（Dockerfile/Compose）': 'Docker',
+  'Spring Boot 2/3': 'Spring Boot', 'Spring Cloud Alibaba': 'Spring Cloud',
+  'Spring Cloud 微服务': 'Spring Cloud',
+  'MySQL/Redis': 'MySQL', 'MySQL 事务与索引': 'MySQL', 'MySQL/PostgreSQL': 'MySQL',
+  'Redis 基础': 'Redis', 'Redis 缓存': 'Redis',
+  'Linux 基础': 'Linux', 'Linux 系统编程': 'Linux', 'Linux/Shell': 'Linux',
+  'Linux 运维': 'Linux', 'Linux 系统管理（CentOS/Ubuntu）': 'Linux', 'Git/Linux': 'Linux',
+  'SQL 数据校验': 'SQL', 'SQL 数据查询': 'SQL', 'SQL 进阶（窗口函数/子查询）': 'SQL',
+  'CI/CD': 'CI/CD', 'CI 集成触发': 'CI/CD', 'CI 安全卡点': 'CI/CD', 'CI/CD 基础': 'CI/CD',
+  'Kafka/RocketMQ': 'Kafka', 'Kafka 消息队列（aiokafka）': 'Kafka',
+  'Kafka 消费与生产': 'Kafka', 'Kafka/RabbitMQ': 'Kafka',
+  '深度学习': '深度学习/PyTorch', 'TensorFlow/PyTorch': '深度学习/PyTorch', 'PyTorch': '深度学习/PyTorch',
+  '机器学习': '机器学习', 'Sklearn 机器学习': '机器学习',
+  'Transformers/BERT': 'NLP/LLM', 'Hugging Face': 'NLP/LLM',
+  'Hugging Face Transformers': 'NLP/LLM', 'BERT/RoBERTa 微调': 'NLP/LLM',
+  'LangChain/LlamaIndex': 'NLP/LLM', 'OpenAI/通义/智谱 API 调用': 'NLP/LLM',
+  'RAG 系统架构': 'NLP/LLM', '向量检索（Chroma/Pinecone）': 'NLP/LLM',
+  '向量数据库（Milvus/Weaviate）': 'NLP/LLM', '向量数据库（Milvus）': 'NLP/LLM',
+  '知识库系统架构': 'NLP/LLM',
+  'Spark Core/SQL/DataFrame': 'Spark', 'Spark MLlib 基础': 'Spark',
+  'Flink DataStream API': 'Flink', 'Flink SQL/Table API': 'Flink', '实时特征（Flink）': 'Flink',
+  'Hive SQL': 'Hive', 'Hive/Presto/Spark SQL': 'Hive',
+  'Prometheus/Grafana 基础': 'Prometheus/Grafana', 'Prometheus + Grafana 监控体系': 'Prometheus/Grafana',
+  'FastAPI/异步框架': 'FastAPI', 'FastAPI 异步高并发': 'FastAPI', 'FastAPI 接口封装': 'FastAPI',
+  'Django/Flask': 'Django/Flask', 'Django/Flask/FastAPI': 'Django/Flask',
+  'Playwright E2E': 'Playwright', 'Selenium 自动化': 'Selenium',
+  'Postman 接口测试': 'Postman', 'Postman': 'Postman',
+  'JMeter 压测脚本': 'JMeter',
+  'MyBatis-Plus': 'MyBatis', 'MyBatis/JPA': 'MyBatis',
+  'Kubernetes 基础（Pod/Service/Ingress）': 'Kubernetes', 'Kubernetes 部署': 'Kubernetes',
+  'Kubernetes/Docker Compose': 'Kubernetes', 'Kubernetes 部署与调优': 'Kubernetes',
+  'Node.js 核心模块': 'Node.js',
+  'Java SE 核心': 'Java',
+  'Shell/Python 脚本': 'Linux', 'Shell 脚本': 'Linux',
+  'Jenkins/GitLab CI 流水线': 'CI/CD',
+  'REST API': 'REST API', 'RESTful API': 'REST API',
+  'Ansible/SaltStack 配置管理': 'Ansible',
+  'Ansible 自动化': 'Ansible',
+  'BI 可视化': 'BI/可视化', 'D3.js': 'BI/可视化', '数据可视化': 'BI/可视化', 'ECharts': 'BI/可视化',
+  'Tableau/PowerBI 基础': 'BI/可视化', 'Tableau/PowerBI': 'BI/可视化',
+}
 
-  // 建立 skillId → CourseGroup 映射
-  const skillToGroup = new Map<string, string>()
-  for (const cn of courseNodes) {
-    for (const sid of cn.relatedSkillIds) {
-      skillToGroup.set(sid, COURSE_GROUP_LABELS[cn.group])
+function normSkill(s: string): string {
+  return SKILL_NORM[s] ?? s
+}
+
+const chordResult = computed(() => {
+  const tagFreq = new Map<string, number>()
+  const portraitData: { skills: string[]; title: string }[] = []
+
+  for (const jp of JOB_PORTRAITS) {
+    const normalized = [...new Set(jp.keySkills.map(normSkill))]
+    portraitData.push({ skills: normalized, title: jp.title })
+    for (const s of normalized) {
+      tagFreq.set(s, (tagFreq.get(s) ?? 0) + 1)
     }
   }
 
-  // 统计每条边连接的课程组对
-  const linkCounts = new Map<string, number>()
-  for (const edge of edges) {
-    const sg = skillToGroup.get(edge.source)
-    const tg = skillToGroup.get(edge.target)
-    if (sg && tg && sg !== tg) {
-      const key = [sg, tg].sort().join('||')
-      linkCounts.set(key, (linkCounts.get(key) ?? 0) + 1)
+  const hotTags = [...tagFreq.entries()]
+    .filter(([, freq]) => freq >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20)
+    .map(([tag]) => tag)
+
+  const tagSet = new Set(hotTags)
+  const n = hotTags.length
+  const matrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0) as number[])
+  const pairPortraits = new Map<string, string[]>()
+
+  for (const { skills, title } of portraitData) {
+    const filtered = skills.filter(s => tagSet.has(s))
+    for (let i = 0; i < filtered.length; i++) {
+      for (let j = i + 1; j < filtered.length; j++) {
+        const si = hotTags.indexOf(filtered[i]!)
+        const sj = hotTags.indexOf(filtered[j]!)
+        if (si >= 0 && sj >= 0) {
+          matrix[si]![sj]! += 1
+          matrix[sj]![si]! += 1
+          const key = si < sj ? `${si}-${sj}` : `${sj}-${si}`
+          const arr = pairPortraits.get(key) ?? []
+          if (!arr.includes(title)) arr.push(title)
+          pairPortraits.set(key, arr)
+        }
+      }
     }
   }
 
-  return [...linkCounts.entries()]
-    .filter(([, v]) => v > 0)
-    .map(([key, value]) => {
-      const parts = key.split('||')
-      return { source: parts[0]!, target: parts[1]!, value }
-    })
+  return { nodes: hotTags, matrix, pairCourses: pairPortraits }
 })
 </script>
 <template>
@@ -206,10 +330,6 @@ const chordData = computed<ChordLink[]>(() => {
         <button v-if="fromRole" class="lc-back-btn" @click="goBackToGraph">
           <Icon icon="lucide:map" :width="13" />
           <span>返回图谱</span>
-        </button>
-        <button class="lc-back-btn lc-back-btn--secondary" @click="router.push({ name: 'course-system' })">
-          <Icon icon="lucide:layers" :width="13" />
-          <span>课程体系图谱</span>
         </button>
       </div>
     </header>
@@ -248,13 +368,15 @@ const chordData = computed<ChordLink[]>(() => {
       </div>
       <div class="lc-viz__chord">
         <div class="lc-viz__panel-head">
-          <span class="lc-viz__panel-title">课程体系关联</span>
-          <span class="lc-viz__panel-desc">
-            {{ fromRole ? fromRole + ' 岗位课程体系关联结构' : '技能层级课程关联结构' }}
-          </span>
+          <span class="lc-viz__panel-title">技能亲和力弦图</span>
+          <span class="lc-viz__panel-desc">岗位所需技能共现关系，ribbon 越宽说明技能越常被同一岗位需要</span>
         </div>
         <div class="lc-viz__chart-wrap lc-viz__chart-wrap--chord">
-          <D3ChordDiagram :data="chordData" />
+          <D3ChordDiagram
+            :nodes="chordResult.nodes"
+            :matrix="chordResult.matrix"
+            :pair-courses="chordResult.pairCourses"
+          />
         </div>
       </div>
     </section>
@@ -284,7 +406,12 @@ const chordData = computed<ChordLink[]>(() => {
             <img :src="course.cover" :alt="course.title" class="lc-card__img" loading="lazy" />
             <div class="lc-card__overlay">
               <span class="lc-card__start-btn">
-                {{ getCourseProgress(course.id) > 0 ? '继续学习' : '开始学习' }}
+                <template v-if="course.externalUrl">
+                  <Icon icon="lucide:external-link" :width="12" style="margin-right:3px"/>前往 B 站学习
+                </template>
+                <template v-else>
+                  {{ getCourseProgress(course.id) > 0 ? '继续学习' : '开始学习' }}
+                </template>
               </span>
             </div>
             <button
@@ -309,16 +436,8 @@ const chordData = computed<ChordLink[]>(() => {
             <p class="lc-card__desc">{{ course.description }}</p>
             <div class="lc-card__meta">
               <span class="lc-card__meta-item">
-                <Icon icon="lucide:user" :width="11" />
-                {{ course.teacherName }}
-              </span>
-              <span class="lc-card__meta-item">
                 <Icon icon="lucide:clock" :width="11" />
                 {{ formatDuration(course.totalDuration) }}
-              </span>
-              <span class="lc-card__meta-item">
-                <Icon icon="lucide:book-open" :width="11" />
-                {{ course.chapters?.length ?? 0 }} 章
               </span>
             </div>
             <div v-if="getCourseProgress(course.id) > 0" class="lc-card__progress-bar">
@@ -535,7 +654,7 @@ const chordData = computed<ChordLink[]>(() => {
   gap: 0;
   padding: 0;
   border-radius: var(--radius-md, 10px);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .lc-viz__treemap {
@@ -570,11 +689,11 @@ const chordData = computed<ChordLink[]>(() => {
 }
 
 .lc-viz__chart-wrap--treemap {
-  height: 280px;
+  height: 400px;
 }
 
 .lc-viz__chart-wrap--chord {
-  height: 280px;
+  height: 400px;
 }
 
 /* ═══ 课程网格 ═══ */

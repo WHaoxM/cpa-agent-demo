@@ -3,7 +3,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { useUserStore } from '@/stores'
+import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useLearningStore } from '@/stores/learning'
 import { gsap } from '@/plugins/gsap'
 import { useCareerInsights, roleOptions, CAREER_DOMAINS, type CareerRole } from '@/composables/useCareerInsights'
@@ -149,7 +149,6 @@ const kpiDemandDetails = {
 /* ═══ 核心状态 ═══ */
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
 const learningStore = useLearningStore()
 
 const followableRole = computed<CareerRole | null>(() => {
@@ -417,6 +416,7 @@ const compareOption = computed(() => {
 
     tooltip: {
       trigger: 'item',
+      appendToBody: true,
       backgroundColor: 'rgba(255,255,255,0.97)',
       borderColor: C.panelBorder,
       borderWidth: 1,
@@ -469,6 +469,7 @@ const compareOption = computed(() => {
       axisTick: { show: false },
       axisLine: { lineStyle: { color: C.panelBorder } },
       axisLabel: {
+        interval: 0,
         fontSize: 11,
         formatter: (val: string) => val === curName ? `{cur|● ${val}}` : `{other|${val}}`,
         rich: {
@@ -725,12 +726,109 @@ function prevAiPage() { if (aiCommentPage.value > 0) aiCommentPage.value-- }
 function nextAiPage() { if (aiCommentPage.value < aiComments.value.length - 1) aiCommentPage.value++ }
 
 /* ═══ AI Drawer 对话 ═══ */
-interface DrawerMsg { role: 'user' | 'assistant'; content: string; time: string }
+interface DrawerMsg {
+  role: 'user' | 'assistant'
+  content: string
+  time: string
+  thinking?: string
+  thinkingDuration?: number
+  status?: 'streaming' | 'done'
+  id?: string
+}
 const showAiDrawer = ref(false)
 const aiDrawerInput = ref('')
 const aiDrawerLoading = ref(false)
 const aiDrawerMessages = ref<DrawerMsg[]>([])
 const aiDrawerScrollRef = ref<HTMLDivElement>()
+
+/* ── Drawer 流式输出状态 ── */
+const drawerStreamingId = ref<string | null>(null)
+const drawerStreamingContent = ref('')
+const drawerIsThinking = ref(false)
+const drawerThinkingSteps = ref<string[]>([])
+const drawerCurrentThinkingStep = ref(0)
+const drawerThinkingElapsed = ref(0)
+const drawerExpandedThinking = ref<Set<string>>(new Set())
+let _drawerStreamTimer: ReturnType<typeof setInterval> | null = null
+let _drawerThinkTimer: ReturnType<typeof setTimeout> | null = null
+let _drawerElapsedTimer: ReturnType<typeof setInterval> | null = null
+let _drawerMsgIdCounter = 0
+
+function clearDrawerTimers() {
+  if (_drawerStreamTimer) { clearInterval(_drawerStreamTimer); _drawerStreamTimer = null }
+  if (_drawerThinkTimer) { clearTimeout(_drawerThinkTimer); _drawerThinkTimer = null }
+  if (_drawerElapsedTimer) { clearInterval(_drawerElapsedTimer); _drawerElapsedTimer = null }
+}
+
+function simulateDrawerThinking(steps: string[]): Promise<number> {
+  return new Promise(resolve => {
+    drawerThinkingSteps.value = steps
+    drawerCurrentThinkingStep.value = 0
+    drawerIsThinking.value = true
+    const start = Date.now()
+    drawerThinkingElapsed.value = 0
+    _drawerElapsedTimer = setInterval(() => {
+      drawerThinkingElapsed.value = Math.floor((Date.now() - start) / 1000)
+    }, 1000)
+    let step = 0
+    const advance = () => {
+      if (step < steps.length) {
+        drawerCurrentThinkingStep.value = step
+        step++
+        _drawerThinkTimer = setTimeout(advance, 600 + Math.random() * 800) as unknown as ReturnType<typeof setTimeout>
+      } else {
+        if (_drawerElapsedTimer) { clearInterval(_drawerElapsedTimer); _drawerElapsedTimer = null }
+        drawerIsThinking.value = false
+        resolve(Math.round((Date.now() - start) / 1000))
+      }
+    }
+    advance()
+  })
+}
+
+function simulateDrawerStreaming(msgId: string, fullContent: string): Promise<void> {
+  return new Promise(resolve => {
+    drawerStreamingId.value = msgId
+    drawerStreamingContent.value = ''
+    let idx = 0
+    const speed = 25 + Math.random() * 20
+    _drawerStreamTimer = setInterval(() => {
+      if (idx < fullContent.length) {
+        const chunk = Math.random() > 0.9 ? 3 : (Math.random() > 0.7 ? 2 : 1)
+        drawerStreamingContent.value += fullContent.slice(idx, idx + chunk)
+        idx += chunk
+        _scrollDrawer()
+      } else {
+        if (_drawerStreamTimer) { clearInterval(_drawerStreamTimer); _drawerStreamTimer = null }
+        drawerStreamingId.value = null
+        drawerStreamingContent.value = ''
+        resolve()
+      }
+    }, speed)
+  })
+}
+
+function renderDrawerContent(content: string): string {
+  return content
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br>')
+}
+
+function getDrawerDisplayContent(msg: DrawerMsg): string {
+  if (msg.id && msg.id === drawerStreamingId.value) {
+    return renderDrawerContent(drawerStreamingContent.value)
+  }
+  return renderDrawerContent(msg.content)
+}
+
+function toggleDrawerThinking(msgId: string) {
+  if (drawerExpandedThinking.value.has(msgId)) {
+    drawerExpandedThinking.value.delete(msgId)
+  } else {
+    drawerExpandedThinking.value.add(msgId)
+  }
+}
 
 function _getDrawerTimestamp() {
   return new Date().toISOString().replace('T', ' ').substring(0, 16)
@@ -761,6 +859,102 @@ const aiDrawerQuickPrompts = [
   '我需要掌握哪些核心技能？',
 ]
 
+interface DrawerQuickPreset {
+  question: string
+  reply: string
+  thinkingSteps: string[]
+}
+
+const drawerPresets: Record<string, DrawerQuickPreset[]> = {
+  /* ── 前端开发 ── */
+  'Vue 前端工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'Vue 前端工程师在未来两年仍有稳定需求，尤其在国内市场。\n\n**利好因素：**\n1. Vue 3 生态逐步成熟，企业级项目迁移带来大量改造需求\n2. Nuxt 3 的 SSR/ISR 方案让 Vue 在中大型项目中更有竞争力\n3. 国内头部公司（字节、美团、快手）持续招聘 Vue 方向\n\n**风险提示：**\n- 纯页面切图类岗位会被 AI 工具压缩，需往工程化方向深入\n- 跨端方案（uni-app / Taro）能力会成为加分项\n\n建议关注 **Vue 3 + TypeScript + Vite** 工程链路的深度掌握。', thinkingSteps: ['检索 Vue 生态最新趋势数据...', '分析头部企业招聘需求变化...', '评估技术栈演进方向...', '生成前景分析报告...'] },
+    { question: '薪资还有多少上涨空间？', reply: '基于当前市场数据，Vue 前端工程师的薪资空间如下：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-16K，增长空间约 30%\n- 中级（3-5年）：18-28K，增长空间约 25%\n- 高级（5年+）：28-45K，增长空间约 15%\n\n**薪资提升关键因素：**\n1. 掌握 SSR / 微前端架构能力可提升 15-20%\n2. 有大型项目性能优化经验可提升 10-15%\n3. 具备团队 Tech Lead 经验可突破 40K+ 天花板\n\n当前市场中级 Vue 工程师供需比约 1:1.3，仍属于卖方市场。', thinkingSteps: ['获取各级别薪资分布数据...', '计算供需比与增长趋势...', '对比同级别其他技术栈薪资...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '作为 Vue 前端工程师，以下技能按优先级排列：\n\n**必备技能（P0）：**\n- Vue 3 Composition API + `<script setup>` 熟练应用\n- TypeScript 工程级使用（泛型、类型体操基础）\n- Vite 构建配置与性能调优\n- Pinia 状态管理 + Vue Router\n\n**竞争力技能（P1）：**\n- Nuxt 3 SSR / SSG 实战\n- 微前端方案（qiankun / Module Federation）\n- 组件库开发与 Design Token 体系\n- E2E 测试（Playwright / Cypress）\n\n**加分技能（P2）：**\n- WebGL / Canvas 可视化基础\n- Node.js BFF 层开发\n- CI/CD 流水线配置', thinkingSteps: ['分析 Vue 岗位 JD 高频关键词...', '按技能热度和薪资关联度排序...', '生成分层技能清单...'] },
+  ],
+  'React 前端工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'React 前端工程师在全球和国内市场均保持强劲需求。\n\n**利好因素：**\n1. React 19 + Server Components 带来全新架构范式\n2. Next.js App Router 已成为全栈 React 开发的标准方案\n3. React Native / Expo 持续巩固跨端生态\n\n**市场趋势：**\n- 外企和出海业务线对 React 需求最为集中\n- 国内新项目中 React 占比约 35%，仅次于 Vue\n- AI + React 的前端智能化方向正在兴起\n\n建议重点关注 **RSC（React Server Components）** 和 **Next.js** 的深度实践。', thinkingSteps: ['检索 React 生态和 Next.js 发展趋势...', '分析外企与国内企业招聘偏好...', '评估 Server Components 影响...', '汇总前景分析...'] },
+    { question: '薪资还有多少上涨空间？', reply: 'React 前端工程师薪资水平整体略高于 Vue 方向：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：12-18K，增长空间约 35%\n- 中级（3-5年）：20-32K，增长空间约 28%\n- 高级（5年+）：32-50K+，增长空间约 18%\n\n**薪资溢价场景：**\n1. 外企 / 出海业务：薪资普遍高出 20-30%\n2. 全栈（Next.js + Node）能力：额外溢价 15%\n3. React Native 跨端经验：移动端项目可叠加 10%\n\nReact 在外企和大厂的定价权更强，如果目标是高薪，建议深耕 Next.js 全栈方向。', thinkingSteps: ['获取 React 岗位薪资分位数据...', '对比 Vue/React 薪资差异...', '分析外企溢价场景...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '以下是 React 前端工程师的核心技能路线：\n\n**必备技能（P0）：**\n- React 18/19 Hooks 深度使用（useTransition、useDeferredValue）\n- TypeScript + React 类型体系\n- Next.js App Router + Server Components\n- 状态管理（Zustand / Jotai / React Query）\n\n**竞争力技能（P1）：**\n- React Server Components 架构设计\n- 服务端渲染 / 流式渲染优化\n- Monorepo（Turborepo）+ 组件库发布\n- React Testing Library + Playwright\n\n**加分技能（P2）：**\n- React Native / Expo 跨端开发\n- GraphQL（Apollo / urql）\n- Tailwind CSS + Headless UI 组件体系', thinkingSteps: ['提取 React 岗位 JD 核心要求...', '按市场需求热度加权排序...', '生成分级技能图谱...'] },
+  ],
+  '可视化工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '可视化工程师属于前端细分中的稀缺方向，前景乐观。\n\n**利好因素：**\n1. 数据驱动决策的趋势下，BI 和数据大屏需求持续增长\n2. 3D 可视化（数字孪生、WebGPU）打开了新的应用场景\n3. AI 生成图表尚无法替代复杂交互可视化的定制能力\n\n**需求集中领域：**\n- 金融风控大屏、城市数字孪生、工业 IoT 监控\n- 互联网大厂的数据平台和 BI 工具团队\n\n**风险提示：**\n- 简单图表类需求会被 AI 工具侵蚀\n- 需往 **3D / 地理信息 / 大规模数据渲染** 方向深入才有长期壁垒', thinkingSteps: ['分析可视化岗位市场规模...', '评估 AI 对可视化领域的替代风险...', '检索数字孪生等新兴场景需求...'] },
+    { question: '薪资还有多少上涨空间？', reply: '可视化工程师因稀缺性，薪资定价通常高于普通前端：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：12-18K\n- 中级（3-5年）：22-35K，稀缺度溢价约 15%\n- 高级（5年+）：35-55K，顶尖人才可达 60K+\n\n**高薪突破路径：**\n1. WebGL / Three.js 3D 可视化能力：溢价 20%+\n2. GIS 地理信息可视化（Mapbox / Cesium）：特定行业溢价 25%\n3. 大规模数据渲染优化（Canvas / WebGPU）：技术壁垒带来议价权\n\n核心优势在于**技术门槛高、人才供给少**，只要持续深耕，薪资天花板远高于普通前端。', thinkingSteps: ['获取可视化岗位薪资数据...', '计算稀缺度溢价系数...', '评估 3D/GIS 方向薪资增量...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '可视化工程师的技能栈较为专精：\n\n**必备技能（P0）：**\n- D3.js 数据驱动文档操作\n- ECharts / AntV 图表库深度定制\n- Canvas 2D 绑定与性能优化\n- SVG 动画与交互\n\n**竞争力技能（P1）：**\n- Three.js / WebGL 3D 场景构建\n- 地理信息可视化（Mapbox GL / Deck.gl）\n- 大数据量渲染优化（虚拟列表、LOD、Web Worker）\n- Shader 编程基础（GLSL）\n\n**加分技能（P2）：**\n- WebGPU 计算与渲染\n- 数字孪生平台集成经验\n- Python 数据处理（配合 Jupyter 做探索性分析）', thinkingSteps: ['梳理可视化技术栈全景图...', '按岗位 JD 频次排序核心技能...', '生成分层学习路径...'] },
+  ],
+  /* ── 后端开发 ── */
+  'Java 后端工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'Java 后端工程师仍是国内需求量最大的后端方向之一。\n\n**利好因素：**\n1. 金融、电商、企业服务等核心领域的存量 Java 系统庞大\n2. Spring Boot 3 + GraalVM 原生编译提升了 Java 的云原生竞争力\n3. 中大型公司的核心交易系统短期内不会迁移\n\n**趋势变化：**\n- 纯 CRUD 岗位减少，中间件 / 架构方向需求增加\n- 微服务治理、分布式事务等高阶能力成为分水岭\n- AI 对 Java 生态的影响主要在辅助编码层面，核心设计能力不可替代\n\n建议从 **Spring Cloud + 分布式** 方向深入，避免停留在单体 CRUD 层面。', thinkingSteps: ['分析 Java 岗位市场存量与增量...', '评估 Spring Boot 3 生态演进...', '对比 Go/Rust 对 Java 市场的冲击...', '生成趋势分析...'] },
+    { question: '薪资还有多少上涨空间？', reply: 'Java 后端工程师薪资分化明显，架构能力是关键分水岭：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-16K，竞争激烈\n- 中级（3-5年）：18-30K，增长空间约 30%\n- 高级/架构（5年+）：30-50K+，分布式经验可突破 55K\n\n**薪资杠杆点：**\n1. 微服务架构设计能力：薪资提升 20%\n2. 高并发 / 性能调优经验：提升 15%\n3. 中间件开发经验（MQ、RPC、网关）：提升 20%\n\n**注意：** 初级 Java 市场供给过剩，需尽快建立差异化优势。', thinkingSteps: ['获取 Java 各级别薪资分位...', '分析架构能力与薪资关联度...', '评估初级市场供给压力...'] },
+    { question: '我需要掌握哪些核心技能？', reply: 'Java 后端工程师技能栈要求深且广：\n\n**必备技能（P0）：**\n- Spring Boot 3 + Spring Cloud 微服务全家桶\n- MySQL 深度优化（索引、慢查询、分库分表）\n- Redis 缓存方案设计（穿透/击穿/雪崩防御）\n- 消息队列（Kafka / RocketMQ）\n\n**竞争力技能（P1）：**\n- 分布式事务（Seata / TCC / Saga）\n- JVM 调优与 GC 分析\n- Kubernetes + Docker 容器化部署\n- 链路追踪与可观测性（SkyWalking / Prometheus）\n\n**加分技能（P2）：**\n- DDD 领域驱动设计实践\n- GraalVM Native Image\n- 大数据组件（Flink / Spark 基础）', thinkingSteps: ['提取 Java 岗位 JD 高频技能...', '按薪资关联度加权排序...', '生成分级技能清单...'] },
+  ],
+  'Go 后端工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'Go 后端工程师处于高速增长期，尤其在云原生和基础设施领域。\n\n**利好因素：**\n1. 云原生生态（Kubernetes、Docker、Istio）几乎全部用 Go 构建\n2. 字节跳动、B站、七牛等公司大规模使用 Go\n3. Go 在微服务和高并发场景下的性能优势明显\n\n**增长点：**\n- 基础架构和中间件方向的 Go 需求年增长约 25%\n- AI 推理服务的后端网关层越来越多采用 Go\n- 区块链和 Web3 项目中 Go 使用率很高\n\n**需要注意：** Go 的业务开发岗位增长较慢，主要增量在基础设施和中间件方向。', thinkingSteps: ['检索 Go 语言岗位增长数据...', '分析云原生生态对 Go 的拉动...', '评估 Go vs Rust 的定位差异...'] },
+    { question: '薪资还有多少上涨空间？', reply: 'Go 后端工程师因供给相对紧张，薪资普遍高于同级别 Java：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：14-20K\n- 中级（3-5年）：22-35K，增长空间约 30%\n- 高级（5年+）：35-55K，基础设施方向可达 60K+\n\n**薪资溢价方向：**\n1. Kubernetes 二次开发 / Operator 开发：溢价 25%\n2. 分布式存储 / 数据库内核：溢价 30%+\n3. 服务网格 / eBPF 等前沿领域：稀缺度极高\n\nGo 工程师在头部互联网公司的定价权很强，但中小公司岗位相对少。建议优先瞄准头部公司。', thinkingSteps: ['获取 Go 岗位薪资分布数据...', '对比 Go/Java 同级别薪资差异...', '分析基础设施方向溢价...'] },
+    { question: '我需要掌握哪些核心技能？', reply: 'Go 后端工程师需要兼顾语言特性和基础设施能力：\n\n**必备技能（P0）：**\n- Go 并发模型（goroutine、channel、sync 包）\n- Go 标准库深度使用（net/http、context、io）\n- gRPC + Protocol Buffers\n- MySQL / PostgreSQL + Redis\n\n**竞争力技能（P1）：**\n- Kubernetes 原理与 Operator 开发\n- 微服务框架（go-zero / Kratos / go-micro）\n- 分布式系统设计（一致性、CAP、Raft）\n- 性能分析工具（pprof、trace、benchmark）\n\n**加分技能（P2）：**\n- eBPF 内核级可观测\n- 分布式存储原理（etcd、TiKV）\n- Rust 基础（在 Go 生态中逐渐渗透）', thinkingSteps: ['梳理 Go 岗位核心技能要求...', '按云原生方向加权排序...', '生成分级技能路径...'] },
+  ],
+  'Python 后端工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'Python 后端工程师受益于 AI 浪潮，需求持续增长。\n\n**利好因素：**\n1. AI / ML 应用落地需要大量 Python 后端支撑（模型服务化、API 网关）\n2. 数据平台和自动化运维持续依赖 Python 生态\n3. FastAPI 等现代框架让 Python 后端性能不再是瓶颈\n\n**增长方向：**\n- AI 应用后端（LLM API 编排、RAG 服务）增速最快\n- 数据工程方向（ETL、数据管道）稳定增长\n- 传统 Django/Flask Web 开发增速放缓\n\n建议往 **AI 应用后端 + FastAPI** 方向发展，纯 Web 开发方向竞争力有限。', thinkingSteps: ['分析 Python 后端岗位增长趋势...', '评估 AI 浪潮对 Python 的拉动效应...', '对比不同框架方向的需求差异...'] },
+    { question: '薪资还有多少上涨空间？', reply: 'Python 后端薪资受方向影响较大：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-16K\n- 中级（3-5年）：18-30K，AI 方向可达 35K\n- 高级（5年+）：30-50K，AI 基础设施方向更高\n\n**方向差异：**\n1. AI 应用后端（LLM 服务化）：薪资比普通 Python 后端高 25-40%\n2. 数据工程方向：薪资与 Java 后端持平\n3. 纯 Django/Flask Web 开发：薪资增长已接近天花板\n\n关键建议：Python 后端的薪资天花板取决于你是否能切入 **AI + 数据** 赛道。', thinkingSteps: ['获取 Python 各方向薪资数据...', '计算 AI 方向溢价幅度...', '评估 Web 方向天花板...'] },
+    { question: '我需要掌握哪些核心技能？', reply: 'Python 后端工程师的技能栈需要与时俱进：\n\n**必备技能（P0）：**\n- FastAPI / Django REST Framework\n- SQLAlchemy + PostgreSQL / MySQL\n- Redis 缓存与消息队列（Celery）\n- Docker + 基本部署运维\n\n**竞争力技能（P1）：**\n- LLM 应用开发（LangChain / LlamaIndex）\n- 异步编程（asyncio、aiohttp）\n- 数据管道（Apache Airflow / Prefect）\n- Kubernetes 部署与服务编排\n\n**加分技能（P2）：**\n- 模型推理服务（vLLM / TensorRT）\n- 向量数据库（Milvus / Qdrant）\n- Spark / Flink 大数据处理', thinkingSteps: ['分析 Python 后端 JD 技能趋势...', '按 AI 应用方向加权...', '生成分层技能路径...'] },
+  ],
+  /* ── 测试开发 ── */
+  '自动化测试工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '自动化测试工程师的角色正在从"测试执行者"向"质量工程师"转型。\n\n**利好因素：**\n1. DevOps 和持续交付要求自动化测试全面覆盖\n2. AI 测试工具（自动生成用例、智能回归）提升了测试工程师的杠杆\n3. 测试左移和质量内建理念在大厂深入推进\n\n**趋势变化：**\n- 纯手工功能测试岗位大幅减少\n- 自动化 + 平台化能力成为准入门槛\n- 测试开发（SDET）定位更接近研发工程师\n\n建议同时掌握 **UI 自动化 + API 自动化 + CI 集成** 三条线。', thinkingSteps: ['分析测试岗位角色演变趋势...', '评估 AI 测试工具的影响...', '检索 DevOps 对测试的需求变化...'] },
+    { question: '薪资还有多少上涨空间？', reply: '自动化测试工程师薪资已明显高于手工测试：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-15K\n- 中级（3-5年）：16-26K，增长空间约 25%\n- 高级（5年+）：26-40K，测试架构师可达 45K\n\n**薪资提升杠杆：**\n1. 测试平台开发能力：溢价 20%\n2. 性能 / 安全测试专项：溢价 15%\n3. 全栈质量保障（含 CI/CD 流水线）：溢价 20%\n\n与同级别研发相比，测试薪资通常低 10-15%，但测试架构师和质量平台方向可以弥补差距。', thinkingSteps: ['获取自动化测试岗位薪资数据...', '对比测试与研发薪资差异...', '分析平台化能力的溢价...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '自动化测试工程师的技能栈日趋全面：\n\n**必备技能（P0）：**\n- Selenium / Playwright UI 自动化\n- API 测试框架（Pytest + Requests / REST Assured）\n- 测试用例设计方法（等价类、边界值、场景法）\n- Git + Jenkins / GitHub Actions CI 集成\n\n**竞争力技能（P1）：**\n- Appium / XCUITest 移动端自动化\n- Docker 容器化测试环境管理\n- 测试数据工厂和 Mock 服务搭建\n- JMeter / Locust 性能测试基础\n\n**加分技能（P2）：**\n- AI 辅助测试用例生成\n- 混沌工程 / 故障注入\n- Allure 测试报告与质量度量体系', thinkingSteps: ['梳理自动化测试核心技能图谱...', '按 JD 高频词排序...', '生成分层学习建议...'] },
+  ],
+  '质量平台工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '质量平台工程师是测试领域中最接近研发的方向，前景较好。\n\n**利好因素：**\n1. 大厂普遍在建设内部质量中台（用例管理、环境管理、度量看板）\n2. 持续测试和智能测试平台化是行业趋势\n3. 该方向技术深度要求高，AI 难以替代\n\n**需求特点：**\n- 主要集中在中大型互联网公司和金融科技企业\n- 中小公司更倾向于使用成熟工具而非自研平台\n- 该方向人才稀缺，竞争压力小于纯测试执行\n\n建议积累 **测试平台架构 + 数据驱动质量度量** 的复合能力。', thinkingSteps: ['分析质量平台岗位市场分布...', '评估大厂质量中台建设趋势...', '对比该方向与传统测试的需求差异...'] },
+    { question: '薪资还有多少上涨空间？', reply: '质量平台工程师薪资接近同级别研发工程师：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：12-18K\n- 中级（3-5年）：20-32K，增长空间约 28%\n- 高级（5年+）：32-48K，平台架构师可达 50K+\n\n**薪资优势来源：**\n1. 全栈开发能力（前后端 + 基础设施）：核心竞争力\n2. 质量度量体系设计经验：稀缺能力\n3. 跨团队协作和工具推广经验：管理线跳板\n\n该方向的薪资天花板接近研发架构师，远高于普通测试工程师。', thinkingSteps: ['获取质量平台岗位薪资数据...', '对比同级别研发薪资...', '分析全栈能力的溢价效应...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '质量平台工程师需要较强的全栈开发能力：\n\n**必备技能（P0）：**\n- Python / Java / Go 至少一门后端语言\n- Vue / React 前端开发基础\n- MySQL + Redis 数据存储\n- RESTful API 设计与开发\n\n**竞争力技能（P1）：**\n- 分布式任务调度（Celery / XXL-Job）\n- Kubernetes + Docker 环境管理\n- 测试数据管理和流量录制回放\n- ELK / Grafana 日志与度量可视化\n\n**加分技能（P2）：**\n- 智能测试算法（用例推荐、变更影响分析）\n- 前端低代码 / 可视化编排能力\n- 质量度量模型设计', thinkingSteps: ['梳理质量平台工程师技能要求...', '按全栈维度分层...', '生成学习路径...'] },
+  ],
+  '性能测试工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '性能测试工程师是测试领域中技术壁垒最高的方向之一。\n\n**利好因素：**\n1. 高并发系统（电商大促、金融交易）始终需要性能保障\n2. 云原生架构下性能问题更复杂（容器资源、服务网格延迟）\n3. 该方向涉及底层系统知识，AI 替代风险极低\n\n**市场特点：**\n- 需求集中在电商、金融、游戏等高流量行业\n- 人才供给严重不足，优秀性能工程师极为抢手\n- 常与 SRE / 可靠性工程师角色重叠\n\n建议深入 **全链路压测 + 系统瓶颈分析** 方向，构建不可替代性。', thinkingSteps: ['分析性能测试岗位需求分布...', '评估云原生对性能测试的影响...', '对比 SRE 方向的角色重叠...'] },
+    { question: '薪资还有多少上涨空间？', reply: '性能测试工程师因高门槛，薪资在测试领域最具竞争力：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：12-18K\n- 中级（3-5年）：22-35K，增长空间约 30%\n- 高级（5年+）：35-55K，首席性能专家可达 60K+\n\n**高薪关键能力：**\n1. 全链路压测方案设计与执行：核心价值\n2. JVM / Linux 内核级性能调优：溢价 25%\n3. APM 工具链（SkyWalking / Arthas / perf）：深度使用\n\n该方向的薪资天花板在测试领域最高，甚至可以超过部分研发工程师。', thinkingSteps: ['获取性能测试岗位薪资分位...', '分析高门槛带来的薪资溢价...', '评估行业分布对薪资的影响...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '性能测试工程师需要深厚的系统级知识：\n\n**必备技能（P0）：**\n- JMeter / Gatling / Locust 压测工具\n- HTTP 协议与网络基础（TCP、DNS、负载均衡）\n- Linux 性能分析（top、vmstat、perf、strace）\n- 性能指标体系（TPS、P99、吞吐量、资源利用率）\n\n**竞争力技能（P1）：**\n- JVM 调优（GC 分析、堆外内存、线程池）\n- 全链路压测方案（流量隔离、影子库）\n- APM 工具（SkyWalking、Prometheus + Grafana）\n- 数据库性能优化（慢查询、连接池、索引）\n\n**加分技能（P2）：**\n- eBPF 内核级分析\n- 混沌工程（ChaosBlade / LitmusChaos）\n- 容量规划与成本优化', thinkingSteps: ['梳理性能测试核心知识体系...', '按系统层次分级...', '生成深度学习路径...'] },
+  ],
+  /* ── 数据分析 ── */
+  '商业数据分析师': [
+    { question: '这个岗位未来两年前景如何？', reply: '商业数据分析师在各行业的需求持续且稳定。\n\n**利好因素：**\n1. 企业数据驱动决策的意识越来越强\n2. 电商、金融、游戏等行业对精细化运营的需求增长\n3. AI 工具让分析师能处理更复杂的分析任务\n\n**趋势变化：**\n- 基础的取数和报表类工作正在被 BI 工具和 AI 自动化\n- 需要具备业务洞察力和实验设计能力才有竞争力\n- "分析 + 策略"复合型人才最受欢迎\n\n建议在数据技能之外，深入理解 **业务指标体系和增长实验** 方法论。', thinkingSteps: ['分析数据分析师市场需求趋势...', '评估 AI 对基础分析工作的替代...', '检索行业对复合型人才的偏好...'] },
+    { question: '薪资还有多少上涨空间？', reply: '商业数据分析师薪资与行业和业务理解深度强相关：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-16K\n- 中级（3-5年）：18-28K，增长空间约 25%\n- 高级/专家（5年+）：28-45K，策略分析师可达 50K\n\n**薪资杠杆点：**\n1. 行业 know-how（如电商增长、金融风控）：溢价 20%\n2. A/B 实验设计与因果推断能力：溢价 15%\n3. 数据产品化思维（指标体系、自助 BI）：管理线跳板\n\n数据分析师转管理（数据团队 Lead）或转产品经理的路径也很成熟。', thinkingSteps: ['获取数据分析师薪资分布...', '分析行业差异对薪资的影响...', '评估业务能力的溢价效应...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '商业数据分析师需要数据 + 业务双轮驱动：\n\n**必备技能（P0）：**\n- SQL 高级查询（窗口函数、CTE、性能优化）\n- Python 数据分析（Pandas、NumPy、Matplotlib）\n- Excel / Google Sheets 高级功能\n- BI 工具（Tableau / Power BI / Metabase）\n\n**竞争力技能（P1）：**\n- A/B 实验设计与统计检验\n- 指标体系设计（北极星指标、OSM 模型）\n- 用户分群与生命周期分析\n- 数据仓库基础（维度建模、ETL 概念）\n\n**加分技能（P2）：**\n- 因果推断方法（DID、PSM、RDD）\n- 机器学习预测模型基础\n- 数据叙事与演示能力', thinkingSteps: ['梳理数据分析师核心技能...', '按业务驱动维度分层...', '生成学习路径建议...'] },
+  ],
+  '数据开发工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '数据开发工程师在大数据和 AI 时代需求旺盛。\n\n**利好因素：**\n1. 数据基础设施（数仓、数据湖、实时计算）投入持续增长\n2. AI 大模型的训练和推理依赖数据管道建设\n3. 数据治理和合规要求推动数据工程体系化\n\n**增长最快的方向：**\n- 实时数据处理（Flink + Kafka）\n- 数据湖仓一体化（Lakehouse 架构）\n- AI 特征工程和数据标注管道\n\n建议掌握 **实时 + 离线双链路** 的数据开发能力，避免只做离线 ETL。', thinkingSteps: ['分析数据开发岗位增长趋势...', '评估 AI 对数据工程的需求拉动...', '检索实时计算方向的市场热度...'] },
+    { question: '薪资还有多少上涨空间？', reply: '数据开发工程师薪资处于后端开发的上游水平：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：12-18K\n- 中级（3-5年）：20-32K，增长空间约 30%\n- 高级（5年+）：32-50K，数据架构师可达 55K+\n\n**薪资提升方向：**\n1. 实时计算（Flink）经验：溢价 20%\n2. 数据湖架构（Iceberg / Hudi）：溢价 18%\n3. 数据治理和质量保障体系：管理线跳板\n\n数据开发的薪资天花板与后端架构师相当，且岗位稳定性更高。', thinkingSteps: ['获取数据开发薪资分位数据...', '对比实时与离线方向薪资差异...', '评估数据架构师的天花板...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '数据开发工程师的技能栈偏基础设施：\n\n**必备技能（P0）：**\n- Hive SQL + Spark 离线处理\n- Kafka + Flink 实时数据处理\n- 数仓建模（维度建模、数据分层）\n- Python / Java / Scala 开发能力\n\n**竞争力技能（P1）：**\n- 数据湖（Apache Iceberg / Hudi / Delta Lake）\n- 任务调度（Airflow / DolphinScheduler）\n- 数据质量监控与治理\n- ClickHouse / Doris OLAP 引擎\n\n**加分技能（P2）：**\n- Kubernetes 上的数据平台部署\n- 数据血缘和元数据管理\n- 特征工程平台（Feast / Tecton）', thinkingSteps: ['梳理数据开发技术栈全景...', '按实时/离线分层...', '生成分级学习路径...'] },
+  ],
+  '增长分析师': [
+    { question: '这个岗位未来两年前景如何？', reply: '增长分析师在互联网和消费品行业需求稳定增长。\n\n**利好因素：**\n1. 流量红利消退后，企业更依赖数据驱动的精细化增长\n2. 产品增长和用户增长团队编制持续扩张\n3. 增长黑客方法论在更多传统行业渗透\n\n**趋势变化：**\n- 从"粗放买量"转向"LTV 精细化运营"\n- 需要同时掌握数据分析和产品实验能力\n- 增长分析师的角色边界与产品经理越来越模糊\n\n建议建立 **数据分析 + 增长实验 + 产品思维** 三合一能力。', thinkingSteps: ['分析增长分析师岗位趋势...', '评估流量红利消退的影响...', '检索行业对增长角色的需求变化...'] },
+    { question: '薪资还有多少上涨空间？', reply: '增长分析师薪资与业务成果强挂钩：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：10-16K\n- 中级（3-5年）：18-30K，增长空间约 30%\n- 高级（5年+）：30-50K，增长负责人可达 55K+\n\n**薪资杠杆点：**\n1. 可量化的增长案例（DAU 提升 X%、转化率提升 X%）：最强背书\n2. A/B 实验和因果推断能力：溢价 15%\n3. 跨职能协调能力（产品 + 研发 + 运营）：管理线跳板\n\n增长分析师转产品经理或增长负责人的路径非常清晰。', thinkingSteps: ['获取增长分析师薪资数据...', '分析业务成果对薪资的影响...', '评估职业发展路径...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '增长分析师需要数据与业务的深度结合：\n\n**必备技能（P0）：**\n- SQL 查询与数据提取\n- 用户行为分析（漏斗、留存、归因）\n- A/B 实验设计与统计显著性检验\n- 数据可视化与报告撰写\n\n**竞争力技能（P1）：**\n- 增长模型（AARRR、北极星指标）\n- 用户分群与个性化策略\n- Python 自动化分析（Pandas + 统计库）\n- 广告投放与 ROI 分析\n\n**加分技能（P2）：**\n- 因果推断（工具变量、断点回归）\n- 推荐系统基础知识\n- 产品 PRD 撰写与需求管理', thinkingSteps: ['梳理增长分析师核心技能...', '按增长方法论分层...', '生成学习路径建议...'] },
+  ],
+  /* ── 机器学习工程师 ── */
+  '算法工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '算法工程师正处于 AI 浪潮的核心位置，前景极佳但竞争激烈。\n\n**利好因素：**\n1. 大模型应用落地创造了大量算法工程需求\n2. 搜索/推荐/广告等传统算法领域仍在持续招聘\n3. AI Agent 和多模态方向开辟了新的应用场景\n\n**挑战与风险：**\n- 校招竞争极其激烈，顶会论文几乎成为准入门槛\n- 预训练和基座模型方向集中在少数头部公司\n- 应用层算法工程师需要更强的工程化能力\n\n建议根据自身背景选择 **大模型应用** 或 **搜推广** 方向深耕。', thinkingSteps: ['分析算法工程师市场需求分布...', '评估大模型对算法岗位的重塑...', '对比基座模型 vs 应用层算法的定位...', '生成趋势分析...'] },
+    { question: '薪资还有多少上涨空间？', reply: '算法工程师薪资在技术岗中处于顶端：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：18-28K，校招白菜价已达 20K+\n- 中级（3-5年）：30-50K，增长空间约 25%\n- 高级（5年+）：50-80K+，首席科学家级别更高\n\n**薪资差异因素：**\n1. 顶会论文 + 竞赛奖牌：校招起薪溢价 30%+\n2. 大模型方向经验：当前最热门，溢价 25%\n3. 搜推广系统实战：大厂核心岗位，薪资稳定且高\n\n算法岗的薪资上限极高，但入门门槛也最高。学历（硕/博）和科研成果是重要的筛选条件。', thinkingSteps: ['获取算法工程师薪资分布...', '分析论文和竞赛对薪资的影响...', '对比不同方向的薪资差异...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '算法工程师需要扎实的数学基础和工程能力：\n\n**必备技能（P0）：**\n- 机器学习理论（损失函数、优化算法、正则化）\n- PyTorch 深度学习框架\n- Python 科学计算（NumPy、Pandas、Scikit-learn）\n- 数学基础（线性代数、概率论、最优化）\n\n**竞争力技能（P1）：**\n- Transformer 架构深度理解\n- 大模型微调（LoRA、QLoRA、RLHF）\n- 模型部署（ONNX、TensorRT、vLLM）\n- 分布式训练（DeepSpeed、Megatron）\n\n**加分技能（P2）：**\n- 搜索/推荐/广告系统设计\n- 多模态模型（视觉-语言）\n- 强化学习基础', thinkingSteps: ['梳理算法工程师核心知识体系...', '按理论+工程维度分层...', '生成学习路径...'] },
+  ],
+  '深度学习工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '深度学习工程师是 AI 技术的核心实践者，前景广阔。\n\n**利好因素：**\n1. CV、NLP、语音等深度学习应用场景持续扩展\n2. 大模型催生了模型训练、推理优化等专项岗位\n3. AI 芯片和框架层面的人才需求也在增长\n\n**方向选择建议：**\n- **模型训练方向**：侧重预训练和微调，学历要求高\n- **推理优化方向**：侧重部署和性能，工程能力要求高\n- **应用开发方向**：侧重业务集成，门槛相对较低\n\n推理优化方向是当前供需缺口最大的，建议优先关注。', thinkingSteps: ['分析深度学习工程师细分方向...', '评估各方向的供需状况...', '检索推理优化方向的增长数据...'] },
+    { question: '薪资还有多少上涨空间？', reply: '深度学习工程师薪资与方向和深度强相关：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：16-25K\n- 中级（3-5年）：28-45K，增长空间约 28%\n- 高级（5年+）：45-70K，AI Infra 方向更高\n\n**方向薪资差异：**\n1. 模型训练（预训练/微调）：薪资最高但门槛极高\n2. 推理优化（TensorRT / 量化 / 编译器）：供需缺口大，溢价 20%\n3. AI 应用集成：薪资与高级后端持平\n\n推理优化方向性价比最高——不需要顶会论文，但需要深厚的系统级知识。', thinkingSteps: ['获取深度学习各方向薪资数据...', '分析训练 vs 推理方向的差异...', '评估 AI Infra 的薪资溢价...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '深度学习工程师的技能栈偏底层和工程化：\n\n**必备技能（P0）：**\n- PyTorch 深度使用（自定义 Module、分布式训练）\n- 深度学习理论（CNN、RNN、Transformer、Attention）\n- CUDA 编程基础\n- Python + C++ 混合开发\n\n**竞争力技能（P1）：**\n- 模型量化与剪枝（INT8、FP16、稀疏化）\n- 推理引擎（TensorRT、ONNX Runtime、vLLM）\n- 分布式训练框架（DeepSpeed、FSDP）\n- 模型可观测性和调试工具\n\n**加分技能（P2）：**\n- AI 编译器（TVM、Triton）\n- 自定义算子开发\n- MLOps 平台（MLflow、Kubeflow）', thinkingSteps: ['梳理深度学习工程核心技能...', '按训练/推理/部署分层...', '生成深度学习路径...'] },
+  ],
+  'AI 应用工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: 'AI 应用工程师是 AI 落地的"最后一公里"，需求增长最快。\n\n**利好因素：**\n1. 大模型 API 的普及降低了 AI 应用的开发门槛\n2. 企业级 AI 助手、智能客服、RAG 系统需求爆发\n3. AI Agent 和工作流编排方向还处于早期红利\n\n**岗位定位：**\n- 不需要从零训练模型，更关注 **API 编排 + 工程集成**\n- 介于后端开发和算法工程师之间\n- 需要理解 Prompt Engineering 和模型能力边界\n\n建议重点掌握 **LangChain / LlamaIndex + RAG + Agent** 技术栈。', thinkingSteps: ['分析 AI 应用工程师岗位增长数据...', '评估大模型 API 普及的影响...', '检索 RAG/Agent 方向的市场热度...'] },
+    { question: '薪资还有多少上涨空间？', reply: 'AI 应用工程师薪资处于快速上升期：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：14-22K\n- 中级（3-5年）：24-38K，增长空间约 35%\n- 高级（5年+）：38-55K，AI 架构师可达 60K+\n\n**当前市场特征：**\n1. 岗位数量年增长约 40%，但成熟人才稀缺\n2. 有 RAG/Agent 实战经验的候选人供不应求\n3. 薪资溢价来自「能落地」而非「会论文」\n\n**提薪关键：**\n- 企业级 RAG 系统构建经验：溢价 25%\n- 多 Agent 协作框架设计：稀缺度极高\n- 模型评测与对齐能力：差异化竞争', thinkingSteps: ['获取 AI 应用岗位薪资趋势...', '分析 RAG/Agent 经验的溢价...', '评估岗位增速与人才供给比...'] },
+    { question: '我需要掌握哪些核心技能？', reply: 'AI 应用工程师需要连接模型和业务：\n\n**必备技能（P0）：**\n- LLM API 使用（OpenAI / Claude / 通义千问）\n- Prompt Engineering 与提示词优化\n- RAG 管道构建（向量化、检索、生成）\n- Python 后端开发（FastAPI / Flask）\n\n**竞争力技能（P1）：**\n- LangChain / LlamaIndex 框架\n- 向量数据库（Milvus / Qdrant / Pinecone）\n- AI Agent 框架（AutoGen / CrewAI）\n- 模型评测与 A/B 测试\n\n**加分技能（P2）：**\n- 模型微调基础（LoRA）\n- 多模态应用集成\n- 语音交互（ASR + TTS + LLM）', thinkingSteps: ['梳理 AI 应用工程师技能图谱...', '按 LLM 应用链路分层...', '生成学习路径建议...'] },
+  ],
+}
+
+/* 通用 fallback：如果岗位不在预设中 */
+const defaultDrawerPresets: DrawerQuickPreset[] = [
+  { question: '这个岗位未来两年前景如何？', reply: '根据当前市场数据分析，该岗位方向在未来两年整体呈**稳中向好**趋势。\n\n**核心判断依据：**\n1. 行业数字化转型持续推进，技术岗需求保持增长\n2. AI 工具提升了从业者效率，但暂未大规模替代核心岗位\n3. 中高级人才仍处于供不应求状态\n\n建议关注该方向中**增速最快的细分赛道**，提前布局技能储备。\n\n你可以选择具体岗位后再次提问，我会给出更精准的分析。', thinkingSteps: ['分析该方向市场数据...', '评估行业发展趋势...', '生成综合分析...'] },
+  { question: '薪资还有多少上涨空间？', reply: '基于当前薪资数据，该方向仍有一定上涨空间：\n\n**一般规律：**\n- 初级（1-2年）：增长空间约 25-35%\n- 中级（3-5年）：增长空间约 20-30%\n- 高级（5年+）：增长空间约 10-20%\n\n**薪资杠杆的通用建议：**\n1. 掌握该方向的**差异化技能**\n2. 积累可量化的**项目成果**\n3. 向**架构和管理方向**发展以突破天花板\n\n选择具体岗位后我可以给出更精确的薪资区间和提升路径。', thinkingSteps: ['获取该方向薪资分布...', '计算各级别增长空间...', '生成薪资建议...'] },
+  { question: '我需要掌握哪些核心技能？', reply: '该方向的技能要求可以分为三个层次：\n\n**基础能力：**\n- 扎实的编程基础和算法思维\n- 核心框架和工具链的熟练使用\n- 团队协作和版本管理\n\n**竞争力能力：**\n- 系统设计和架构思维\n- 性能优化和问题诊断\n- 技术选型和方案评估\n\n**领导力能力：**\n- 技术规划和团队建设\n- 跨团队沟通协调\n- 业务理解和价值判断\n\n建议选择具体岗位后再来提问，我会给出该岗位精确的技能清单。', thinkingSteps: ['梳理该方向通用技能体系...', '按能力层次分级...', '生成学习建议...'] },
+]
+
 async function sendAiDrawerMsg(text?: string) {
   const content = (text ?? aiDrawerInput.value).trim()
   if (!content || aiDrawerLoading.value) return
@@ -770,9 +964,48 @@ async function sendAiDrawerMsg(text?: string) {
   aiDrawerMessages.value.push({ role: 'user', content, time: _getDrawerTimestamp() })
   _scrollDrawer()
   aiDrawerLoading.value = true
-  await new Promise(r => setTimeout(r, 800))
-  const reply = learningStore.getAIResponse(`[岗位:${job}][省份:${prov}] ${content}`)
-  aiDrawerMessages.value.push({ role: 'assistant', content: reply, time: _getDrawerTimestamp() })
+
+  /* 1. 查找预设回答（快捷问题命中） */
+  const presets = drawerPresets[job] ?? defaultDrawerPresets
+  const matched = presets.find(p => p.question === content)
+
+  let reply: string
+  let thinkingSteps: string[]
+  let thinkingSummary: string
+
+  if (matched) {
+    reply = matched.reply
+    thinkingSteps = matched.thinkingSteps
+    thinkingSummary = thinkingSteps.join(' → ')
+  } else {
+    /* 自由输入走通用回复 */
+    const resp = learningStore.getAIResponse(`[岗位:${job}][省份:${prov}] ${content}`)
+    reply = resp.content
+    thinkingSteps = resp.thinking ?? ['理解问题...', '检索相关数据...', '组织回答...']
+    thinkingSummary = thinkingSteps.join(' → ')
+  }
+
+  /* 2. 思考动画 */
+  _scrollDrawer()
+  const duration = await simulateDrawerThinking(thinkingSteps)
+
+  /* 3. 推入 AI 消息（流式占位） */
+  const msgId = `drawer-msg-${++_drawerMsgIdCounter}`
+  const aiMsg: DrawerMsg = {
+    role: 'assistant',
+    content: reply,
+    time: _getDrawerTimestamp(),
+    thinking: thinkingSummary,
+    thinkingDuration: duration,
+    status: 'streaming',
+    id: msgId,
+  }
+  aiDrawerMessages.value.push(aiMsg)
+  _scrollDrawer()
+
+  /* 4. 逐字流式输出 */
+  await simulateDrawerStreaming(msgId, reply)
+  aiMsg.status = 'done'
   aiDrawerLoading.value = false
   _scrollDrawer()
 }
@@ -1075,6 +1308,41 @@ function initBubbleChart() {
     })
   })
 
+  // ── 弹性碰撞力工厂（两层共用） ──
+  function makeElasticCollideForce<N extends d3.SimulationNodeDatum & { r: number }>(nodes: N[], e = 0.65) {
+    return () => {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let k = i + 1; k < nodes.length; k++) {
+          const a = nodes[i]!, b = nodes[k]!
+          const dx = (b.x ?? 0) - (a.x ?? 0)
+          const dy = (b.y ?? 0) - (a.y ?? 0)
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1e-6
+          const minD = a.r + b.r + 2
+          if (dist >= minD) continue
+          // 1. 位置分离（按质量 r² 比例）
+          const overlap = minD - dist
+          const m1 = a.r * a.r, m2 = b.r * b.r
+          const total = m1 + m2
+          const nx = dx / dist, ny = dy / dist
+          a.x = (a.x ?? 0) - nx * overlap * (m2 / total)
+          a.y = (a.y ?? 0) - ny * overlap * (m2 / total)
+          b.x = (b.x ?? 0) + nx * overlap * (m1 / total)
+          b.y = (b.y ?? 0) + ny * overlap * (m1 / total)
+          // 2. 弹性速度交换（只在相互接近时触发）
+          const dvx = (a.vx ?? 0) - (b.vx ?? 0)
+          const dvy = (a.vy ?? 0) - (b.vy ?? 0)
+          const dvn = dvx * nx + dvy * ny
+          if (dvn <= 0) continue
+          const J = (1 + e) * dvn / (1 / m1 + 1 / m2)
+          a.vx = (a.vx ?? 0) - (J / m1) * nx
+          a.vy = (a.vy ?? 0) - (J / m1) * ny
+          b.vx = (b.vx ?? 0) + (J / m2) * nx
+          b.vy = (b.vy ?? 0) + (J / m2) * ny
+        }
+      }
+    }
+  }
+
   // ── 内层 simulations（永不停止 + 正弦波平滑 wander）──
   CAREER_DOMAINS.forEach((_, di) => {
     const jobs = jobNodesByDomain[di]!
@@ -1090,24 +1358,32 @@ function initBubbleChart() {
     const sim = d3.forceSimulation(jobs)
       .alphaDecay(0)
       .alphaTarget(0.15)
-      .velocityDecay(0.55)
-      .force('collide', d3.forceCollide<JobNode>(d => d.r + 2).strength(1))
+      .velocityDecay(0.18)
+      .force('elasticCollide', makeElasticCollideForce(jobs, 0.65))
       .force('center', d3.forceCenter(0, 0).strength(0.02))
       .force('wander', () => {
         jobs.forEach(j => {
           j._phaseX = (j._phaseX ?? 0) + 0.009 + Math.random() * 0.004
           j._phaseY = (j._phaseY ?? 0) + 0.009 + Math.random() * 0.004
-          j.vx = (j.vx ?? 0) + Math.sin(j._phaseX) * 0.08
-          j.vy = (j.vy ?? 0) + Math.cos(j._phaseY) * 0.08
+          j.vx = (j.vx ?? 0) + Math.sin(j._phaseX) * 0.06
+          j.vy = (j.vy ?? 0) + Math.cos(j._phaseY) * 0.06
         })
       })
       .on('tick', () => {
         jobs.forEach(j => {
           const dist = Math.sqrt((j.x ?? 0) ** 2 + (j.y ?? 0) ** 2)
-          if (dist > innerBound) {
+          if (dist > innerBound && dist > 0) {
             const ratio = innerBound / dist
             j.x = (j.x ?? 0) * ratio
             j.y = (j.y ?? 0) * ratio
+            // 反射外向速度分量（restitution = 0.65）
+            const nx = (j.x ?? 0) / innerBound
+            const ny = (j.y ?? 0) / innerBound
+            const vr = (j.vx ?? 0) * nx + (j.vy ?? 0) * ny
+            if (vr > 0) {
+              j.vx = (j.vx ?? 0) - 1.65 * vr * nx
+              j.vy = (j.vy ?? 0) - 1.65 * vr * ny
+            }
           }
         })
         innerNodeG.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
@@ -1124,26 +1400,26 @@ function initBubbleChart() {
   _outerSim = d3.forceSimulation(domainNodes)
     .alphaDecay(0)
     .alphaTarget(0.12)
-    .velocityDecay(0.35)
-    .force('collide', d3.forceCollide<DomainNode>(d => d.r + 6).strength(0.85))
+    .velocityDecay(0.18)
+    .force('elasticCollide', makeElasticCollideForce(domainNodes, 0.70))
     .force('center', d3.forceCenter(W / 2, H / 2).strength(0.01))
-    .force('charge', d3.forceManyBody().strength(-50))
     .force('wander', () => {
       domainNodes.forEach(d => {
         d._phaseX = (d._phaseX ?? 0) + 0.007 + Math.random() * 0.003
         d._phaseY = (d._phaseY ?? 0) + 0.007 + Math.random() * 0.003
-        d.vx = (d.vx ?? 0) + Math.sin(d._phaseX) * 0.12
-        d.vy = (d.vy ?? 0) + Math.cos(d._phaseY) * 0.12
+        d.vx = (d.vx ?? 0) + Math.sin(d._phaseX) * 0.09
+        d.vy = (d.vy ?? 0) + Math.cos(d._phaseY) * 0.09
       })
     })
     .force('bound', () => {
-      // 弹性反射：碰壁稍减速（×0.85），避免来回弹
+      // 弹性反射：碰壁后保证最小弹出速度（MIN_V），确保离开边界
+      const MIN_V = 0.5
       domainNodes.forEach(d => {
         const pad = d.r + 14
-        if ((d.x ?? 0) < pad)     { d.x = pad;     d.vx = Math.abs(d.vx ?? 0) * 0.85 }
-        if ((d.x ?? 0) > W - pad) { d.x = W - pad; d.vx = -Math.abs(d.vx ?? 0) * 0.85 }
-        if ((d.y ?? 0) < pad)     { d.y = pad;     d.vy = Math.abs(d.vy ?? 0) * 0.85 }
-        if ((d.y ?? 0) > H - pad) { d.y = H - pad; d.vy = -Math.abs(d.vy ?? 0) * 0.85 }
+        if ((d.x ?? 0) < pad)     { d.x = pad;     d.vx =  Math.max(MIN_V, Math.abs(d.vx ?? 0)) * 0.8 }
+        if ((d.x ?? 0) > W - pad) { d.x = W - pad; d.vx = -Math.max(MIN_V, Math.abs(d.vx ?? 0)) * 0.8 }
+        if ((d.y ?? 0) < pad)     { d.y = pad;     d.vy =  Math.max(MIN_V, Math.abs(d.vy ?? 0)) * 0.8 }
+        if ((d.y ?? 0) > H - pad) { d.y = H - pad; d.vy = -Math.max(MIN_V, Math.abs(d.vy ?? 0)) * 0.8 }
       })
     })
     .on('tick', () => {
@@ -1276,6 +1552,7 @@ onBeforeUnmount(() => {
   gsapCtx?.revert()
   if (_ctaTimer) clearTimeout(_ctaTimer)
   stopAllSimulations()
+  clearDrawerTimers()
   if (_bubbleRo) { _bubbleRo.disconnect(); _bubbleRo = null }
 })
 </script>
@@ -1309,15 +1586,8 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </div>
-      <!-- #6 右上角头像+姓名+身份 -->
       <div class="da-header__right">
-        <div class="da-user-info">
-          <div class="da-avatar">{{ userStore.currentUser?.name?.substring(0, 1) || '学' }}</div>
-          <div class="da-user-text">
-            <span class="da-user-name">{{ userStore.currentUser?.name || '张同学' }}</span>
-            <span class="da-user-role">学生</span>
-          </div>
-        </div>
+        <UserInfoBar />
       </div>
     </header>
 
@@ -1576,16 +1846,59 @@ onBeforeUnmount(() => {
 
         <!-- 消息列表 -->
         <div class="ai-drawer__messages" ref="aiDrawerScrollRef">
-          <div
-            v-for="(msg, i) in aiDrawerMessages"
-            :key="i"
-            class="ai-drawer__msg"
-            :class="msg.role === 'user' ? 'ai-drawer__msg--user' : 'ai-drawer__msg--ai'"
-          >
-            <div class="ai-drawer__bubble">{{ msg.content }}</div>
-            <span class="ai-drawer__time">{{ msg.time }}</span>
+          <template v-for="(msg, i) in aiDrawerMessages" :key="msg.id ?? i">
+            <!-- 用户消息 -->
+            <div v-if="msg.role === 'user'" class="ai-drawer__msg ai-drawer__msg--user">
+              <div class="ai-drawer__bubble">{{ msg.content }}</div>
+              <span class="ai-drawer__time">{{ msg.time }}</span>
+            </div>
+            <!-- AI 消息 -->
+            <div v-else class="ai-drawer__msg ai-drawer__msg--ai">
+              <!-- 推理过程折叠 -->
+              <button
+                v-if="msg.thinking && msg.status === 'done'"
+                class="ai-drawer__reasoning-toggle"
+                @click="toggleDrawerThinking(msg.id!)"
+              >
+                <Icon icon="lucide:brain" :width="12" />
+                <span>推理过程</span>
+                <span class="ai-drawer__reasoning-dur">{{ msg.thinkingDuration }}s</span>
+                <Icon :icon="drawerExpandedThinking.has(msg.id!) ? 'lucide:chevron-up' : 'lucide:chevron-down'" :width="12" />
+              </button>
+              <div v-if="msg.id && drawerExpandedThinking.has(msg.id)" class="ai-drawer__reasoning-detail">
+                {{ msg.thinking }}
+              </div>
+              <!-- 气泡内容 -->
+              <div class="ai-drawer__bubble" v-html="getDrawerDisplayContent(msg)"></div>
+              <span v-if="msg.id === drawerStreamingId" class="ai-drawer__cursor"></span>
+              <span class="ai-drawer__time">{{ msg.time }}</span>
+            </div>
+          </template>
+
+          <!-- 思考中动画 -->
+          <div v-if="drawerIsThinking" class="ai-drawer__msg ai-drawer__msg--ai">
+            <div class="ai-drawer__thinking">
+              <div class="ai-drawer__thinking-head">
+                <span class="ai-drawer__thinking-dot"></span>
+                <span>正在分析</span>
+                <span class="ai-drawer__thinking-time">{{ drawerThinkingElapsed }}s</span>
+              </div>
+              <div class="ai-drawer__thinking-steps">
+                <div
+                  v-for="(step, si) in drawerThinkingSteps" :key="si"
+                  class="ai-drawer__thinking-step"
+                  :class="{
+                    'is-current': si === drawerCurrentThinkingStep,
+                    'is-past': si < drawerCurrentThinkingStep,
+                    'is-future': si > drawerCurrentThinkingStep,
+                  }"
+                >{{ step }}</div>
+              </div>
+            </div>
           </div>
-          <div v-if="aiDrawerLoading" class="ai-drawer__msg ai-drawer__msg--ai">
+
+          <!-- typing 占位（仅 loading 且未进入 thinking 时显示） -->
+          <div v-if="aiDrawerLoading && !drawerIsThinking && !drawerStreamingId" class="ai-drawer__msg ai-drawer__msg--ai">
             <div class="ai-drawer__bubble ai-drawer__bubble--typing">
               <span></span><span></span><span></span>
             </div>
@@ -1774,17 +2087,6 @@ onBeforeUnmount(() => {
 }
 .da-map-search__btn:hover { background: rgba(0,0,0,0.15); color: #333; }
 
-/* #6 用户信息 */
-.da-user-info { display: flex; align-items: center; gap: 10px; }
-.da-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center; color: #fff;
-  font-size: 15px; font-weight: 600;
-  background: var(--primary-100);
-}
-.da-user-text { display: flex; flex-direction: column; line-height: 1.3; }
-.da-user-name { font-size: 14px; font-weight: 600; color: var(--text-100); }
-.da-user-role { font-size: 12px; color: var(--text-300); }
 
 /* ═══ 主体三栏布局 ═══ */
 .da-body {
@@ -1968,15 +2270,15 @@ onBeforeUnmount(() => {
 }
 .da-map-inner::before {
   left: 0;
-  background: linear-gradient(90deg, #999 0%, #aaa 40%, #bbb 100%);
+  background: linear-gradient(90deg, #8B6914 0%, #A68A4B 40%, #C4A86C 100%);
   border-radius: 4px 0 0 4px;
-  box-shadow: inset -3px 0 8px rgba(62,48,32,0.15);
+  box-shadow: inset -3px 0 8px rgba(62,48,32,0.25);
 }
 .da-map-inner::after {
   right: 0;
-  background: linear-gradient(270deg, #999 0%, #aaa 40%, #bbb 100%);
+  background: linear-gradient(270deg, #8B6914 0%, #A68A4B 40%, #C4A86C 100%);
   border-radius: 0 4px 4px 0;
-  box-shadow: inset 3px 0 8px rgba(62,48,32,0.15);
+  box-shadow: inset 3px 0 8px rgba(62,48,32,0.25);
 }
 /* 羊皮纸底图 */
 .da-map-inner__base {
@@ -2433,7 +2735,13 @@ onBeforeUnmount(() => {
   max-width: 82%;
   padding: 10px 14px; border-radius: 12px;
   font-size: 13px; line-height: 1.65; color: var(--text-100);
-  white-space: pre-wrap; word-break: break-word;
+  word-break: break-word;
+}
+.ai-drawer__bubble :deep(strong) { font-weight: 700; color: var(--text-100); }
+.ai-drawer__bubble :deep(code) {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px; background: rgba(0,0,0,0.06);
+  padding: 1px 5px; border-radius: 3px;
 }
 .ai-drawer__msg--user .ai-drawer__bubble {
   background: var(--primary-100); color: #fff;
@@ -2498,6 +2806,97 @@ onBeforeUnmount(() => {
 }
 .ai-drawer__send:hover:not(:disabled) { background: var(--primary-300, #5C1A00); }
 .ai-drawer__send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ═══ Drawer 思考动画 ═══ */
+.ai-drawer__thinking {
+  max-width: 82%;
+  padding: 12px 14px;
+  background: var(--bg-200);
+  border: 1px solid var(--bg-300);
+  border-radius: 12px;
+  border-bottom-left-radius: 4px;
+}
+.ai-drawer__thinking-head {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600; color: var(--text-200);
+  margin-bottom: 8px;
+}
+.ai-drawer__thinking-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--primary-100);
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes thinking-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+.ai-drawer__thinking-time {
+  margin-left: auto; font-size: 11px; font-weight: 400;
+  color: var(--text-300); font-variant-numeric: tabular-nums;
+}
+.ai-drawer__thinking-steps {
+  display: flex; flex-direction: column; gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--bg-300);
+}
+.ai-drawer__thinking-step {
+  font-size: 12px; color: var(--text-300);
+  transition: color 0.3s, opacity 0.3s;
+  line-height: 1.5;
+}
+.ai-drawer__thinking-step.is-current {
+  color: var(--primary-100); font-weight: 600;
+}
+.ai-drawer__thinking-step.is-past {
+  color: var(--text-200); opacity: 0.7;
+}
+.ai-drawer__thinking-step.is-future {
+  opacity: 0.35;
+}
+
+/* ═══ Drawer 流式光标 ═══ */
+.ai-drawer__cursor {
+  display: inline-block;
+  width: 2px; height: 14px;
+  background: var(--primary-100);
+  margin-left: 2px;
+  animation: drawer-cursor-blink 0.8s steps(2) infinite;
+  vertical-align: text-bottom;
+}
+@keyframes drawer-cursor-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* ═══ Drawer 推理过程折叠 ═══ */
+.ai-drawer__reasoning-toggle {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 1px solid var(--bg-300);
+  border-radius: 999px; padding: 3px 10px;
+  font-size: 11px; color: var(--text-300);
+  font-family: inherit; cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+}
+.ai-drawer__reasoning-toggle:hover {
+  border-color: var(--primary-100);
+  color: var(--primary-100);
+}
+.ai-drawer__reasoning-dur {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+.ai-drawer__reasoning-detail {
+  max-width: 82%;
+  font-size: 11px; line-height: 1.5;
+  color: var(--text-300);
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.03);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
 
 /* ═══ 滚动条 ═══ */
 .da-left::-webkit-scrollbar, .da-right::-webkit-scrollbar, .rank-list::-webkit-scrollbar { width: 3px; }

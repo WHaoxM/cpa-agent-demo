@@ -50,8 +50,8 @@ function createBookView(record: ReportRecord): BookViewItem {
     record,
     dateLabel: formatSpineDate(record.createdAt),
     titleLabel: record.title.length > 8 ? `${record.title.slice(0, 8)}…` : record.title,
-    width: 20 + (seed % 28),
-    height: 72 + (seed2 % 72),
+    width: 28 + (seed % 15),
+    height: 90 + (seed2 % 41),
   }
 }
 
@@ -147,16 +147,16 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
               <svg class="book-face-svg" viewBox="0 0 100 320" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient :id="`book-grad-${item.record.id}`" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" :stop-color="type === 'portrait' ? '#c04828' : '#4169bf'" />
-                    <stop offset="0.6" :stop-color="type === 'portrait' ? '#a03018' : '#30559c'" />
-                    <stop offset="1" :stop-color="type === 'portrait' ? '#7a1e08' : '#223f7f'" />
+                    <stop offset="0" :stop-color="type === 'portrait' ? '#8B6E5A' : '#4A7A6F'" />
+                    <stop offset="0.6" :stop-color="type === 'portrait' ? '#6B5248' : '#3A6359'" />
+                    <stop offset="1" :stop-color="type === 'portrait' ? '#4E3B32' : '#2A4D44'" />
                   </linearGradient>
                 </defs>
                 <rect x="0" y="0" width="100" height="320" :fill="`url(#book-grad-${item.record.id})`" />
-                <rect x="0" y="0" width="12" height="320" fill="rgba(20,16,12,0.28)" />
-                <rect x="8" y="24" width="84" height="2" fill="rgba(255,255,255,0.28)" />
-                <rect x="8" y="44" width="84" height="1" fill="rgba(255,255,255,0.2)" />
-                <rect x="8" y="62" width="84" height="1" fill="rgba(255,255,255,0.2)" />
+                <rect x="0" y="0" width="12" height="320" fill="rgba(0,0,0,0.10)" />
+                <rect x="8" y="24" width="84" height="2" fill="rgba(255,255,255,0.35)" />
+                <rect x="8" y="44" width="84" height="1" fill="rgba(255,255,255,0.25)" />
+                <rect x="8" y="62" width="84" height="1" fill="rgba(255,255,255,0.25)" />
               </svg>
 
               <span class="book-binding"></span>
@@ -179,29 +179,16 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   width: 100%;
   flex: 1;
   min-height: 360px;
-  border: 3px solid #5a2818;
-  background: linear-gradient(180deg, #4a2418 0%, #3c1c12 50%, #30160e 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
   overflow: hidden;
-  box-shadow:
-    0 8px 24px rgba(10, 6, 4, 0.50),
-    inset 0 0 30px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-md);
   position: relative;
 }
 
-/* 外框竖向木纹暗纹 */
 .bookshelf-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 32px,
-    rgba(220, 200, 160, 0.05) 32px,
-    rgba(220, 200, 160, 0.05) 34px
-  );
-  z-index: 0;
+  display: none;
 }
 
 .shelf-cabinet {
@@ -214,18 +201,10 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
 
 .cabinet-frame {
   height: 100%;
-  border: 10px solid #5a2818;
-  border-left-width: 13px;
-  border-right-width: 13px;
-  border-bottom-width: 16px;
-  border-top-width: 8px;
-  background: linear-gradient(175deg, #362018 0%, #2a1a14 50%, #221810 100%);
-  box-shadow:
-    inset 0 0 0 1px rgba(180, 155, 60, 0.30),
-    inset 0 0 0 2px rgba(90, 40, 24, 0.55),
-    inset 5px 0 14px rgba(0, 0, 0, 0.22),
-    inset -5px 0 14px rgba(0, 0, 0, 0.22),
-    inset 0 4px 8px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -234,14 +213,8 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   position: relative;
 }
 
-/* 金线框内侧装饰 */
 .cabinet-frame::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border: 1px solid rgba(180, 155, 60, 0.22);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .cabinet-top-deco {
@@ -260,7 +233,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   content: '';
   display: block;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(180, 155, 60, 0.6), transparent);
+  background: linear-gradient(to right, transparent, var(--color-border), transparent);
 }
 
 .shelf-row {
@@ -271,12 +244,10 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   flex: 1;
   min-height: 0;
   padding: 6px 8px 0;
-  background: linear-gradient(180deg, #382218 0%, #2a1a14 100%);
-  border: 1px solid rgba(90, 40, 24, 0.50);
-  box-shadow:
-    inset 0 0 0 1px rgba(180, 155, 60, 0.08),
-    inset 0 8px 16px rgba(0, 0, 0, 0.35),
-    inset 0 -2px 6px rgba(180, 120, 60, 0.10);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.04);
   transform: translateZ(4px);
   z-index: 1;
   overflow: hidden;
@@ -289,8 +260,8 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   right: 0;
   bottom: 0;
   height: 10px;
-  background: linear-gradient(180deg, transparent, rgba(15, 10, 6, 0.55));
-  border-top: 1px solid rgba(140, 80, 40, 0.30);
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.04));
+  border-top: 1px solid var(--color-border);
 }
 
 .book-item {
@@ -313,11 +284,11 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border: 1px solid rgba(34, 22, 16, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 2px;
   box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.22),
-    inset -4px 0 8px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    0 2px 6px rgba(0, 0, 0, 0.12),
+    inset -3px 0 6px rgba(0, 0, 0, 0.08);
 }
 
 .book-face-svg {
@@ -339,7 +310,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   height: 4px;
   transform-origin: bottom;
   transform: rotateX(90deg);
-  background: rgba(233, 217, 193, 0.88);
+  background: rgba(245, 245, 243, 0.95);
 }
 
 .book-depth--side {
@@ -349,7 +320,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   height: 100%;
   transform-origin: left;
   transform: rotateY(90deg);
-  background: rgba(78, 56, 43, 0.55);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .book-binding {
@@ -358,8 +329,8 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   left: 5px;
   right: 5px;
   height: 3px;
-  border-top: 1px solid rgba(245, 232, 200, 0.9);
-  border-bottom: 1px solid rgba(245, 232, 200, 0.58);
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .book-date {
@@ -370,7 +341,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   text-orientation: mixed;
   font-size: 10px;
   line-height: 1;
-  color: rgba(255, 244, 226, 0.96);
+  color: rgba(255, 255, 255, 0.92);
   font-family: var(--font-latin, monospace);
   letter-spacing: 0.05em;
 }
@@ -382,31 +353,31 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
   bottom: 8px;
   text-align: center;
   font-size: 10px;
-  color: rgba(251, 239, 214, 0.9);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .book-item--career .book-depth--side {
-  background: rgba(39, 59, 102, 0.68);
+  background: rgba(27, 78, 121, 0.15);
 }
 
 .book-item--career .book-depth--top {
-  background: rgba(212, 224, 246, 0.9);
+  background: rgba(240, 245, 252, 0.95);
 }
 
 .shelf-empty {
   margin: auto;
   font-size: 12px;
-  color: rgba(180, 155, 60, 0.5);
+  color: var(--color-text-subtle);
 }
 
 .shelf-shadow {
   flex-shrink: 0;
   height: 8px;
-  background: radial-gradient(ellipse at center, rgba(80, 30, 18, 0.45), transparent);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.06), transparent);
   transform: translateZ(1px);
 }
 

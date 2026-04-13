@@ -1,10 +1,10 @@
 <!-- 组件：图谱构建工作台；由 CareerAbilityShell.vue 引入使用，非路由直接渲染；角色：STUDENT -->
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { getRoleIntro } from '@/composables/useAbilityGraph'
-import { useGraphGeneration, type LogEntry } from '@/composables/useGraphGeneration'
+import type { LogEntry } from '@/composables/useGraphGeneration'
 
 defineOptions({ name: 'CareerAbilityWorkspace' })
 
@@ -19,8 +19,21 @@ const roleName = sg.roleName
 /* ═══ 岗位介绍 ═══ */
 const roleIntro = computed(() => getRoleIntro(roleName.value))
 
-/* ═══ 生成流程（驱动日志面板，图谱由Shell统一管理） ═══ */
-const gen = useGraphGeneration(allNodes, allEdges)
+/* ═══ 生成流程（使用 Shell 共享实例，与图谱时序同步） ═══ */
+const gen = sg.gen
+
+/* ═══ 职业分析骨架屏：根据 gen.progress 逐区块解锁 ═══ */
+const revealedSections = computed(() => {
+  const p = gen.progress.value
+  return {
+    summary:          p >= 10,
+    responsibilities: p >= 30,
+    requirements:     p >= 50,
+    skills:           p >= 70,
+    regions:          p >= 85,
+    outlook:          p >= 100,
+  }
+})
 
 /* ═══ 日志面板自动滚动 ═══ */
 const logPanelEl = ref<HTMLElement>()
@@ -38,13 +51,9 @@ function onEnterCourseSystem() {
   router.push({ name: 'course-system', query: { role: roleName.value } })
 }
 
-/* ═══ 生命周期 ═══ */
-onMounted(() => { gen.start() })
-onBeforeUnmount(() => { gen.stop() })
-
 /* ═══ 日志图标 ═══ */
 function logIcon(level: LogEntry['level']) {
-  return level === 'success' ? '✅' : level === 'warn' ? '⚠️' : 'ℹ️'
+  return level === 'success' ? '√' : level === 'warn' ? '!' : '-'
 }
 </script>
 
@@ -57,32 +66,69 @@ function logIcon(level: LogEntry['level']) {
         <section class="ws-card">
           <h3 class="ws-card__title"><span class="ws-card__num">01</span> 职业分析</h3>
           <div class="ws-card__body">
-            <p class="ws-intro-summary">{{ roleIntro.summary }}</p>
+            <!-- 摘要 -->
+            <template v-if="revealedSections.summary">
+              <p class="ws-intro-summary ws-reveal">{{ roleIntro.summary }}</p>
+            </template>
+            <template v-else>
+              <div class="ws-sk-block" style="height:40px;margin-bottom:12px;"></div>
+            </template>
+            <!-- 岗位职责 -->
             <div class="ws-intro-section">
               <h4>岗位职责</h4>
-              <ul><li v-for="(r, i) in roleIntro.responsibilities" :key="i">{{ r }}</li></ul>
+              <template v-if="revealedSections.responsibilities">
+                <ul class="ws-reveal"><li v-for="(r, i) in roleIntro.responsibilities" :key="i">{{ r }}</li></ul>
+              </template>
+              <template v-else>
+                <div class="ws-sk-line" v-for="n in 3" :key="n" :style="{ width: (50 + n * 12) + '%' }"></div>
+              </template>
             </div>
+            <!-- 任职要求 -->
             <div class="ws-intro-section">
               <h4>任职要求</h4>
-              <ul><li v-for="(r, i) in roleIntro.requirements" :key="i">{{ r }}</li></ul>
+              <template v-if="revealedSections.requirements">
+                <ul class="ws-reveal"><li v-for="(r, i) in roleIntro.requirements" :key="i">{{ r }}</li></ul>
+              </template>
+              <template v-else>
+                <div class="ws-sk-line" v-for="n in 3" :key="n" :style="{ width: (55 + n * 10) + '%' }"></div>
+              </template>
             </div>
+            <!-- 技能标签 -->
             <div class="ws-intro-section">
               <h4>技能标签</h4>
-              <div class="ws-tags">
-                <span class="ws-tag" v-for="s in roleIntro.skills" :key="s">{{ s }}</span>
-              </div>
+              <template v-if="revealedSections.skills">
+                <div class="ws-tags ws-reveal">
+                  <span class="ws-tag" v-for="s in roleIntro.skills" :key="s">{{ s }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="ws-sk-tags"><div class="ws-sk-tag" v-for="n in 5" :key="n"></div></div>
+              </template>
             </div>
+            <!-- 需求热区 -->
             <div class="ws-intro-section">
               <h4>需求热区</h4>
-              <div class="ws-regions">
-                <span class="ws-region" v-for="rg in roleIntro.topRegions" :key="rg.name">
-                  {{ rg.name }} <em>{{ rg.demand }}</em>
-                </span>
-              </div>
+              <template v-if="revealedSections.regions">
+                <div class="ws-regions ws-reveal">
+                  <span class="ws-region" v-for="rg in roleIntro.topRegions" :key="rg.name">
+                    {{ rg.name }} <em>{{ rg.demand }}</em>
+                  </span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="ws-sk-tags"><div class="ws-sk-tag" style="width:52px" v-for="n in 3" :key="n"></div></div>
+              </template>
             </div>
+            <!-- 发展前景 -->
             <div class="ws-intro-section">
               <h4>发展前景</h4>
-              <p>{{ roleIntro.outlook }}</p>
+              <template v-if="revealedSections.outlook">
+                <p class="ws-reveal">{{ roleIntro.outlook }}</p>
+              </template>
+              <template v-else>
+                <div class="ws-sk-line" style="width:90%"></div>
+                <div class="ws-sk-line" style="width:72%"></div>
+              </template>
             </div>
           </div>
         </section>
@@ -183,9 +229,9 @@ function logIcon(level: LogEntry['level']) {
             :key="i"
           >
             <span class="ws-log__ts">[{{ log.ts }}]</span>
+            <span class="ws-log__icon" :class="'ws-log__icon--' + log.level">{{ logIcon(log.level) }}</span>
             <span class="ws-log__agent">{{ log.agent }}</span>
             <span class="ws-log__msg">{{ log.message }}</span>
-            <span class="ws-log__icon">{{ logIcon(log.level) }}</span>
           </div>
           <div v-if="gen.logs.value.length === 0" class="ws-log--empty">等待日志输出…</div>
         </div>
@@ -273,6 +319,38 @@ function logIcon(level: LogEntry['level']) {
 .ws-region em {
   font-style: normal; font-size: 11px; font-weight: 600;
   color: var(--primary-100); margin-left: 2px;
+}
+
+/* 骨架屏元素 */
+@keyframes ws-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.ws-sk-block,
+.ws-sk-line,
+.ws-sk-tag {
+  background: linear-gradient(
+    90deg,
+    var(--bg-300, #CBCBC8) 25%,
+    var(--bg-200, #EDEDEB) 50%,
+    var(--bg-300, #CBCBC8) 75%
+  );
+  background-size: 200% 100%;
+  animation: ws-shimmer 1.4s ease infinite;
+  border-radius: 2px;
+}
+.ws-sk-block { width: 100%; margin-bottom: 10px; }
+.ws-sk-line  { height: 12px; margin-bottom: 6px; }
+.ws-sk-tags  { display: flex; flex-wrap: wrap; gap: 5px; }
+.ws-sk-tag   { height: 22px; width: 60px; border-radius: 2px; }
+
+/* 渐显动画 */
+@keyframes ws-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ws-reveal {
+  animation: ws-fadein 0.4s ease both;
 }
 
 /* 生成过程卡片 */
@@ -386,9 +464,12 @@ function logIcon(level: LogEntry['level']) {
 
 .ws-log { display: flex; gap: 8px; align-items: baseline; }
 .ws-log__ts { color: #777; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.ws-log__icon { flex-shrink: 0; font-weight: 700; font-size: 12px; }
+.ws-log__icon--success { color: #68D391; }
+.ws-log__icon--warn    { color: #F6AD55; }
+.ws-log__icon--info    { color: #63B3ED; }
 .ws-log__agent { color: #B7791F; font-weight: 600; flex-shrink: 0; }
 .ws-log__msg { color: #bbb; }
-.ws-log__icon { flex-shrink: 0; }
 .ws-log--empty { color: #777; font-size: 11px; }
 
 /* ═══ 响应式 ═══ */

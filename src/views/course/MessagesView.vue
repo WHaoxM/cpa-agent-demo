@@ -1,8 +1,9 @@
-﻿<!-- 页面：消息；路由：messages（messages） -->
+﻿<!-- 页面：消息中心；路由：messages（messages） -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 
-type MsgType = '系统消息' | '课程通知'
+type MsgType = '系统消息'
 
 type Msg = {
   id: string
@@ -19,7 +20,7 @@ const list = ref<Msg[]>([
   {
     id: 'm_01',
     title: '学习中心新主题上线',
-    content: '现在支持“宝石蓝 / 温暖 / 宣纸 / 落日”四种主题，切换更丝滑。',
+    content: '现在支持"宝石蓝 / 温暖 / 宣纸 / 落日"四种主题，切换更丝滑。',
     time: '2026-02-07 14:12',
     type: '系统消息',
     read: false,
@@ -29,7 +30,7 @@ const list = ref<Msg[]>([
     title: '《Vue3 + TypeScript 工程化实战》新增章节',
     content: '已更新：路由守卫与鉴权最佳实践。建议优先学习。',
     time: '2026-02-06 20:30',
-    type: '课程通知',
+    type: '系统消息',
     read: false,
   },
   {
@@ -40,6 +41,30 @@ const list = ref<Msg[]>([
     type: '系统消息',
     read: true,
   },
+  {
+    id: 'm_04',
+    title: '安全提醒：密码已 90 天未更换',
+    content: '建议定期更换密码以保护账户安全，前往设置页即可修改。',
+    time: '2026-01-28 10:00',
+    type: '系统消息',
+    read: true,
+  },
+  {
+    id: 'm_05',
+    title: '职业分析功能升级',
+    content: '新增薪资趋势图、城市热力对比，帮助你更全面地了解目标岗位。',
+    time: '2026-01-20 16:45',
+    type: '系统消息',
+    read: true,
+  },
+  {
+    id: 'm_06',
+    title: '系统维护通知',
+    content: '2026-01-15 02:00–06:00 进行例行维护，届时部分功能可能暂不可用。',
+    time: '2026-01-14 18:00',
+    type: '系统消息',
+    read: true,
+  },
 ])
 
 const filtered = computed(() => {
@@ -47,163 +72,532 @@ const filtered = computed(() => {
 })
 
 const unreadCount = computed(() => list.value.filter((x) => !x.read).length)
+const latestTime = computed(() => list.value.length ? list.value[0]!.time.split(' ')[0] : '—')
 
 function markRead(id: string) {
   const m = list.value.find((x) => x.id === id)
   if (m) m.read = true
 }
+
+/* ── 进场动画 ── */
+let observer: IntersectionObserver | null = null
+
+onMounted(async () => {
+  await nextTick()
+  observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible')
+        observer?.unobserve(entry.target)
+      }
+    })
+  }, { rootMargin: '-40px 0px', threshold: 0.08 })
+
+  document.querySelectorAll('.tl-reveal').forEach((el, i) => {
+    ;(el as HTMLElement).style.transitionDelay = `${i * 80}ms`
+    observer?.observe(el)
+  })
+})
+
+onUnmounted(() => { observer?.disconnect() })
 </script>
 
 
 
 <template>
-  <div class="page page--compact messages-page">
-    <div class="toolbar">
-      <div class="toolbar__title">
-        消息
-        <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="toolbar__badge" />
+  <div class="messages-page">
+    <!-- ── 页头区（深底 hero） ── -->
+    <div class="msg-hero tl-reveal">
+      <div class="msg-hero__inner">
+        <div class="msg-hero__left">
+          <div class="msg-hero__title">
+            <Icon icon="mdi:bell-outline" class="msg-hero__icon" />
+            <h1>消息中心</h1>
+          </div>
+          <div class="msg-hero__stats">
+            <span class="stat-item">未读 <strong>{{ unreadCount }}</strong> 条</span>
+            <span class="stat-sep">·</span>
+            <span class="stat-item">共 <strong>{{ list.length }}</strong> 条</span>
+            <span class="stat-sep">·</span>
+            <span class="stat-item">最近 <strong>{{ latestTime }}</strong></span>
+          </div>
+        </div>
+        <el-segmented
+          class="msg-hero__seg"
+          v-model="tab"
+          :options="[
+            { label: '全部', value: '全部' },
+            { label: '系统消息', value: '系统消息' },
+          ]"
+        />
       </div>
-
-      <el-segmented
-        class="toolbar__seg"
-        v-model="tab"
-        :options="[
-          { label: '全部', value: '全部' },
-          { label: '系统消息', value: '系统消息' },
-          { label: '课程通知', value: '课程通知' },
-        ]"
-      />
     </div>
 
-    <div class="msg-list" role="list">
-      <button
-        v-for="m in filtered"
-        :key="m.id"
-        class="msg-row"
-        type="button"
-        role="listitem"
-        @click="markRead(m.id)"
-      >
-        <div class="msg-row__main">
-          <div class="msg-row__title">
-            <span v-if="!m.read" class="msg-row__dot" />
-            <span class="msg-row__title-text">{{ m.title }}</span>
-            <el-tag size="small" round effect="plain" class="msg-row__type">{{ m.type }}</el-tag>
+    <!-- ── 内容区 ── -->
+    <div class="msg-body">
+
+      <!-- ── 摘要统计条 ── -->
+      <div class="msg-stat-strip tl-reveal">
+        <div class="msg-stat-item">
+          <Icon icon="mdi:email-outline" class="msg-stat-icon" />
+          <div class="msg-stat-text">
+            <span class="msg-stat-value">{{ unreadCount }}</span>
+            <span class="msg-stat-label">未读消息</span>
           </div>
-          <div class="msg-row__meta">{{ m.time }}</div>
-          <div class="msg-row__content">{{ m.content }}</div>
         </div>
-      </button>
+        <div class="msg-stat-item">
+          <Icon icon="mdi:inbox-full" class="msg-stat-icon" />
+          <div class="msg-stat-text">
+            <span class="msg-stat-value">{{ list.length }}</span>
+            <span class="msg-stat-label">全部消息</span>
+          </div>
+        </div>
+        <div class="msg-stat-item msg-stat-item--latest">
+          <Icon icon="mdi:clock-outline" class="msg-stat-icon" />
+          <div class="msg-stat-text">
+            <span class="msg-stat-value">{{ latestTime }}</span>
+            <span class="msg-stat-label">最近更新</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 时间线 ── -->
+      <div v-if="filtered.length" class="timeline" role="list">
+        <div
+          v-for="m in filtered"
+          :key="m.id"
+          class="tl-node tl-reveal"
+          :class="{ 'tl-node--unread': !m.read }"
+          role="listitem"
+        >
+          <!-- 圆点 -->
+          <span class="tl-dot" :class="{ 'tl-dot--unread': !m.read }" />
+
+          <!-- 卡片 -->
+          <button
+            class="tl-card"
+            :class="{ 'tl-card--unread': !m.read }"
+            type="button"
+            @click="markRead(m.id)"
+          >
+            <div class="tl-card__head">
+              <Icon icon="mdi:cog-outline" class="tl-card__type-icon" />
+              <span class="tl-card__title">{{ m.title }}</span>
+              <span class="tl-card__time">{{ m.time }}</span>
+            </div>
+            <div class="tl-card__body">{{ m.content }}</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 空状态 ── -->
+      <div v-else class="msg-empty tl-reveal">
+        <Icon icon="mdi:bell-off-outline" class="msg-empty__icon" />
+        <div class="msg-empty__title">暂无消息</div>
+        <div class="msg-empty__desc">系统通知会在这里集中展示</div>
+      </div>
+
     </div>
   </div>
 </template>
 
 <style scoped>
+/* ══════════════════════════════════
+   页面容器
+   ══════════════════════════════════ */
 .messages-page {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--parchment-100);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
 }
 
-.toolbar {
+/* ══════════════════════════════════
+   页头 Hero
+   ══════════════════════════════════ */
+.msg-hero {
+  background: #1A1815;
+  padding: 0 28px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* 锦纹斜线纹理 */
+.msg-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 48L48 0M-6 6L6-6M42 54L54 42' stroke='rgba(255,255,255,0.035)' stroke-width='1'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.msg-hero__inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 24px 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 24px;
   flex-wrap: wrap;
-  padding: 12px;
-  border-radius: 0;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 1;
 }
 
-.toolbar__title {
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.2;
-  display: inline-flex;
-  align-items: center;
+.msg-hero__left {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.toolbar__seg {
-  border-radius: 0;
+.msg-hero__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.msg-list {
-  margin-top: 10px;
-  border-radius: 0;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--bg-300) 55%, transparent 45%);
-  background: color-mix(in srgb, var(--bg-100) 92%, #ffffff 8%);
-  box-shadow: var(--shadow-sm);
+.msg-hero__icon {
+  font-size: 24px;
+  color: var(--color-primary);
+  filter: drop-shadow(0 0 8px rgba(180, 60, 40, 0.5));
+}
+
+.msg-hero__title h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: var(--font-title);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.msg-hero__stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.msg-hero__stats strong {
+  color: var(--color-gold);
+  font-size: 15px;
+  font-family: var(--font-latin);
+}
+
+.msg-hero__stats .stat-sep {
+  opacity: 0.4;
+}
+
+.msg-hero__seg {
+  --el-border-radius-base: 4px;
+}
+
+/* segmented 白色描边风格 */
+.msg-hero :deep(.el-segmented) {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  --el-text-color-primary: rgba(255, 255, 255, 0.7);
+}
+
+.msg-hero :deep(.el-segmented__item.is-selected) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.msg-hero :deep(.el-segmented__item) {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ══════════════════════════════════
+   内容区
+   ══════════════════════════════════ */
+.msg-body {
+  flex: 1;
+  max-width: 1160px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 28px 48px;
   display: flex;
   flex-direction: column;
+  gap: 16px;
 }
 
-.msg-row {
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 12px;
-  cursor: pointer;
-  transition: background 0.18s ease;
+/* ══════════════════════════════════
+   摘要统计条
+   ══════════════════════════════════ */
+.msg-stat-strip {
+  display: flex;
+  gap: 12px;
 }
 
-.msg-row:hover {
-  background: color-mix(in srgb, var(--bg-200) 78%, transparent 22%);
-}
-
-.msg-row + .msg-row {
-  border-top: 1px solid color-mix(in srgb, var(--bg-300) 40%, transparent 60%);
-}
-
-.msg-row__main {
-  min-width: 0;
-}
-
-.msg-row__title {
-  font-weight: 600;
-  line-height: 1.35;
+.msg-stat-item {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.msg-stat-icon {
+  font-size: 20px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.msg-stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.msg-stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: var(--font-latin);
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.msg-stat-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* ══════════════════════════════════
+   时间线
+   ══════════════════════════════════ */
+.timeline {
+  position: relative;
+  padding-left: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 竖轴线 */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--color-border);
+  border-radius: 1px;
+}
+
+/* ── 节点 ── */
+.tl-node {
+  position: relative;
+}
+
+/* ── 圆点 ── */
+.tl-dot {
+  position: absolute;
+  left: -32px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--parchment-400);
+  border: 2px solid var(--color-surface);
+  transform: translateX(4px);
+  z-index: 1;
+}
+
+.tl-dot--unread {
+  background: var(--color-primary);
+  border-color: var(--color-surface);
+  animation: pulse-dot 2s ease-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%   { box-shadow: 0 0 0 0 rgba(190, 42, 0, 0.35); }
+  70%  { box-shadow: 0 0 0 7px rgba(190, 42, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(190, 42, 0, 0); }
+}
+
+/* ── 卡片 ── */
+.tl-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 16px 18px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease,
+    border-color 200ms ease;
+  font-family: inherit;
+}
+
+.tl-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+.tl-card--unread {
+  border-left: 3px solid var(--color-primary);
+  background: var(--card-emphasis-bg);
+}
+
+.tl-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.msg-row__title-text {
+.tl-card__type-icon {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.tl-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
-.msg-row__type {
-  margin-left: auto;
-}
-
-.msg-row__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--accent-100);
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-100) 14%, transparent 86%);
-}
-
-.msg-row__meta {
-  margin-top: 6px;
+.tl-card__time {
   font-size: 12px;
-  color: color-mix(in srgb, var(--text-200) 70%, transparent 30%);
+  color: var(--color-text-subtle);
+  flex-shrink: 0;
+  font-family: var(--font-latin);
 }
 
-.msg-row__content {
-  margin-top: 6px;
-  color: var(--text-200);
+.tl-card__body {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted);
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ══════════════════════════════════
+   空状态
+   ══════════════════════════════════ */
+.msg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0;
+  gap: 8px;
+}
+
+.msg-empty__icon {
+  font-size: 48px;
+  color: var(--color-text-subtle);
+  margin-bottom: 4px;
+}
+
+.msg-empty__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.msg-empty__desc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* ══════════════════════════════════
+   进场动画
+   ══════════════════════════════════ */
+@media (prefers-reduced-motion: no-preference) {
+  .tl-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(6px);
+    transition:
+      opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+      filter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .tl-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* ══════════════════════════════════
+   响应式
+   ══════════════════════════════════ */
+@media (max-width: 768px) {
+  .msg-hero {
+    padding: 0 16px;
+  }
+
+  .msg-hero__inner {
+    padding: 18px 0 22px;
+  }
+
+  .msg-hero__title h1 {
+    font-size: 22px;
+  }
+
+  .msg-body {
+    padding: 12px 16px 36px;
+  }
+
+  .msg-stat-strip {
+    flex-wrap: wrap;
+  }
+
+  .msg-stat-item {
+    min-width: calc(50% - 6px);
+  }
+
+  .timeline {
+    padding-left: 28px;
+  }
+
+  .tl-dot {
+    left: -28px;
+  }
+
+  .timeline::before {
+    left: 9px;
+  }
+}
+
+@media (max-width: 640px) {
+  .msg-stat-item--latest {
+    display: none;
+  }
+
+  .msg-hero__stats .stat-sep:last-of-type,
+  .msg-hero__stats .stat-item:last-child {
+    display: none;
+  }
+}
 </style>
-
-

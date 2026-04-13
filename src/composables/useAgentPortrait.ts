@@ -64,16 +64,110 @@ export interface AgentPortraitResult {
 }
 
 /* ══════════════════════════════════════════════
-   主调用函数
+   分阶段流式渲染：Phase 类型与回调
+══════════════════════════════════════════════ */
+export type AgentPhase = 'parsing' | 'evaluating' | 'analyzing' | 'summarizing'
+
+export type SummarySource = string | ReadableStream<string>
+
+export type PhaseData =
+  | { phase: 'parsing';      personInfo: PersonInfo; completenessScore: number }
+  | { phase: 'evaluating';   dimensions: AbilityDimension[]; competitivenessScore: number; skillTags: { name: string; weight: number; category: string }[] }
+  | { phase: 'analyzing';    honors: PersonInfo['honors']; projects: PersonInfo['projects'] }
+  | { phase: 'summarizing';  agentSummary: SummarySource }
+
+export type PhaseCallback = (data: PhaseData) => void
+
+export const PHASE_META: { key: AgentPhase; label: string }[] = [
+  { key: 'parsing',      label: '简历解析' },
+  { key: 'evaluating',   label: '能力评估' },
+  { key: 'analyzing',    label: '经历分析' },
+  { key: 'summarizing',  label: '生成综合评语' },
+]
+
+// 后端事件类型 → 前端 Phase 的映射（对接时按后端实际事件名补充）
+export const PHASE_MAP: Record<string, AgentPhase> = {
+  'resume_parsed':       'parsing',
+  'ability_scored':      'evaluating',
+  'experience_analyzed': 'analyzing',
+  'summary_generated':   'summarizing',
+}
+
+/* ══════════════════════════════════════════════
+   适配器接口：mock 与真实 API 共用签名
+   联调时：实现 apiAdapter，将 activeAdapter 指向它
+══════════════════════════════════════════════ */
+export interface PortraitAdapter {
+  run(input: AgentPortraitInput, onPhase: PhaseCallback): Promise<AgentPortraitResult>
+}
+
+async function mockStreamingImpl(
+  input: AgentPortraitInput,
+  onPhase: PhaseCallback,
+): Promise<AgentPortraitResult> {
+  const result = mockPortrait(input)
+
+  // Phase ① 简历解析 ~600ms
+  await delay(600)
+  onPhase({
+    phase: 'parsing',
+    personInfo: result.personInfo,
+    completenessScore: result.completenessScore,
+  })
+
+  // Phase ② 能力评估 ~800ms
+  await delay(800)
+  onPhase({
+    phase: 'evaluating',
+    dimensions: result.dimensions,
+    competitivenessScore: result.competitivenessScore,
+    skillTags: result.skillTags,
+  })
+
+  // Phase ③ 经历分析 ~500ms
+  await delay(500)
+  onPhase({
+    phase: 'analyzing',
+    honors: result.personInfo.honors,
+    projects: result.personInfo.projects,
+  })
+
+  // Phase ④ AI 综评 ~700ms
+  await delay(700)
+  onPhase({
+    phase: 'summarizing',
+    agentSummary: result.agentSummary,
+  })
+
+  return result
+}
+
+const mockAdapter: PortraitAdapter = { run: mockStreamingImpl }
+
+// 联调时：取消注释并实现 apiAdapter，将 activeAdapter 切换
+// const apiAdapter: PortraitAdapter = { run: apiStreamingImpl }
+const activeAdapter: PortraitAdapter = mockAdapter
+
+/* ══════════════════════════════════════════════
+   分阶段流式调用（TalentPortrait.vue 使用）
+══════════════════════════════════════════════ */
+export async function callAgentPortraitStreaming(
+  input: AgentPortraitInput,
+  onPhase: PhaseCallback,
+): Promise<AgentPortraitResult> {
+  return activeAdapter.run(input, onPhase)
+}
+
+/* ══════════════════════════════════════════════
+   主调用函数（向后兼容，一次性返回完整结果）
    联调时：将 mockPortrait(input) 替换为
      const res = await fetch(endpoint, { method:'POST', body: JSON.stringify(input) })
      return res.json()
 ══════════════════════════════════════════════ */
 export async function callAgentPortrait(
   input: AgentPortraitInput,
-  // options?: { endpoint?: string; apiKey?: string }  // 预留，联调时开放
 ): Promise<AgentPortraitResult> {
-  await new Promise(r => setTimeout(r, 400)) // 模拟网络延迟
+  await delay(400)
   return mockPortrait(input)
 }
 
@@ -83,10 +177,11 @@ export async function callAgentPortrait(
 ══════════════════════════════════════════════ */
 export async function getAbstractAbilityScores(
   input: AgentPortraitInput,
-  // endpoint?: string  // 预留
 ): Promise<Pick<AbilityDimension, 'key' | 'score' | 'desc'>[]> {
   return mockAbstractScores(input)
 }
+
+function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
 /* ══════════════════════════════════════════════
    工具：确定性伪随机（基于字符串哈希）

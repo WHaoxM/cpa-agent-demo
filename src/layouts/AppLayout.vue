@@ -2,13 +2,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox, ElNotification } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { ICONS } from '@/constants/icons'
 import { useUserStore, useThemeStore } from '@/stores'
-import { UserRole } from '@/types'
 import CloudTabNav from '@/components/book/CloudTabNav.vue'
 import BookPage from '@/components/book/BookPage.vue'
+import UserInfoBar from '@/components/UserInfoBar.vue'
 import { gsap } from '@/plugins/gsap'
 
 const route = useRoute()
@@ -53,6 +52,7 @@ const hiddenBookHeaderRoutes = new Set([
   '/app/dashboard',
   '/app/exams',
   '/app/student/favorites',
+  '/app/messages',
   '/app/student/learning',
   '/app/student/my-reports',
   '/app/student/ai-assistant',
@@ -74,18 +74,17 @@ const breadcrumbs = computed(() => {
 // 学生菜单（按职业规划主路径顺序排列）
 const studentMenus = [
   { index: '/app/dashboard', icon: ICONS.home, title: '首页' },
+  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'ai助手' },
   // ── 职业探索 ──
   { index: '/app/student/career-analysis', icon: ICONS.target, title: '职业分析' },
   { index: '/app/exams', icon: ICONS.checkSquare, title: '技能自评' },
-  { index: '/app/student/favorites', icon: ICONS.bookmark, title: '心仪岗位' },
   // ── 能力匹配 ──
   { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
   // ── 学习执行 ──
   { index: '/app/student/learning', icon: ICONS.trendingUp, title: '技能提升' },
   // ── 成果追踪 ──
   { index: '/app/student/my-reports', icon: ICONS.fileText, title: '我的报告' },
-  // ── 工具 ──
-  { index: '/app/student/ai-assistant', icon: ICONS.bot, title: 'ai助手' },
+  { index: '/app/student/favorites', icon: ICONS.bookmark, title: '心仪岗位' },
 ]
 
 // 管理员菜单
@@ -124,32 +123,6 @@ function toggleCollapse() {
   drawerOpen.value = true
 }
 
-async function onLogout() {
-  await ElMessageBox.confirm('确认退出登录？', '退出登录', {
-    type: 'warning',
-    confirmButtonText: '退出',
-    cancelButtonText: '取消',
-  })
-  userStore.logout()
-  ElNotification({
-    title: '已退出',
-    message: '登录状态已清空',
-    type: 'success',
-    duration: 1800,
-  })
-  router.replace('/login')
-}
-
-function switchRole(role: UserRole) {
-  userStore.loginByRole(role)
-  ElNotification({
-    title: '切换成功',
-    message: `已切换到${role === UserRole.STUDENT ? '学生' : '管理员'}角色`,
-    type: 'success',
-    duration: 1800,
-  })
-  router.push('/app/dashboard')
-}
 
 const cloudTabs = computed(() => {
   return currentMenus.value.map(m => ({
@@ -173,12 +146,16 @@ function onImmersiveEnter(_el: Element, done: () => void) {
 function onImmersiveLeave(el: Element, done: () => void) {
   if (prefersReduced.value) { done(); return }
   const h = el as HTMLElement
+  let called = false
+  const safeDone = () => { if (called) return; called = true; h.style.willChange = ''; done() }
   h.style.willChange = 'opacity'
+  gsap.killTweensOf(h)
   gsap.to(h, {
     opacity: 0,
     duration: 0.18, ease: 'power1.out',
-    onComplete: () => { h.style.willChange = ''; done() },
+    onComplete: safeDone,
   })
+  setTimeout(safeDone, 400)
 }
 
 /* ===== 生命周期 ===== */
@@ -217,59 +194,7 @@ onBeforeUnmount(() => {
         :tabs="cloudTabs"
       />
 
-      <div class="top-row__user">
-        <button class="top-row__icon-btn" type="button" @click="router.push('/app/messages')" title="消息">
-          <Icon :icon="ICONS.inbox" />
-        </button>
-
-        <el-popover
-          placement="bottom-end"
-          width="280"
-          :trigger="isMobile ? 'click' : 'hover'"
-          :show-after="isMobile ? 0 : 120"
-          :hide-after="isMobile ? 0 : 120"
-          popper-class="user-popover"
-        >
-          <template #reference>
-            <div class="top-row__user-card">
-              <el-avatar :size="30" :src="userStore.currentUser?.avatar" class="top-row__avatar" />
-              <div class="top-row__user-text">
-                <div class="top-row__user-name">{{ userStore.currentUser?.name }}</div>
-                <div class="top-row__user-role">{{ userRole === 'student' ? '学生' : '管理员' }}</div>
-              </div>
-            </div>
-          </template>
-
-          <div class="user-pop">
-            <div class="user-pop__info">
-              <el-avatar :size="50" :src="userStore.currentUser?.avatar" />
-              <div class="user-pop__name">{{ userStore.currentUser?.name }}</div>
-              <div class="user-pop__role">{{ userRole === 'student' ? '学生用户' : '系统管理员' }}</div>
-            </div>
-            <el-divider />
-            <div class="user-pop__section">
-              <div class="user-pop__section-title">切换角色</div>
-              <div class="user-pop__role-list">
-                <button class="user-pop__role-item" :class="{ active: userRole === UserRole.STUDENT }" @click="switchRole(UserRole.STUDENT)">
-                  <Icon :icon="ICONS.graduationCap" /> 学生
-                </button>
-                <button class="user-pop__role-item" :class="{ active: userRole === UserRole.ADMIN }" @click="switchRole(UserRole.ADMIN)">
-                  <Icon :icon="ICONS.shield" /> 管理员
-                </button>
-              </div>
-            </div>
-            <el-divider />
-            <div class="user-pop__actions">
-              <button class="user-pop__btn" @click="router.push('/app/profile')">
-                <Icon :icon="ICONS.user" /> 个人中心
-              </button>
-              <button class="user-pop__btn" @click="onLogout">
-                <Icon :icon="ICONS.logOut" /> 退出登录
-              </button>
-            </div>
-          </div>
-        </el-popover>
-      </div>
+      <UserInfoBar />
     </div>
 
     <!-- ===== 书页主区域 ===== -->
@@ -384,91 +309,6 @@ onBeforeUnmount(() => {
   margin-right: auto;
 }
 
-.top-row__user {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent 28%);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--bg-200) 4%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  flex-shrink: 0;
-}
-
-.top-row__icon-btn {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--color-text-muted);
-  transition:
-    color 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.top-row__icon-btn:hover {
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface) 95%);
-  border-color: color-mix(in srgb, var(--color-border) 80%, transparent 20%);
-  transform: translateY(-1px);
-}
-
-.top-row__icon-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-text) 18%, transparent 82%);
-  outline-offset: 2px;
-}
-
-.top-row__user-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  min-height: 34px;
-  padding: 0 10px 0 4px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.top-row__user-card:hover {
-  background: color-mix(in srgb, var(--color-text) 5%, var(--color-surface) 95%);
-  border-color: color-mix(in srgb, var(--color-border) 80%, transparent 20%);
-  transform: translateY(-1px);
-}
-
-.top-row__avatar :deep(.el-avatar) {
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent 25%);
-}
-
-.top-row__user-text {
-  display: none;
-}
-
-.top-row__user-name {
-  font-family: var(--font-ui);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--color-text);
-}
-
-.top-row__user-role {
-  font-size: 11px;
-  color: var(--color-text-subtle);
-}
 
 /* ═══ 书页主区域 ═══ */
 .book-main-area {
@@ -545,9 +385,6 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-.book-content :deep(.book-page__body) {
-  padding: 16px 20px;
-}
 
 .page-turn-perspective {
   width: 100%;
@@ -582,109 +419,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-/* ═══ 用户弹窗 ═══ */
-:deep(.user-popover) {
-  --el-popover-padding: 0px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent 22%);
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--bg-200) 4%);
-  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.14);
-  transform-origin: top right;
-  animation: sealPopIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes sealPopIn {
-  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.user-pop__info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 18px 18px 14px;
-}
-
-.user-pop__name {
-  font-family: var(--font-ui);
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 10px;
-}
-
-.user-pop__role {
-  font-size: 12px;
-  color: var(--text-200);
-  margin-top: 4px;
-}
-
-.user-pop__section-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  letter-spacing: 0.01em;
-  margin-bottom: 10px;
-}
-
-.user-pop__role-list {
-  display: grid;
-  gap: 8px;
-}
-
-.user-pop__role-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent 24%);
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--bg-200) 6%);
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-}
-
-.user-pop__role-item:hover {
-  border-color: color-mix(in srgb, var(--color-text) 18%, var(--color-border) 82%);
-  background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface) 96%);
-  transform: translateY(-1px);
-}
-
-.user-pop__role-item.active {
-  border-color: rgba(17, 17, 17, 0.96);
-  background: linear-gradient(180deg, rgba(34, 34, 34, 0.96), rgba(17, 17, 17, 0.96));
-  color: #ffffff;
-}
-
-.user-pop__actions {
-  display: grid;
-  gap: 8px;
-}
-
-.user-pop__btn {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--bg-200) 6%);
-  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent 24%);
-  border-radius: 12px;
-  font-size: 14px;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-}
-
-.user-pop__btn:hover {
-  background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface) 96%);
-  border-color: color-mix(in srgb, var(--color-text) 18%, var(--color-border) 82%);
-  transform: translateY(-1px);
-}
 
 /* ═══ 移动端抽屉 ═══ */
 .drawer {
@@ -782,15 +516,6 @@ onBeforeUnmount(() => {
 }
 
 /* ═══ 响应式 ═══ */
-@media (min-width: 1024px) {
-  .top-row__user-text {
-    display: block;
-  }
-
-  .book-content :deep(.book-page__body) {
-    padding: 18px 24px;
-  }
-}
 
 @media (max-width: 767px) {
   .top-row {
@@ -807,19 +532,9 @@ onBeforeUnmount(() => {
     margin-right: 0;
   }
 
-  .top-row__user {
-    margin-left: auto;
-    min-height: 0;
-    padding: 4px;
-    gap: 6px;
-  }
-
   .book-header {
     padding: 0 12px;
     height: 36px;
-  }
-  .book-content :deep(.book-page__body) {
-    padding: 12px 14px;
   }
 }
 

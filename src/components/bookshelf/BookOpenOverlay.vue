@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
 import type { ReportRecord } from '@/types'
 import BookPage from '@/components/book/BookPage.vue'
-import { init as echartsInit, use as echartsUse } from 'echarts/core'
-import { RadarChart } from 'echarts/charts'
-import { TooltipComponent } from 'echarts/components'
-import { SVGRenderer } from 'echarts/renderers'
 import { JOB_PORTRAITS, getGrowthPlan, type SevenDim } from '@/mock/careerReportData'
 import type { AbilityDimension, PersonInfo } from '@/composables/useAgentPortrait'
 import { useUserStore } from '@/stores'
-
-echartsUse([RadarChart, TooltipComponent, SVGRenderer])
+import D3RadarChart from '@/components/charts/D3RadarChart.vue'
+import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -29,11 +25,9 @@ const emit = defineEmits<{
 
 const bookRef = ref<HTMLDivElement | null>(null)
 const pageRef = ref<HTMLDivElement | null>(null)
-const radarEl = ref<HTMLDivElement | null>(null)
 
 let timeline: gsap.core.Timeline | null = null
 let isClosing = false
-let radarChart: ReturnType<typeof echartsInit> | null = null
 
 const userStore = useUserStore()
 
@@ -90,72 +84,16 @@ const portraitSnap = computed(() => {
   }
 })
 
-function lvColor(score: number): string {
-  return score >= 80 ? 'rgba(94,179,107,0.95)' : score >= 60 ? 'rgba(212,168,85,0.95)' : 'rgba(200,100,90,0.95)'
-}
-
-function initPortraitRadar() {
-  if (!radarEl.value || !portraitSnap.value?.dimensions.length) return
-  if (radarChart) { radarChart.dispose(); radarChart = null }
-  radarChart = echartsInit(radarEl.value, undefined, { renderer: 'svg' })
-  const dims = portraitSnap.value.dimensions
-  radarChart.setOption({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: 'rgba(14,8,3,0.97)',
-      borderColor: 'rgba(212,201,181,0.18)',
-      padding: [8, 12],
-      textStyle: { color: 'rgba(220,205,185,0.9)', fontSize: 11 },
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params
-        if (!p?.value) return ''
-        return dims.map((d, i) => {
-          const s = (p.value as number[])[i] ?? 0
-          return `<div style="display:flex;align-items:center;gap:8px;padding:2px 0"><span style="color:rgba(180,165,140,0.7);font-size:10px;min-width:48px">${d.label}</span><span style="color:${lvColor(s)};font-weight:600;font-size:12px">${s}</span></div>`
-        }).join('')
-      },
-    },
-    radar: {
-      indicator: dims.map(d => ({ name: d.label, max: 100 })),
-      shape: 'polygon', center: ['50%', '50%'], radius: '62%', splitNumber: 5, nameGap: 8,
-      axisName: {
-        formatter: (name: string) => {
-          const d = dims.find(x => x.label === name)
-          if (!d) return name
-          return d.score >= 80 ? `{g|${name}}` : d.score >= 60 ? `{m|${name}}` : `{r|${name}}`
-        },
-        rich: {
-          g: { color: 'rgba(94,179,107,0.9)', fontSize: 10, fontWeight: '600' },
-          m: { color: 'rgba(212,168,85,0.9)', fontSize: 10, fontWeight: '600' },
-          r: { color: 'rgba(200,100,90,0.9)', fontSize: 10, fontWeight: '600' },
-        },
-      },
-      splitArea: { show: true, areaStyle: { color: ['rgba(200,85,74,0.12)','rgba(200,85,74,0.08)','rgba(212,168,85,0.06)','rgba(212,168,85,0.07)','rgba(94,159,107,0.10)'] } },
-      splitLine: { lineStyle: { color: 'rgba(212,201,181,0.10)', width: 1 } },
-      axisLine:  { lineStyle: { color: 'rgba(212,201,181,0.10)' } },
-    },
-    series: [{
-      type: 'radar',
-      data: [{ value: dims.map(d => d.score), name: '能力雷达',
-        areaStyle: { color: 'rgba(139,37,0,0.20)' },
-        lineStyle: { color: 'rgba(180,60,20,0.85)', width: 2 },
-        itemStyle: { color: 'rgba(200,80,30,0.9)' },
-        symbolSize: 5,
-        label: { show: true, formatter: (p: any) => `${p.value}`, fontSize: 9, fontWeight: '600',
-          color: 'rgba(230,210,185,0.95)', backgroundColor: 'rgba(14,8,3,0.65)', borderRadius: 2, padding: [1,3] },
-      }],
-      animation: true, animationDuration: 900, animationEasing: 'cubicOut',
-    }],
-  })
-}
-
-function disposePortraitRadar() {
-  radarChart?.dispose()
-  radarChart = null
-}
-
-onBeforeUnmount(() => disposePortraitRadar())
+/* ── portrait 模式 D3 雷达图数据 ── */
+const portraitRadarData = computed<RadarDatum[]>(() => {
+  if (!portraitSnap.value) return []
+  return portraitSnap.value.dimensions.map(d => ({
+    axis: d.label,
+    value: d.score,
+    level: d.level,
+    desc: d.desc,
+  }))
+})
 
 // ── 职业生涯发展报告数据 ──
 const DIM_NAMES = ['专业技能', '证书资质', '创新能力', '学习能力', '抗压能力', '沟通能力', '实习经验'] as const
@@ -216,13 +154,7 @@ function runEnter() {
   gsap.set(bookRef.value, { x: dx, y: dy, scale: 0.28, opacity: 0.9, rotate: -6 })
   gsap.set(pageRef.value, { opacity: 0, y: 12 })
   timeline?.kill()
-  timeline = gsap.timeline({
-    onComplete: () => {
-      if (props.type === 'portrait') {
-        nextTick().then(() => setTimeout(initPortraitRadar, 60))
-      }
-    }
-  })
+  timeline = gsap.timeline()
     .to(bookRef.value, { x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, duration: 0.5, ease: 'power3.out' })
     .to(pageRef.value, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }, '-=0.18')
 }
@@ -230,7 +162,6 @@ function runEnter() {
 function closeWithAnim() {
   if (isClosing || !bookRef.value || !pageRef.value) { emit('close'); return }
   isClosing = true
-  disposePortraitRadar()
   timeline?.kill()
   gsap.timeline({ onComplete: () => { isClosing = false; emit('close') } })
     .to(pageRef.value, { opacity: 0, y: 10, duration: 0.18, ease: 'power1.in' })
@@ -246,7 +177,7 @@ watch(
   () => props.visible,
   async (visible) => {
     if (visible) { await nextTick(); runEnter() }
-    else { disposePortraitRadar(); timeline?.kill() }
+    else { timeline?.kill() }
   }
 )
 </script>
@@ -329,7 +260,7 @@ watch(
 
                 <!-- [C] 雷达图 + 尺度条 -->
                 <div class="port-viz-row">
-                  <div ref="radarEl" class="port-radar"></div>
+                  <D3RadarChart :data="portraitRadarData" :show-legend="false" :height="200" :width="240" />
                   <div class="port-dims">
                     <div
                       v-for="dim in portraitSnap.dimensions"
@@ -480,7 +411,7 @@ watch(
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(12, 10, 8, 0.68);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
 }
 
@@ -496,15 +427,15 @@ watch(
   inset: 0;
   border-radius: 10px;
   overflow: hidden;
-  background: var(--parchment-100);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  background: var(--color-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
 }
 
 .open-book-page--portrait {
-  background: #0E0805;
-  color: rgba(220, 205, 185, 0.9);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .detail-head {
@@ -761,14 +692,14 @@ watch(
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(180, 60, 20, 0.75);
-  border: 2px solid rgba(212, 168, 85, 0.40);
+  background: var(--color-primary);
+  border: 2px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1rem;
   font-weight: 600;
-  color: rgba(230, 210, 185, 0.95);
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -788,7 +719,7 @@ watch(
 .port-profile__name {
   font-size: 1.05rem;
   font-weight: 600;
-  color: rgba(230, 215, 190, 0.95);
+  color: var(--color-text);
 }
 
 .port-badge {
@@ -800,15 +731,15 @@ watch(
 }
 
 .port-badge--grade {
-  background: rgba(212, 168, 85, 0.15);
-  color: rgba(212, 168, 85, 0.9);
-  border: 1px solid rgba(212, 168, 85, 0.25);
+  background: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  color: var(--color-gold-dark);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 25%, transparent);
 }
 
 .port-badge--role {
-  background: rgba(180, 60, 20, 0.20);
-  color: rgba(220, 130, 80, 0.9);
-  border: 1px solid rgba(200, 100, 60, 0.25);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 .port-profile__school-row {
@@ -817,7 +748,7 @@ watch(
   gap: 0.28rem;
   flex-wrap: wrap;
   font-size: 0.68rem;
-  color: rgba(160, 145, 120, 0.75);
+  color: var(--color-text-subtle);
 }
 
 .port-meta-icon {
@@ -826,12 +757,12 @@ watch(
 }
 
 .port-sep {
-  color: rgba(140, 125, 100, 0.5);
+  color: var(--color-text-subtle);
 }
 
 .port-score-card--honors {
-  background: rgba(40, 30, 15, 0.55);
-  border: 1px solid rgba(212, 168, 85, 0.22);
+  background: color-mix(in srgb, var(--color-gold) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-gold) 20%, transparent);
 }
 
 .port-honors-row {
@@ -846,23 +777,23 @@ watch(
   align-items: center;
   gap: 0.22rem;
   font-size: 0.68rem;
-  color: rgba(190, 170, 130, 0.8);
+  color: var(--color-text-muted);
 }
 
 .port-honor-item strong {
   font-weight: 600;
-  color: rgba(212, 168, 85, 0.95);
+  color: var(--color-text);
 }
 
 .port-highlights {
   margin-top: 0.55rem;
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(212, 201, 181, 0.10);
+  border-top: 1px solid var(--color-border);
 }
 
 .port-section-lbl {
   font-size: 0.65rem;
-  color: rgba(160, 145, 120, 0.55);
+  color: var(--color-text-subtle);
   letter-spacing: 0.10em;
   text-transform: uppercase;
   display: block;
@@ -888,14 +819,14 @@ watch(
   padding: 0.32rem 0.5rem;
   border-radius: 3px;
   font-size: 0.7rem;
-  color: rgba(200, 185, 160, 0.85);
-  border: 1px solid rgba(212, 201, 181, 0.10);
-  background: rgba(30, 20, 10, 0.40);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
 }
 
-.port-honor-card--cert  { border-left: 2px solid rgba(212, 168, 85, 0.50); }
-.port-honor-card--intern { border-left: 2px solid rgba(100, 160, 200, 0.50); }
-.port-honor-card--award  { border-left: 2px solid rgba(200, 100, 60, 0.50); }
+.port-honor-card--cert  { border-left: 2px solid var(--color-gold); }
+.port-honor-card--intern { border-left: 2px solid var(--color-secondary); }
+.port-honor-card--award  { border-left: 2px solid var(--color-primary); }
 
 .port-honor-icon {
   opacity: 0.7;
@@ -906,14 +837,14 @@ watch(
   display: flex;
   border-radius: 3px;
   overflow: hidden;
-  border: 1px solid rgba(212, 201, 181, 0.10);
-  background: rgba(30, 20, 10, 0.40);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
 }
 
 .port-project-accent {
   width: 3px;
   flex-shrink: 0;
-  background: rgba(180, 60, 20, 0.65);
+  background: var(--color-primary);
 }
 
 .port-project-body {
@@ -931,22 +862,22 @@ watch(
 .port-project-name {
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgba(220, 205, 185, 0.9);
+  color: var(--color-text);
 }
 
 .port-project-role {
   font-size: 0.6rem;
   padding: 0.05rem 0.28rem;
   border-radius: 2px;
-  background: rgba(180, 60, 20, 0.15);
-  color: rgba(200, 130, 80, 0.85);
-  border: 1px solid rgba(180, 60, 20, 0.20);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .port-project-desc {
   margin: 0;
   font-size: 0.64rem;
-  color: rgba(150, 135, 110, 0.7);
+  color: var(--color-text-subtle);
   line-height: 1.4;
 }
 
@@ -966,25 +897,25 @@ watch(
 }
 
 .port-score-card--comp {
-  background: rgba(30, 80, 40, 0.55);
-  border: 1px solid rgba(94, 179, 107, 0.30);
+  background: color-mix(in srgb, var(--bamboo-green) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--bamboo-green) 20%, transparent);
 }
 
 .port-score-card--complete {
-  background: rgba(20, 30, 60, 0.55);
-  border: 1px solid rgba(80, 130, 200, 0.30);
+  background: color-mix(in srgb, var(--color-secondary) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-secondary) 20%, transparent);
 }
 
 .port-score-card--role {
-  background: rgba(60, 20, 10, 0.55);
-  border: 1px solid rgba(200, 100, 60, 0.30);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
   justify-content: center;
 }
 
 .port-score-val {
   font-size: 1.4rem;
   font-weight: 600;
-  color: rgba(230, 215, 190, 0.95);
+  color: var(--color-text);
   line-height: 1.1;
 }
 
@@ -992,19 +923,19 @@ watch(
   font-style: normal;
   font-size: 0.65rem;
   font-weight: 400;
-  color: rgba(180, 165, 140, 0.7);
+  color: var(--color-text-subtle);
   margin-left: 2px;
 }
 
 .port-score-role {
   font-size: 0.88rem;
   font-weight: 600;
-  color: rgba(230, 160, 100, 0.9);
+  color: var(--color-primary);
 }
 
 .port-score-lbl {
   font-size: 0.65rem;
-  color: rgba(160, 145, 120, 0.7);
+  color: var(--color-text-muted);
   letter-spacing: 0.06em;
 }
 
@@ -1028,14 +959,14 @@ watch(
   overflow-y: auto;
   max-height: 400px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100,80,60,0.3) transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .port-dim-item {
   padding: 0.28rem 0.4rem;
   border-radius: 3px;
-  background: rgba(30, 20, 10, 0.35);
-  border: 1px solid rgba(212, 201, 181, 0.08);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
 }
 
 .port-dim-top {
@@ -1048,7 +979,7 @@ watch(
 .port-dim-label {
   font-size: 0.78rem;
   font-weight: 600;
-  color: rgba(220, 205, 185, 0.9);
+  color: var(--color-text);
   flex: 1;
 }
 
@@ -1061,21 +992,21 @@ watch(
 }
 
 .port-dim-badge--good {
-  background: rgba(94, 179, 107, 0.20);
-  color: rgba(94, 179, 107, 0.95);
-  border: 1px solid rgba(94, 179, 107, 0.25);
+  background: color-mix(in srgb, #5eb36b 12%, var(--color-surface));
+  color: #3d8b4a;
+  border: 1px solid color-mix(in srgb, #5eb36b 25%, transparent);
 }
 
 .port-dim-badge--mid {
-  background: rgba(212, 168, 85, 0.15);
-  color: rgba(212, 168, 85, 0.95);
-  border: 1px solid rgba(212, 168, 85, 0.20);
+  background: color-mix(in srgb, var(--color-gold) 12%, var(--color-surface));
+  color: var(--color-gold-dark);
+  border: 1px solid color-mix(in srgb, var(--color-gold) 20%, transparent);
 }
 
 .port-dim-badge--low {
-  background: rgba(200, 100, 90, 0.15);
-  color: rgba(200, 100, 90, 0.95);
-  border: 1px solid rgba(200, 100, 90, 0.20);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .port-dim-bar-wrap {
@@ -1089,7 +1020,7 @@ watch(
   flex: 1;
   height: 5px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-background);
   overflow: hidden;
 }
 
@@ -1099,14 +1030,14 @@ watch(
   transition: width 0.6s ease;
 }
 
-.port-dim-bar--good { background: rgba(94, 179, 107, 0.85); }
-.port-dim-bar--mid  { background: rgba(212, 168, 85, 0.85); }
-.port-dim-bar--low  { background: rgba(200, 100, 90, 0.85); }
+.port-dim-bar--good { background: #5eb36b; }
+.port-dim-bar--mid  { background: var(--color-gold); }
+.port-dim-bar--low  { background: var(--color-primary); }
 
 .port-dim-score {
   font-size: 0.72rem;
   font-weight: 600;
-  color: rgba(200, 185, 160, 0.8);
+  color: var(--color-text-muted);
   min-width: 22px;
   text-align: right;
 }
@@ -1114,19 +1045,19 @@ watch(
 .port-dim-desc {
   margin: 0;
   font-size: 0.66rem;
-  color: rgba(160, 145, 120, 0.7);
+  color: var(--color-text-subtle);
   line-height: 1.4;
 }
 
 .port-tags-wrap {
   padding-top: 0.4rem;
   margin-top: 0.2rem;
-  border-top: 1px solid rgba(212, 201, 181, 0.08);
+  border-top: 1px solid var(--color-border);
 }
 
 .port-tags-lbl {
   font-size: 0.62rem;
-  color: rgba(160, 145, 120, 0.6);
+  color: var(--color-text-subtle);
   letter-spacing: 0.08em;
   display: block;
   margin-bottom: 0.35rem;
@@ -1146,11 +1077,11 @@ watch(
   border: 1px solid;
 }
 
-.port-tag--fe   { color: rgba(180, 120, 80, 0.9);  border-color: rgba(180, 120, 80, 0.25);  background: rgba(180, 120, 80, 0.08); }
-.port-tag--be   { color: rgba(100, 160, 200, 0.9); border-color: rgba(100, 160, 200, 0.25); background: rgba(100, 160, 200, 0.08); }
-.port-tag--qa   { color: rgba(140, 190, 140, 0.9); border-color: rgba(140, 190, 140, 0.25); background: rgba(140, 190, 140, 0.08); }
-.port-tag--data { color: rgba(200, 165, 80, 0.9);  border-color: rgba(200, 165, 80, 0.25);  background: rgba(200, 165, 80, 0.08); }
-.port-tag--gen  { color: rgba(180, 165, 140, 0.7); border-color: rgba(180, 165, 140, 0.15); background: rgba(180, 165, 140, 0.05); }
+.port-tag--fe   { color: var(--chart-color-1);  border-color: color-mix(in srgb, var(--chart-color-1) 25%, transparent);  background: color-mix(in srgb, var(--chart-color-1) 8%, var(--color-surface)); }
+.port-tag--be   { color: var(--chart-color-3);  border-color: color-mix(in srgb, var(--chart-color-3) 25%, transparent);  background: color-mix(in srgb, var(--chart-color-3) 8%, var(--color-surface)); }
+.port-tag--qa   { color: var(--chart-color-2);  border-color: color-mix(in srgb, var(--chart-color-2) 25%, transparent);  background: color-mix(in srgb, var(--chart-color-2) 8%, var(--color-surface)); }
+.port-tag--data { color: var(--chart-color-4);  border-color: color-mix(in srgb, var(--chart-color-4) 25%, transparent);  background: color-mix(in srgb, var(--chart-color-4) 8%, var(--color-surface)); }
+.port-tag--gen  { color: var(--color-text-subtle); border-color: var(--color-border); background: var(--color-background); }
 
 .overlay-fade-enter-active,
 .overlay-fade-leave-active {

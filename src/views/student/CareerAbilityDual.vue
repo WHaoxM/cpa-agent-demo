@@ -1,10 +1,10 @@
 <!-- 组件：双栏分析右侧面板；由 CareerAbilityShell.vue 引入使用，非路由直接渲染；角色：STUDENT -->
 <script setup lang="ts">
-import { ref, computed, inject, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { getRoleIntro } from '@/composables/useAbilityGraph'
-import { useGraphGeneration, type LogEntry } from '@/composables/useGraphGeneration'
+import type { LogEntry } from '@/composables/useGraphGeneration'
 
 defineOptions({ name: 'CareerAbilityDual' })
 
@@ -19,8 +19,21 @@ const roleName = sg.roleName
 /* ═══ 岗位介绍 ═══ */
 const roleIntro = computed(() => getRoleIntro(roleName.value))
 
-/* ═══ 生成流程（驱动日志面板，图谱由Shell统一管理） ═══ */
-const gen = useGraphGeneration(allNodes, allEdges)
+/* ═══ 生成流程（使用 Shell 共享实例，避免重复启动和时序偏差） ═══ */
+const gen = sg.gen
+
+/* ═══ 职业分析骨架屏：根据 gen.progress 逐区块解锁 ═══ */
+const revealedSections = computed(() => {
+  const p = gen.progress.value
+  return {
+    summary:          p >= 10,
+    responsibilities: p >= 30,
+    requirements:     p >= 50,
+    skills:           p >= 70,
+    regions:          p >= 85,
+    outlook:          p >= 100,
+  }
+})
 
 /* ═══ 日志面板自动滚动 ═══ */
 const logPanelEl = ref<HTMLElement>()
@@ -38,13 +51,9 @@ function onEnterCourseSystem() {
   router.push({ name: 'course-system', query: { role: roleName.value } })
 }
 
-/* ═══ 生命周期 ═══ */
-onMounted(() => { gen.start() })
-onBeforeUnmount(() => { gen.stop() })
-
 /* ═══ 日志图标 ═══ */
 function logIcon(level: LogEntry['level']) {
-  return level === 'success' ? '✅' : level === 'warn' ? '⚠️' : 'ℹ️'
+  return level === 'success' ? '√' : level === 'warn' ? '!' : '-'
 }
 </script>
 
@@ -58,32 +67,69 @@ function logIcon(level: LogEntry['level']) {
         <section class="dual-card">
           <h3 class="dual-card__title"><span class="dual-card__num">01</span> 职业分析</h3>
           <div class="dual-card__body">
-            <p class="dual-intro-summary">{{ roleIntro.summary }}</p>
+            <!-- 摘要 -->
+            <template v-if="revealedSections.summary">
+              <p class="dual-intro-summary dual-reveal">{{ roleIntro.summary }}</p>
+            </template>
+            <template v-else>
+              <div class="dual-sk-block" style="height:36px;margin-bottom:10px;"></div>
+            </template>
+            <!-- 岗位职责 -->
             <div class="dual-intro-section">
               <h4>岗位职责</h4>
-              <ul><li v-for="(r, i) in roleIntro.responsibilities" :key="i">{{ r }}</li></ul>
+              <template v-if="revealedSections.responsibilities">
+                <ul class="dual-reveal"><li v-for="(r, i) in roleIntro.responsibilities" :key="i">{{ r }}</li></ul>
+              </template>
+              <template v-else>
+                <div class="dual-sk-line" v-for="n in 3" :key="n" :style="{ width: (50 + n * 12) + '%' }"></div>
+              </template>
             </div>
+            <!-- 任职要求 -->
             <div class="dual-intro-section">
               <h4>任职要求</h4>
-              <ul><li v-for="(r, i) in roleIntro.requirements" :key="i">{{ r }}</li></ul>
+              <template v-if="revealedSections.requirements">
+                <ul class="dual-reveal"><li v-for="(r, i) in roleIntro.requirements" :key="i">{{ r }}</li></ul>
+              </template>
+              <template v-else>
+                <div class="dual-sk-line" v-for="n in 3" :key="n" :style="{ width: (55 + n * 10) + '%' }"></div>
+              </template>
             </div>
+            <!-- 技能标签 -->
             <div class="dual-intro-section">
               <h4>技能标签</h4>
-              <div class="dual-tags">
-                <span class="dual-tag" v-for="s in roleIntro.skills" :key="s">{{ s }}</span>
-              </div>
+              <template v-if="revealedSections.skills">
+                <div class="dual-tags dual-reveal">
+                  <span class="dual-tag" v-for="s in roleIntro.skills" :key="s">{{ s }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="dual-sk-tags"><div class="dual-sk-tag" v-for="n in 4" :key="n"></div></div>
+              </template>
             </div>
+            <!-- 需求热区 -->
             <div class="dual-intro-section">
               <h4>需求热区</h4>
-              <div class="dual-regions">
-                <span class="dual-region" v-for="rg in roleIntro.topRegions" :key="rg.name">
-                  {{ rg.name }} <em>{{ rg.demand }}</em>
-                </span>
-              </div>
+              <template v-if="revealedSections.regions">
+                <div class="dual-regions dual-reveal">
+                  <span class="dual-region" v-for="rg in roleIntro.topRegions" :key="rg.name">
+                    {{ rg.name }} <em>{{ rg.demand }}</em>
+                  </span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="dual-sk-tags"><div class="dual-sk-tag" style="width:48px" v-for="n in 3" :key="n"></div></div>
+              </template>
             </div>
+            <!-- 发展前景 -->
             <div class="dual-intro-section">
               <h4>发展前景</h4>
-              <p>{{ roleIntro.outlook }}</p>
+              <template v-if="revealedSections.outlook">
+                <p class="dual-reveal">{{ roleIntro.outlook }}</p>
+              </template>
+              <template v-else>
+                <div class="dual-sk-line" style="width:90%"></div>
+                <div class="dual-sk-line" style="width:70%"></div>
+              </template>
             </div>
           </div>
         </section>
@@ -184,9 +230,9 @@ function logIcon(level: LogEntry['level']) {
             :key="i"
           >
             <span class="dual-dash-log__ts">[{{ log.ts }}]</span>
+            <span class="dual-dash-log__icon" :class="'dual-dash-log__icon--' + log.level">{{ logIcon(log.level) }}</span>
             <span class="dual-dash-log__agent">{{ log.agent }}</span>
             <span class="dual-dash-log__msg">{{ log.message }}</span>
-            <span class="dual-dash-log__icon">{{ logIcon(log.level) }}</span>
           </div>
           <div v-if="gen.logs.value.length === 0" class="dual-dash-empty">等待日志输出…</div>
         </div>
@@ -274,6 +320,38 @@ function logIcon(level: LogEntry['level']) {
 .dual-region em {
   font-style: normal; font-size: 11px; font-weight: 600;
   color: var(--primary-100); margin-left: 2px;
+}
+
+/* 骨架屏元素 */
+@keyframes dual-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.dual-sk-block,
+.dual-sk-line,
+.dual-sk-tag {
+  background: linear-gradient(
+    90deg,
+    var(--bg-300, #CBCBC8) 25%,
+    var(--bg-200, #EDEDEB) 50%,
+    var(--bg-300, #CBCBC8) 75%
+  );
+  background-size: 200% 100%;
+  animation: dual-shimmer 1.4s ease infinite;
+  border-radius: 2px;
+}
+.dual-sk-block { width: 100%; margin-bottom: 8px; }
+.dual-sk-line  { height: 11px; margin-bottom: 5px; }
+.dual-sk-tags  { display: flex; flex-wrap: wrap; gap: 5px; }
+.dual-sk-tag   { height: 20px; width: 56px; border-radius: 2px; }
+
+/* 渐显动画 */
+@keyframes dual-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dual-reveal {
+  animation: dual-fadein 0.4s ease both;
 }
 
 /* 生成过程卡片 */
@@ -389,9 +467,12 @@ function logIcon(level: LogEntry['level']) {
 
 .dual-dash-log { display: flex; gap: 6px; align-items: baseline; }
 .dual-dash-log__ts { color: #777; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.dual-dash-log__icon { flex-shrink: 0; font-weight: 700; font-size: 12px; }
+.dual-dash-log__icon--success { color: #68D391; }
+.dual-dash-log__icon--warn    { color: #F6AD55; }
+.dual-dash-log__icon--info    { color: #63B3ED; }
 .dual-dash-log__agent { color: #B7791F; font-weight: 600; flex-shrink: 0; }
 .dual-dash-log__msg { color: #bbb; }
-.dual-dash-log__icon { flex-shrink: 0; }
 .dual-dash-empty { color: #777; font-size: 11px; }
 
 /* ═══ 响应式 ═══ */

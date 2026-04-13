@@ -168,22 +168,45 @@ function draw() {
     .attr('stroke-width', (d: any) => d.data.isHighlighted ? 2 : 0.8)
     .attr('rx', 2)
 
-  leafGroups.append('text')
-    .attr('x', (d: any) => d.x0 + 5)
-    .attr('y', (d: any) => (d.y0 + d.y1) / 2 + 1)
-    .attr('dominant-baseline', 'middle')
-    .attr('font-size', 10)
-    .attr('fill', 'rgba(255,255,255,0.95)')
-    .attr('pointer-events', 'none')
-    .text((d: any) => {
-      const w = d.x1 - d.x0
-      const h = d.y1 - d.y0
-      if (w < 30 || h < 14) return ''
-      const name: string = d.data.name
-      const maxChars = Math.floor(w / 6.5)
-      if (name.length <= maxChars) return name
-      return name.substring(0, maxChars - 1) + '…'
-    })
+  leafGroups.each(function (this: any, d: any) {
+    const w = d.x1 - d.x0
+    const h = d.y1 - d.y0
+    if (w < 18 || h < 12) return
+
+    const g = d3.select(this)
+    const fontSize = w > 100 && h > 36 ? 12 : w < 40 || h < 20 ? 8 : 10
+    const charW = fontSize * 0.58
+    const padX = fontSize < 10 ? 2 : 5
+    const maxChars = Math.max(1, Math.floor((w - padX * 2) / charW))
+    const name: string = d.data.name
+    const label = name.length <= maxChars ? name : name.substring(0, maxChars - 1) + '…'
+
+    const canTwoLine = h > 30 && w > 40
+    const yBase = canTwoLine ? d.y0 + h * 0.38 : (d.y0 + d.y1) / 2 + 1
+
+    g.append('text')
+      .attr('x', d.x0 + padX)
+      .attr('y', yBase)
+      .attr('dominant-baseline', 'middle')
+      .attr('font-size', fontSize)
+      .attr('font-weight', '600')
+      .attr('fill', 'rgba(255,255,255,0.95)')
+      .attr('pointer-events', 'none')
+      .text(label)
+
+    if (canTwoLine) {
+      const dur = d.value ?? 0
+      const durText = dur >= 60 ? `${Math.round(dur / 60)}h` : `${dur}min`
+      g.append('text')
+        .attr('x', d.x0 + padX)
+        .attr('y', yBase + fontSize + 3)
+        .attr('dominant-baseline', 'middle')
+        .attr('font-size', fontSize - 1)
+        .attr('fill', 'rgba(255,255,255,0.7)')
+        .attr('pointer-events', 'none')
+        .text(durText)
+    }
+  })
 }
 
 function ensureTooltip() {
