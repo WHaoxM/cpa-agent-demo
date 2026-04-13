@@ -76,13 +76,41 @@ const HUB_FACTOR: Record<string, number> = {
   '陕西省': 0.50, '香港特别行政区': 0.72, '台湾省': 0.42,
 }
 
+// 省份 IT 薪资系数（全国平均=1.0），基于国家统计局 2024 各省非私营平均工资 + IT 行业集中度
+const PROVINCE_SALARY_COEFF: Record<string, number> = {
+  '北京市': 1.82, '上海市': 1.75, '浙江省': 1.52, '广东省': 1.48,
+  '江苏省': 1.18, '天津市': 1.08, '福建省': 1.06, '四川省': 1.05,
+  '湖北省': 1.02, '陕西省': 0.98, '重庆市': 0.96, '山东省': 0.90,
+  '辽宁省': 0.88, '湖南省': 0.86, '安徽省': 0.85, '海南省': 0.82,
+  '河南省': 0.82, '云南省': 0.80, '江西省': 0.80, '内蒙古自治区': 0.78,
+  '河北省': 0.78, '贵州省': 0.76, '广西壮族自治区': 0.76, '山西省': 0.76,
+  '吉林省': 0.74, '黑龙江省': 0.72, '新疆维吾尔自治区': 0.70,
+  '宁夏回族自治区': 0.70, '甘肃省': 0.68, '青海省': 0.66,
+  '西藏自治区': 0.65, '台湾省': 1.25, '香港特别行政区': 2.10, '澳门特别行政区': 1.35,
+}
+
+// 15 岗位全国中位薪资（K/月），基于 BOSS 直聘 2024 实际数据 + 合理推算
+const JOB_BASE_SALARY: Record<string, number> = {
+  '算法工程师': 14.0, '深度学习工程师': 13.0, 'AI 应用工程师': 12.0,
+  'Go 后端工程师': 12.0, '数据开发工程师': 10.5, 'Java 后端工程师': 10.4,
+  '可视化工程师': 10.2, 'Python 后端工程师': 10.0, '质量平台工程师': 9.5,
+  'React 前端工程师': 9.5, '增长分析师': 9.0, '性能测试工程师': 9.0,
+  'Vue 前端工程师': 8.9, '商业数据分析师': 8.5, '自动化测试工程师': 7.9,
+}
+// 5 个通用方向基准薪资（子岗位均值）
+const ROLE_BASE_SALARY: Record<string, number> = {
+  '前端开发': 9.5, '后端开发': 10.8, '测试开发': 8.8, '数据分析': 9.3, '机器学习工程师': 13.0,
+}
+
 type ProvinceItem = { name: string; value: number; salary: number }
 function getProvinceData(role: string): ProvinceItem[] {
   const rng = seededRng(strHash(role))
+  const baseSalary = JOB_BASE_SALARY[role] ?? ROLE_BASE_SALARY[role] ?? (8 + seededRng(strHash('fallback_' + role))() * 5)
   return ALL_PROVINCES.map(name => {
     const hub = HUB_FACTOR[name] ?? (0.12 + rng() * 0.22)
     const value = Math.min(100, Math.max(5, Math.round((hub * 75 + rng() * 30) * (0.8 + rng() * 0.4))))
-    const salary = Math.min(28, Math.max(5, +((hub * 14 + rng() * 8) * (0.7 + rng() * 0.6)).toFixed(1)))
+    const coeff = PROVINCE_SALARY_COEFF[name] ?? (0.65 + rng() * 0.20)
+    const salary = +(baseSalary * coeff).toFixed(1)
     return { name, value, salary }
   })
 }
@@ -106,8 +134,27 @@ function getProvinceBox(provinceName: string, data: ProvinceItem[]): { box: numb
   }
 }
 
-// 为每个岗位生成确定性薪资数据
+// 15 岗位真实薪资区间（K/月）：junior=应届~2年, mid=3~5年, senior=5年以上
+const JOB_SALARY_TABLE: Record<string, { junior: number; mid: number; senior: number }> = {
+  '算法工程师':       { junior: 18, mid: 30, senior: 50 },
+  '深度学习工程师':   { junior: 16, mid: 27, senior: 45 },
+  'AI 应用工程师':    { junior: 13, mid: 22, senior: 38 },
+  'Go 后端工程师':    { junior: 10, mid: 18, senior: 32 },
+  'Java 后端工程师':  { junior: 8,  mid: 15, senior: 28 },
+  'Python 后端工程师':{ junior: 8,  mid: 14, senior: 26 },
+  '数据开发工程师':   { junior: 8,  mid: 15, senior: 28 },
+  '可视化工程师':     { junior: 8,  mid: 14, senior: 26 },
+  'React 前端工程师': { junior: 7,  mid: 13, senior: 24 },
+  'Vue 前端工程师':   { junior: 7,  mid: 12, senior: 22 },
+  '质量平台工程师':   { junior: 7,  mid: 13, senior: 24 },
+  '性能测试工程师':   { junior: 7,  mid: 12, senior: 23 },
+  '增长分析师':       { junior: 7,  mid: 12, senior: 23 },
+  '商业数据分析师':   { junior: 6,  mid: 11, senior: 22 },
+  '自动化测试工程师': { junior: 6,  mid: 11, senior: 20 },
+}
 function getJobSalaryData(jobName: string) {
+  const preset = JOB_SALARY_TABLE[jobName]
+  if (preset) return { name: jobName, ...preset }
   const rng = seededRng(strHash('salary_' + jobName))
   const junior = Math.round(6 + rng() * 10)
   const mid = junior + Math.round(5 + rng() * 10)
@@ -140,9 +187,9 @@ const kpiDemandDetails = {
   method: '汇总主流招聘平台（Boss直聘、拉勾、猎聘）在线岗位数',
   updateDate: '2026-03-15',
   platforms: [
-    { name: 'Boss直聘', count: 5230 },
-    { name: '拉勾网', count: 3850 },
-    { name: '猎聘', count: 3500 },
+    { name: 'Boss直聘', count: 1850 },
+    { name: '拉勾网', count: 1280 },
+    { name: '猎聘', count: 950 },
   ],
 }
 
@@ -310,7 +357,7 @@ async function refreshCompareColumns() {
 const nationalKpi = computed(() => {
   const data = provinceData.value
   const avgSalary = data.length ? +(data.reduce((s, d) => s + d.salary, 0) / data.length).toFixed(1) : 0
-  const demandTotal = data.reduce((s, d) => s + d.value, 0) * 100
+  const demandTotal = data.reduce((s, d) => s + d.value, 0) * 3
   const rng = seededRng(strHash('growth_' + roleSearch.value))
   const growthPct = +(8 + rng() * 12).toFixed(1)
   return {
@@ -1061,27 +1108,64 @@ function setupEntranceAnimation() {
   }, pageRef.value)
 }
 
-watch(selectedProvince, (val) => {
+watch(selectedProvince, (val, oldVal) => {
   if (!val || !pageRef.value) return
-  // 统一过渡节奏：对标图 → AI 洞察 → 操作区依次淡入
-  const sections = pageRef.value.querySelectorAll('.da-right-content > .da-section')
-  if (sections.length) {
-    gsap.killTweensOf(sections)
-    gsap.fromTo(sections,
-      { opacity: 0, y: 10 },
-      { opacity: 1, y: 0, duration: 0.25, stagger: 0.06, ease: 'power2.out', clearProps: 'transform,opacity' }
-    )
-  }
-  // 薪资图轻量淡入
-  const salaryChart = pageRef.value.querySelector('.da-salary-chart')
-  if (salaryChart) {
-    gsap.killTweensOf(salaryChart)
-    gsap.fromTo(salaryChart,
-      { opacity: 0 },
-      { opacity: 1, duration: 0.3, ease: 'power2.out', clearProps: 'opacity' }
-    )
+  // 仅在右面板已处于 insight-ready 状态（省份切换，非首次进入）时做 stagger 刷新
+  // 首次进入由 Vue <Transition> 的 GSAP hooks 负责
+  if (oldVal && analysisStage.value === 'insight-ready') {
+    nextTick(() => {
+      const sections = pageRef.value?.querySelectorAll('.da-right-content > .da-section')
+      if (sections?.length) {
+        gsap.killTweensOf(sections)
+        gsap.fromTo(sections,
+          { opacity: 0.3, y: 10 },
+          { opacity: 1, y: 0, duration: 0.45, stagger: 0.07, ease: 'power3.out', clearProps: 'transform,opacity' }
+        )
+      }
+    })
   }
 })
+
+/* ═══ 三图切换 GSAP 过渡钩子 ═══ */
+
+// 薪资排行：从左侧展开滑入
+function onSalaryEnter(el: Element, done: () => void) {
+  gsap.fromTo(el,
+    { opacity: 0, x: -50, clipPath: 'inset(0 100% 0 0)' },
+    { opacity: 1, x: 0, clipPath: 'inset(0 0% 0 0)', duration: 0.55, ease: 'power3.out', onComplete: done, clearProps: 'transform,opacity,clipPath' }
+  )
+}
+function onSalaryLeave(el: Element, done: () => void) {
+  gsap.to(el,
+    { opacity: 0, x: -40, clipPath: 'inset(0 100% 0 0)', duration: 0.35, ease: 'power3.inOut', onComplete: done }
+  )
+}
+
+// 右面板：柔和淡入 + 上浮 + sections 依次 stagger
+function onRightEnter(el: Element, done: () => void) {
+  gsap.fromTo(el,
+    { opacity: 0, y: 20 },
+    { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out',
+      onComplete: () => {
+        gsap.set(el, { clearProps: 'transform,opacity' })
+        // sections stagger — 内容出场后依次展开
+        const sections = (el as HTMLElement).querySelectorAll('.da-section')
+        if (sections.length) {
+          gsap.fromTo(sections,
+            { opacity: 0.5, y: 6 },
+            { opacity: 1, y: 0, duration: 0.35, stagger: 0.06, ease: 'power2.out', clearProps: 'transform,opacity' }
+          )
+        }
+        done()
+      },
+    }
+  )
+}
+function onRightLeave(el: Element, done: () => void) {
+  gsap.to(el,
+    { opacity: 0, y: -10, duration: 0.2, ease: 'power2.in', onComplete: done }
+  )
+}
 
 /* ═══ 气泡图数据（基于 CAREER_DOMAINS 5×3=15 岗位）═══ */
 
@@ -1566,7 +1650,6 @@ onBeforeUnmount(() => {
           <span>返回</span>
         </button>
         <div class="da-brand">
-          <span class="da-brand__icon">舆</span>
           <span class="da-brand__title">职业分析 · 岗位舆图</span>
         </div>
       </div>
@@ -1675,12 +1758,14 @@ onBeforeUnmount(() => {
         <!-- 下半：薪资柱状图 + 地图 -->
         <div class="da-bottom" :class="{ 'da-bottom--focus-map': !hasSelectedProvince }">
           <!-- 左：省份中位薪资排行（全岗位滑动） -->
-          <div v-if="hasSelectedProvince" class="da-salary-chart">
-            <div class="da-section__title da-section__title--sm">
-              <Icon icon="lucide:list-ordered" :width="12" />{{ selectedProvinceLabel }} · 中位薪资排行（K/月）
+          <Transition :css="false" @enter="onSalaryEnter" @leave="onSalaryLeave">
+            <div v-if="hasSelectedProvince" class="da-salary-chart">
+              <div class="da-section__title da-section__title--sm">
+                <Icon icon="lucide:list-ordered" :width="12" />{{ selectedProvinceLabel }} · 中位薪资排行（K/月）
+              </div>
+              <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
             </div>
-            <VChart class="da-salary-vchart" :option="salaryChartOption" autoresize />
-          </div>
+          </Transition>
 
           <!-- 右：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
           <div class="da-map-inner" ref="scrollRef" :class="{ 'da-map-inner--locked': !hasSelectedJob, 'da-map-inner--pending': hasSelectedJob && !hasSelectedProvince }">
@@ -1732,75 +1817,77 @@ onBeforeUnmount(() => {
 
       <!-- 右面板 -->
       <aside class="da-right">
-        <div v-if="analysisStage === 'insight-ready'" class="da-right-content">
-          <!-- 省份对标图 -->
-          <div class="da-section da-section--chart">
-            <div class="da-section__title">
-              <Icon icon="lucide:git-compare" :width="14" />
-              <span class="da-trend-province">{{ selectedProvinceLabel }}</span>
-              <span class="da-trend-sep">·</span>
-              薪资水平对标
+        <Transition :css="false" mode="out-in" @enter="onRightEnter" @leave="onRightLeave">
+          <div v-if="analysisStage === 'insight-ready'" key="insight" class="da-right-content">
+            <!-- 省份对标图 -->
+            <div class="da-section da-section--chart">
+              <div class="da-section__title">
+                <Icon icon="lucide:git-compare" :width="14" />
+                <span class="da-trend-province">{{ selectedProvinceLabel }}</span>
+                <span class="da-trend-sep">·</span>
+                薪资水平对标
+              </div>
+              <VChart class="da-trend-chart" :option="compareOption" autoresize />
             </div>
-            <VChart class="da-trend-chart" :option="compareOption" autoresize />
-          </div>
 
-          <!-- #4 AI 评价模块（可翻页） -->
-          <div class="da-section da-section--ai">
-            <div class="da-section__title da-section__title--with-action">
-              <span class="da-section__title-text"><Icon icon="lucide:sparkles" :width="14" />AI 市场洞察</span>
-              <button class="da-ask-ai-btn" @click="openAiDrawer">
-                <Icon icon="lucide:message-circle" :width="12" />问 AI
+            <!-- #4 AI 评价模块（可翻页） -->
+            <div class="da-section da-section--ai">
+              <div class="da-section__title da-section__title--with-action">
+                <span class="da-section__title-text"><Icon icon="lucide:sparkles" :width="14" />AI 市场洞察</span>
+                <button class="da-ask-ai-btn" @click="openAiDrawer">
+                  <Icon icon="lucide:message-circle" :width="12" />问 AI
+                </button>
+              </div>
+              <div class="ai-card" v-if="currentAiComment">
+                <div class="ai-card__header">
+                  <span class="ai-card__tag"><Icon icon="lucide:bot" :width="12" />{{ currentAiComment.title }}</span>
+                  <span class="ai-card__page">{{ aiCommentPage + 1 }}/{{ aiComments.length }}</span>
+                </div>
+                <p class="ai-card__content">{{ currentAiComment.content }}</p>
+                <div class="ai-card__nav">
+                  <button :disabled="aiCommentPage <= 0" @click="prevAiPage">
+                    <Icon icon="lucide:chevron-left" :width="14" />
+                  </button>
+                  <button :disabled="aiCommentPage >= aiComments.length - 1" @click="nextAiPage">
+                    <Icon icon="lucide:chevron-right" :width="14" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- #7 查看图谱 — 增强引导 -->
+            <div class="da-section">
+              <button class="da-link-btn" @click="goToCareerCenter">
+                <Icon icon="lucide:cpu" :width="14" />
+                <span>查看「{{ selectedJobLabel }}」能力图谱</span>
+                <Icon icon="lucide:arrow-right" :width="12" />
+              </button>
+              <p class="da-link-hint">基于当前已选岗位，查看所需技能和学习路径</p>
+            </div>
+
+            <!-- 关注此方向 -->
+            <div class="da-section">
+              <button
+                class="da-follow-btn"
+                :class="{ 'da-follow-btn--active': isCurrentRoleFollowed, 'da-follow-btn--disabled': !followableRole }"
+                :disabled="!followableRole"
+                @click="toggleFollowRole"
+              >
+                <Icon :icon="followableRole && isCurrentRoleFollowed ? 'lucide:bookmark-check' : 'lucide:bookmark'" :width="12" />
+                <span>{{ !followableRole ? '暂不支持关注' : isCurrentRoleFollowed ? '已关注 · 取消' : '关注此方向' }}</span>
               </button>
             </div>
-            <div class="ai-card" v-if="currentAiComment">
-              <div class="ai-card__header">
-                <span class="ai-card__tag"><Icon icon="lucide:bot" :width="12" />{{ currentAiComment.title }}</span>
-                <span class="ai-card__page">{{ aiCommentPage + 1 }}/{{ aiComments.length }}</span>
-              </div>
-              <p class="ai-card__content">{{ currentAiComment.content }}</p>
-              <div class="ai-card__nav">
-                <button :disabled="aiCommentPage <= 0" @click="prevAiPage">
-                  <Icon icon="lucide:chevron-left" :width="14" />
-                </button>
-                <button :disabled="aiCommentPage >= aiComments.length - 1" @click="nextAiPage">
-                  <Icon icon="lucide:chevron-right" :width="14" />
-                </button>
-              </div>
-            </div>
           </div>
 
-          <!-- #7 查看图谱 — 增强引导 -->
-          <div class="da-section">
-            <button class="da-link-btn" @click="goToCareerCenter">
-              <Icon icon="lucide:cpu" :width="14" />
-              <span>查看「{{ selectedJobLabel }}」能力图谱</span>
-              <Icon icon="lucide:arrow-right" :width="12" />
-            </button>
-            <p class="da-link-hint">基于当前已选岗位，查看所需技能和学习路径</p>
+          <!-- 未选中提示 -->
+          <div v-else :key="'empty-' + analysisStage" class="da-right-empty" :class="{ 'da-right-empty--pending': analysisStage === 'province-pending' }">
+            <Icon :icon="analysisStage === 'job-pending' ? 'lucide:mouse-pointer-click' : 'lucide:map-pinned'" :width="36" />
+            <span class="da-right-empty__badge">{{ analysisStage === 'job-pending' ? '第 1 步' : '第 2 步' }}</span>
+            <p class="da-right-empty__title">{{ analysisStage === 'job-pending' ? '先从气泡图选择岗位' : '继续选择目标省份' }}</p>
+            <p class="da-right-empty__desc" v-if="analysisStage === 'job-pending'">当前先展示 {{ currentAnalysisLabel }} 方向概览，选中岗位后这里会展开省份分析。</p>
+            <p class="da-right-empty__desc" v-else>已选岗位：{{ selectedJobLabel }}。点击地图或左侧 TOP 10 列表后，再查看完整洞察。</p>
           </div>
-
-          <!-- 关注此方向 -->
-          <div class="da-section">
-            <button
-              class="da-follow-btn"
-              :class="{ 'da-follow-btn--active': isCurrentRoleFollowed, 'da-follow-btn--disabled': !followableRole }"
-              :disabled="!followableRole"
-              @click="toggleFollowRole"
-            >
-              <Icon :icon="followableRole && isCurrentRoleFollowed ? 'lucide:bookmark-check' : 'lucide:bookmark'" :width="12" />
-              <span>{{ !followableRole ? '暂不支持关注' : isCurrentRoleFollowed ? '已关注 · 取消' : '关注此方向' }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 未选中提示 -->
-        <div v-else class="da-right-empty" :class="{ 'da-right-empty--pending': analysisStage === 'province-pending' }">
-          <Icon :icon="analysisStage === 'job-pending' ? 'lucide:mouse-pointer-click' : 'lucide:map-pinned'" :width="36" />
-          <span class="da-right-empty__badge">{{ analysisStage === 'job-pending' ? '第 1 步' : '第 2 步' }}</span>
-          <p class="da-right-empty__title">{{ analysisStage === 'job-pending' ? '先从气泡图选择岗位' : '继续选择目标省份' }}</p>
-          <p class="da-right-empty__desc" v-if="analysisStage === 'job-pending'">当前先展示 {{ currentAnalysisLabel }} 方向概览，选中岗位后这里会展开省份分析。</p>
-          <p class="da-right-empty__desc" v-else>已选岗位：{{ selectedJobLabel }}。点击地图或左侧 TOP 10 列表后，再查看完整洞察。</p>
-        </div>
+        </Transition>
       </aside>
     </div>
 
@@ -1973,12 +2060,7 @@ onBeforeUnmount(() => {
 }
 .da-back:hover { border-color: var(--primary-100); background: rgba(139,37,0,0.06); }
 
-.da-brand { display: flex; align-items: center; gap: 8px; }
-.da-brand__icon {
-  width: 32px; height: 32px; display: grid; place-items: center;
-  border: 1.5px solid var(--primary-100); color: var(--primary-100); font-size: 16px; font-weight: 600;
-  transform: rotate(-3deg);
-}
+.da-brand { display: flex; align-items: center; }
 .da-brand__title {
   font-size: 16px; font-weight: 600; letter-spacing: 0.04em; color: var(--text-100);
   white-space: nowrap;
@@ -2622,6 +2704,15 @@ onBeforeUnmount(() => {
 
 .cta-slide-enter-active, .cta-slide-leave-active { transition: all 0.3s ease; }
 .cta-slide-enter-from, .cta-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(1rem); }
+
+/* ═══ 三图切换过渡（GSAP 驱动，GPU 加速提示） ═══ */
+.da-salary-chart {
+  will-change: transform, opacity, clip-path;
+}
+.da-right-content,
+.da-right-empty {
+  will-change: transform, opacity;
+}
 
 /* ═══ 响应式 ═══ */
 @media (max-width: 1199px) {

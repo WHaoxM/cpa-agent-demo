@@ -136,26 +136,23 @@ const currentChapter = computed(() => {
   return String(route.meta.title ?? '课程管理')
 })
 
-/* ===== 页面入场动效（CSS Transition，去掉 GSAP JS 钉子避免 done() 时序问题）===== */
+/* ===== 页面入场动效 ===== */
 const prefersReduced = ref(false)
-
-function onImmersiveEnter(_el: Element, done: () => void) {
-  done()
-}
 
 function onImmersiveLeave(el: Element, done: () => void) {
   if (prefersReduced.value) { done(); return }
   const h = el as HTMLElement
-  let called = false
-  const safeDone = () => { if (called) return; called = true; h.style.willChange = ''; done() }
-  h.style.willChange = 'opacity'
-  gsap.killTweensOf(h)
-  gsap.to(h, {
-    opacity: 0,
-    duration: 0.18, ease: 'power1.out',
-    onComplete: safeDone,
-  })
-  setTimeout(safeDone, 400)
+  h.style.position = 'absolute'
+  h.style.inset = '0'
+  gsap.to(h, { opacity: 0, x: -60, duration: 0.3, ease: 'power2.in', onComplete: done })
+}
+
+function onImmersiveEnter(el: Element, done: () => void) {
+  if (prefersReduced.value) { done(); return }
+  gsap.fromTo(el,
+    { opacity: 0, x: 60 },
+    { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out', clearProps: 'opacity,transform', onComplete: done },
+  )
 }
 
 /* ===== 生命周期 ===== */
@@ -229,14 +226,9 @@ onBeforeUnmount(() => {
       </main>
 
       <main v-else class="immersive-stage">
-        <router-view v-slot="{ Component }">
-          <Transition
-            :css="false"
-            mode="out-in"
-            @enter="onImmersiveEnter"
-            @leave="onImmersiveLeave"
-          >
-            <component :is="Component" :key="route.fullPath" />
+        <router-view :key="route.fullPath" v-slot="{ Component }">
+          <Transition :css="false" @enter="onImmersiveEnter" @leave="onImmersiveLeave">
+            <component :is="Component" />
           </Transition>
         </router-view>
       </main>
@@ -413,7 +405,9 @@ onBeforeUnmount(() => {
   }
 }
 
+
 .immersive-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: hidden;

@@ -38,17 +38,20 @@ function toggleSkills(role: string) {
   else expandedSkills.add(role)
 }
 
+type MatchState = 'unscored' | 'low' | 'scored'
+const MATCH_THRESHOLD = 35
+
 type FollowedRoleMarket = TargetRoleMarket & {
   sourceRole: string
   savedAt: string
   matchScore: number
+  matchState: MatchState
 }
 
 const router = useRouter()
 const learningStore = useLearningStore()
 const resumeStore = useResumeStore()
 
-/* 动态计算匹配度：parsedSkills 与 requiredSkills 的交集占比 */
 function normalizeRole(role: string): TargetRoleMarket['role'] {
   const text = role.toLowerCase()
   if (role === '机器学习工程师' || /机器学习|深度学习|算法|pytorch|tensorflow|ml/.test(text)) return '机器学习工程师'
@@ -62,17 +65,22 @@ function getRoleMarket(role: string): TargetRoleMarket {
   return mockTargetRoleMarkets.find(item => item.role === normalizeRole(role)) ?? mockTargetRoleMarkets[0]!
 }
 
-function computeMatchScore(job: TargetRoleMarket): number {
-  if (!resumeStore.isParsed || !resumeStore.parsedSkills.length) return job.referenceMatch
-  const userSkills = new Set(resumeStore.parsedSkills.map(s => s.name.toLowerCase()))
-  const required = job.skillTags.map(s => s.toLowerCase())
-  if (!required.length) return job.referenceMatch
-  const matched = required.filter(s => userSkills.has(s)).length
-  return Math.round((matched / required.length) * 100)
+/* 匹配度状态：基于职途导航产出的 matchedCareers */
+function getMatchState(normalizedRole: string): { state: MatchState; score: number } {
+  if (!resumeStore.isParsed || !resumeStore.matchedCareers.length) {
+    return { state: 'unscored', score: 0 }
+  }
+  const candidate = resumeStore.matchedCareers.find(c => c.role === normalizedRole)
+  const score = candidate ? Math.round(candidate.score * 100) : 0
+  if (score < MATCH_THRESHOLD) {
+    return { state: 'low', score }
+  }
+  return { state: 'scored', score }
 }
 
-function goToAnalysis(role: string) {
-  router.push({ path: '/app/student/career-analysis', query: { role: normalizeRole(role) } })
+function goToNavigation(role: string) {
+  resumeStore.setEvaluatingRole(role)
+  router.push({ name: 'student-career-navigation' })
 }
 
 // TODO: API — GET /api/saved-jobs?userId=xxx
@@ -93,11 +101,13 @@ const filteredDirections = computed<FollowedRoleMarket[]>(() => {
 
   learningStore.targetRoles.forEach(item => {
     const market = getRoleMarket(item.role)
+    const ms = getMatchState(market.role)
     const nextItem: FollowedRoleMarket = {
       ...market,
       sourceRole: item.role,
       savedAt: item.savedAt,
-      matchScore: computeMatchScore(market),
+      matchScore: ms.score,
+      matchState: ms.state,
     }
     const existing = merged.get(market.role)
     if (!existing || existing.savedAt < nextItem.savedAt) {
@@ -148,15 +158,16 @@ function shortDemand(level: string): string {
   return cut ? cut[0] : level
 }
 
-const isParsed = computed(() => resumeStore.isParsed)
-
 /* ── Hero 统计数据 ── */
 const heroStats = computed(() => {
   const dirs = filteredDirections.value
   if (!dirs.length) return null
-  const avgMatch = Math.round(dirs.reduce((s, d) => s + d.matchScore, 0) / dirs.length)
+  const scored = dirs.filter(d => d.matchState === 'scored')
+  const avgMatch = scored.length
+    ? Math.round(scored.reduce((s, d) => s + d.matchScore, 0) / scored.length)
+    : 0
   const bestSalary = Math.max(...dirs.map(d => d.medianSalary))
-  return { count: dirs.length, avgMatch, bestSalary }
+  return { count: dirs.length, scoredCount: scored.length, avgMatch, bestSalary }
 })
 
 /* ── 数字滚动动画 ── */
@@ -183,7 +194,9 @@ function animateCountUp(role: string, target: number) {
 
 function triggerDataAnimations() {
   filteredDirections.value.forEach((job, i) => {
-    setTimeout(() => animateCountUp(job.role, job.matchScore), i * 120)
+    if (job.matchState === 'scored') {
+      setTimeout(() => animateCountUp(job.role, job.matchScore), i * 120)
+    }
   })
 }
 
@@ -262,10 +275,20 @@ function setCardStagger(cards: NodeListOf<Element>) {
             <span class="stat-item">
               <strong>{{ heroStats.count }}</strong> 个方向
             </span>
-            <span class="stat-sep">·</span>
-            <span class="stat-item">
-              均匹配 <strong>{{ heroStats.avgMatch }}%</strong>
-            </span>
+            <template v-if="heroStats.scoredCount > 0">
+              <span class="stat-sep">·</span>
+              <span class="stat-item">
+                <strong>{{ heroStats.scoredCount }}</strong> 个已评估
+              </span>
+              <span class="stat-sep">·</span>
+              <span class="stat-item">
+                均匹配 <strong>{{ heroStats.avgMatch }}%</strong>
+              </span>
+            </template>
+            <template v-else>
+              <span class="stat-sep">·</span>
+              <span class="stat-item">完成职途导航后查看匹配度</span>
+            </template>
             <span class="stat-sep">·</span>
             <span class="stat-item">
               最高薪资 <strong>{{ heroStats.bestSalary }}K</strong>
@@ -302,12 +325,18 @@ function setCardStagger(cards: NodeListOf<Element>) {
           <!-- 左侧色块 -->
           <div
             class="card-panel-left"
-            :style="{ background: `linear-gradient(175deg, ${roleColors[job.role] ?? '#555'} 0%, ${roleDarkColors[job.role] ?? '#333'} 100%)` }"
+            :class="{ 'card-panel-left--muted': job.matchState !== 'scored' }"
+            :style="{ background: job.matchState === 'scored'
+              ? `linear-gradient(175deg, ${roleColors[job.role] ?? '#555'} 0%, ${roleDarkColors[job.role] ?? '#333'} 100%)`
+              : `linear-gradient(175deg, ${roleColors[job.role] ?? '#555'}99 0%, ${roleDarkColors[job.role] ?? '#333'}99 100%)` }"
           >
             <div class="panel-role-name">{{ job.role }}</div>
+
+            <!-- 态 C：正常 —— 环形匹配度 -->
             <div
+              v-if="job.matchState === 'scored'"
               class="score-ring"
-              :title="isParsed ? '结合简历估算' : '参考匹配度'"
+              title="职途导航评估"
               :style="{ '--score-pct': progressWidths[job.role] ?? 0, '--ring-fill': 'rgba(255,255,255,0.9)' }"
             >
               <div class="score-ring-inner">
@@ -315,6 +344,19 @@ function setCardStagger(cards: NodeListOf<Element>) {
                 <span class="score-pct-sign">%</span>
               </div>
             </div>
+
+            <!-- 态 A：未评估 -->
+            <div v-else-if="job.matchState === 'unscored'" class="score-unscored">
+              <span class="score-unscored-num">--</span>
+              <span class="score-unscored-label">尚未评估</span>
+            </div>
+
+            <!-- 态 B：偏低 -->
+            <div v-else class="score-low">
+              <Icon icon="mdi:trending-down" class="score-low-icon" />
+              <span class="score-low-label">匹配度偏低</span>
+            </div>
+
             <div class="panel-saved-at">{{ job.savedAt }}</div>
           </div>
 
@@ -372,19 +414,35 @@ function setCardStagger(cards: NodeListOf<Element>) {
               <span>{{ job.trendNote }}</span>
             </div>
 
-            <!-- 第四区：操作按钮 -->
+            <!-- 第四区：引导 + 操作按钮 -->
             <div class="right-footer">
-              <el-button text size="small" @click="goToAnalysis(job.role)">查看实情</el-button>
-              <el-popconfirm
-                title="确定取消关注该方向？"
-                confirm-button-text="确定"
-                cancel-button-text="取消"
-                @confirm="removeJob(job.role)"
-              >
-                <template #reference>
-                  <el-button text type="danger" size="small">取消关注</el-button>
-                </template>
-              </el-popconfirm>
+              <div v-if="job.matchState === 'unscored'" class="guide-hint">
+                <Icon icon="mdi:information-outline" class="guide-hint-icon" />
+                <span>完成职途导航后，这里会显示你和该方向的匹配程度</span>
+              </div>
+              <div v-else-if="job.matchState === 'low'" class="guide-hint guide-hint--low">
+                <Icon icon="mdi:lightbulb-outline" class="guide-hint-icon" />
+                <span>该方向与你目前的能力画像匹配度较低，可以先关注技能提升</span>
+              </div>
+              <div class="right-footer-actions">
+                <el-button
+                  v-if="job.matchState === 'unscored'"
+                  type="primary"
+                  size="small"
+                  @click="goToNavigation(job.role)"
+                >去评估</el-button>
+                <el-button v-else text size="small" @click="goToNavigation(job.role)">重新评估</el-button>
+                <el-popconfirm
+                  title="确定取消关注该方向？"
+                  confirm-button-text="确定"
+                  cancel-button-text="取消"
+                  @confirm="removeJob(job.role)"
+                >
+                  <template #reference>
+                    <el-button text type="danger" size="small">取消关注</el-button>
+                  </template>
+                </el-popconfirm>
+              </div>
             </div>
           </div>
         </div>
@@ -717,6 +775,60 @@ function setCardStagger(cards: NodeListOf<Element>) {
   letter-spacing: 0.02em;
 }
 
+/* ── 左侧色块：降级态（未评估 / 偏低） ── */
+.card-panel-left--muted {
+  filter: saturate(0.55);
+}
+
+/* 态 A：未评估 */
+.score-unscored {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.score-unscored-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--font-latin, monospace);
+  line-height: 1;
+}
+
+.score-unscored-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+/* 态 B：偏低 */
+.score-low {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.score-low-icon {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.score-low-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
 /* ── 右侧内容区 ── */
 .card-panel-right {
   flex: 1;
@@ -851,15 +963,47 @@ function setCardStagger(cards: NodeListOf<Element>) {
   margin-top: 1px;
 }
 
-/* 第四区：操作按钮 */
+/* 第四区：引导 + 操作按钮 */
 .right-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.right-footer-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
-  margin-top: auto;
-  padding-top: 6px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 引导提示条 */
+.guide-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(46, 97, 143, 0.06);
+  border: 1px solid rgba(46, 97, 143, 0.12);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #666;
+  line-height: 1.55;
+}
+
+.guide-hint--low {
+  background: rgba(180, 130, 60, 0.06);
+  border-color: rgba(180, 130, 60, 0.14);
+}
+
+.guide-hint-icon {
+  font-size: 14px;
+  color: #999;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 /* ══════════════════════════════════
@@ -907,6 +1051,8 @@ function setCardStagger(cards: NodeListOf<Element>) {
   .score-ring { width: 64px; height: 64px; }
   .score-ring-inner { width: 50px; height: 50px; }
   .score-num { font-size: 17px; }
+  .score-unscored { width: 64px; height: 64px; }
+  .score-unscored-num { font-size: 19px; }
 }
 
 @media (max-width: 680px) {
@@ -928,6 +1074,10 @@ function setCardStagger(cards: NodeListOf<Element>) {
   .score-ring-inner { width: 40px; height: 40px; }
   .score-num { font-size: 14px; }
   .panel-role-name { font-size: 17px; }
+  .score-unscored { width: 52px; height: 52px; }
+  .score-unscored-num { font-size: 16px; }
+  .score-low { flex-direction: row; gap: 6px; padding: 0; }
+  .score-low-icon { font-size: 16px; }
 }
 
 @media (max-width: 480px) {
@@ -935,6 +1085,7 @@ function setCardStagger(cards: NodeListOf<Element>) {
   .toolbar { height: auto; padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
   .salary-main { font-size: 18px; }
   .right-header { flex-direction: column; align-items: flex-start; }
+  .guide-hint { font-size: 10px; }
 }
 </style>
 

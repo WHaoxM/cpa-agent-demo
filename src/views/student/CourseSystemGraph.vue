@@ -771,7 +771,6 @@ const importanceLabels: Record<string, string> = {
           <span>返回</span>
         </button>
         <div class="cs-brand">
-          <span class="cs-brand__icon">谱</span>
           <span class="cs-brand__title">课程体系图谱 · {{ roleName }}</span>
         </div>
       </div>
@@ -974,12 +973,7 @@ const importanceLabels: Record<string, string> = {
 }
 .cs-back:hover { border-color: #aaa; color: #222; }
 
-.cs-brand { display: flex; align-items: center; gap: 9px; }
-.cs-brand__icon {
-  width: 30px; height: 30px; display: grid; place-items: center;
-  border: 1.5px solid #C04A2B; color: #C04A2B;
-  font-size: 14px; font-weight: 600; border-radius: 6px;
-}
+.cs-brand { display: flex; align-items: center; }
 .cs-brand__title {
   font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
   color: #222; white-space: nowrap;
@@ -1009,7 +1003,7 @@ const importanceLabels: Record<string, string> = {
   width: 100% !important;
   height: 100% !important;
 }
-.cs-3d-label {
+:global(.cs-3d-label) {
   position: absolute;
   top: 0; left: 0;
   z-index: 2;
@@ -1021,7 +1015,7 @@ const importanceLabels: Record<string, string> = {
   text-shadow: 0 0 4px rgba(255,255,255,0.9), 0 0 8px rgba(255,255,255,0.5);
   transition: opacity 0.2s;
 }
-.cs-3d-label.is-job {
+:global(.cs-3d-label.is-job) {
   font-size: 13px;
   font-weight: 700;
 }

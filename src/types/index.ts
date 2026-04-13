@@ -19,6 +19,7 @@ export interface User {
   status: 'active' | 'disabled'
   classId?: string
   phone?: string
+  signature?: string
 }
 
 // 登录用户信息

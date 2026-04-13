@@ -752,9 +752,8 @@ const centerStatusText = computed(() => {
 .rp-brand-name { font-size: 13px; font-weight: 600; color: var(--rp-text); letter-spacing: 0.06em; }
 
 .rp-header-tag {
-  font-size: 10px; letter-spacing: 0.18em;
-  color: var(--rp-hint); border: 1px solid var(--rp-border);
-  padding: 3px 12px; text-transform: uppercase;
+  font-size: 16px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--rp-text);
 }
 
 

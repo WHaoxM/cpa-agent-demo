@@ -7,7 +7,6 @@ import { useRouter } from 'vue-router'
 import { ElMessageBox, ElNotification } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores'
-import { UserRole } from '@/types'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -39,16 +38,6 @@ async function onLogout() {
   router.replace('/login')
 }
 
-function switchRole(role: UserRole) {
-  userStore.loginByRole(role)
-  ElNotification({
-    title: '切换成功',
-    message: `已切换到${role === UserRole.STUDENT ? '学生' : '管理员'}角色`,
-    type: 'success',
-    duration: 1800,
-  })
-  router.push('/app/dashboard')
-}
 </script>
 
 <template>
@@ -99,18 +88,6 @@ function switchRole(role: UserRole) {
           </div>
           <div class="uib-pop__name">{{ userStore.currentUser?.name }}</div>
           <div class="uib-pop__role">{{ roleLabel }}用户</div>
-        </div>
-        <el-divider />
-        <div class="uib-pop__section">
-          <div class="uib-pop__section-title">切换角色</div>
-          <div class="uib-pop__role-list">
-            <button class="uib-pop__role-item" :class="{ active: userRole === UserRole.STUDENT }" @click="switchRole(UserRole.STUDENT)">
-              <Icon icon="lucide:graduation-cap" /> 学生
-            </button>
-            <button class="uib-pop__role-item" :class="{ active: userRole === UserRole.ADMIN }" @click="switchRole(UserRole.ADMIN)">
-              <Icon icon="lucide:shield" /> 管理员
-            </button>
-          </div>
         </div>
         <el-divider />
         <div class="uib-pop__actions">
@@ -281,42 +258,6 @@ function switchRole(role: UserRole) {
   color: var(--color-text-subtle, #999);
 }
 
-.uib-pop__section {
-  padding: 4px 0;
-}
-.uib-pop__section-title {
-  font-size: 11px;
-  color: var(--color-text-subtle, #aaa);
-  padding: 6px 14px 4px;
-  letter-spacing: 0.03em;
-}
-.uib-pop__role-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 6px;
-}
-.uib-pop__role-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  background: transparent;
-  border: none;
-  font-size: 13px;
-  color: var(--color-text, #333);
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 0.15s, color 0.15s;
-}
-.uib-pop__role-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-.uib-pop__role-item.active {
-  font-weight: 600;
-  color: var(--primary-100, #C04A2B);
-  background: rgba(192, 74, 43, 0.06);
-}
 
 .uib-pop__actions {
   display: flex;

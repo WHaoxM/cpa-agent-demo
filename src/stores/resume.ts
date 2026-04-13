@@ -23,6 +23,7 @@ export const useResumeStore = defineStore('resume', () => {
   const insights = ref<CareerInsights | null>(null)
   const isParsed = ref(false)
   const draftText = ref('')
+  const evaluatingRole = ref('')
 
   function setResult(result: ResumeParseResult) {
     rawText.value = result.rawText
@@ -50,5 +51,20 @@ export const useResumeStore = defineStore('resume', () => {
     draftText.value = ''
   }
 
-  return { rawText, fileName, parsedSkills, matchedCareers, insights, isParsed, draftText, setResult, reset, setDraftText, clearDraftText }
+  function setEvaluatingRole(role: string) {
+    evaluatingRole.value = role
+  }
+
+  function clearEvaluatingRole() {
+    evaluatingRole.value = ''
+  }
+
+  return { rawText, fileName, parsedSkills, matchedCareers, insights, isParsed, draftText, evaluatingRole, setResult, reset, setDraftText, clearDraftText, setEvaluatingRole, clearEvaluatingRole }
+},
+{
+  persist: {
+    key: 'resume-store',
+    storage: localStorage,
+    pick: ['rawText', 'fileName', 'parsedSkills', 'matchedCareers', 'insights', 'isParsed', 'evaluatingRole'],
+  },
 })

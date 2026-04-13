@@ -420,18 +420,19 @@ export function getCareerInsightsMock(targetRole: CareerRole, cfg?: CareerInsigh
     { source: '数据处理', target: '机器学习工程师', value: 10 },
   ]
 
-  const predictedRole: CareerRole = '前端开发'
+  const predictedRole: CareerRole = targetRole
+
+  const allRoles: CareerRole[] = ['前端开发', '后端开发', '测试开发', '数据分析', '机器学习工程师']
+  const scoreSteps = [0.78, 0.62, 0.54, 0.47, 0.33]
+  const candidates: CareerCandidate[] = allRoles
+    .slice()
+    .sort((a, b) => (a === targetRole ? -1 : b === targetRole ? 1 : 0))
+    .map((role, i) => ({ role, score: scoreSteps[i]! }))
 
   return {
     predictedRole,
     confidence: 0.78,
-    candidates: [
-      { role: '前端开发', score: 0.78 },
-      { role: '测试开发', score: 0.62 },
-      { role: '后端开发', score: 0.54 },
-      { role: '数据分析', score: 0.47 },
-      { role: '机器学习工程师', score: 0.33 },
-    ],
+    candidates,
     evidence: [
       { type: 'course', label: 'Vue3 + TypeScript 工程化实战', weight: 0.34 },
       { type: 'course', label: '前端工程化与构建', weight: 0.18 },

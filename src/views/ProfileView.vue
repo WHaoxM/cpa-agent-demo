@@ -60,14 +60,45 @@ const roleName = computed(() => {
 })
 
 const form = reactive({
-  nickname: profile.value.nickname,
-  phone: '13800000000',
-  signature: '保持专注，持续迭代。',
-  email: profile.value.account,
+  nickname: userStore.currentUser?.name || profile.value.nickname,
+  phone: userStore.currentUser?.phone || '13800000000',
+  signature: userStore.currentUser?.signature || '保持专注，持续迭代。',
+  email: userStore.currentUser?.email || profile.value.account,
 })
 
-function onSave() {
-  ElMessage.info('仅 UI 演示，无提交逻辑')
+const saving = ref(false)
+
+async function onSave() {
+  saving.value = true
+  try {
+    // 更新 userStore（Pinia persist 自动落 localStorage）
+    userStore.updateUserInfo({
+      name: form.nickname,
+      email: form.email,
+      phone: form.phone,
+      signature: form.signature,
+    })
+
+    // 同步 authStore，保持两侧一致
+    if (auth.user) {
+      auth.user.nickname = form.nickname
+      auth.user.account = form.email
+    }
+
+    // TODO: 接入后端 API —— 替换下方注释为真实请求
+    // await api.updateProfile({
+    //   name: form.nickname,
+    //   email: form.email,
+    //   phone: form.phone,
+    //   signature: form.signature,
+    // })
+
+    ElMessage.success('个人资料已保存')
+  } catch {
+    ElMessage.error('保存失败，请稍后重试')
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -97,16 +128,12 @@ function onSave() {
           </div>
 
           <div class="rail__actions">
-            <el-button type="primary" :icon="EditPen" @click="onSave">保存修改</el-button>
+            <el-button type="primary" :icon="EditPen" :loading="saving" @click="onSave">保存修改</el-button>
           </div>
         </div>
 
         <div class="panel rail__panel rail__panel--muted">
           <div class="rail__section-label">账号信息</div>
-          <div class="kv">
-            <div class="kv__k">用户 ID</div>
-            <div class="kv__v kv__v--mono">{{ profile.id }}</div>
-          </div>
           <div class="kv">
             <div class="kv__k">账号状态</div>
             <div class="kv__v"><span class="kv__dot kv__dot--ok"></span>正常</div>
@@ -121,7 +148,7 @@ function onSave() {
           </div>
           <div class="kv">
             <div class="kv__k">注册时间</div>
-            <div class="kv__v">2024-09-01</div>
+            <div class="kv__v">2026-01-14</div>
           </div>
           <div class="kv">
             <div class="kv__k">最近登录</div>
@@ -129,32 +156,12 @@ function onSave() {
           </div>
         </div>
 
-        <div class="panel rail__panel rail__panel--muted">
-          <div class="rail__section-label">学习概况</div>
-          <div class="kv">
-            <div class="kv__k">在学课程</div>
-            <div class="kv__v">3 门</div>
-          </div>
-          <div class="kv">
-            <div class="kv__k">已完成章节</div>
-            <div class="kv__v">18 / 45</div>
-          </div>
-          <div class="kv">
-            <div class="kv__k">累计学习</div>
-            <div class="kv__v">42.5 小时</div>
-          </div>
-          <div class="kv">
-            <div class="kv__k">本周活跃天</div>
-            <div class="kv__v">5 天</div>
-          </div>
-        </div>
       </aside>
 
       <main class="main">
         <div class="panel">
           <div class="section-head">
             <div class="section-head__title">个人资料</div>
-            <el-tag round effect="plain" size="small">仅 UI 演示</el-tag>
           </div>
 
           <div class="form-section">
@@ -221,7 +228,7 @@ function onSave() {
               <button class="pref-row" type="button" @click="onSave">
                 <div class="pref-row__left">
                   <div class="pref-row__title">邮件通知</div>
-                  <div class="pref-row__meta">课程更新、作业提醒</div>
+                  <div class="pref-row__meta">课程更新</div>
                 </div>
                 <el-tag size="small" type="success" effect="plain">已开启</el-tag>
               </button>

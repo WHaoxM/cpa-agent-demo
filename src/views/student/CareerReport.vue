@@ -48,7 +48,7 @@ function saveCareerReport() {
       targetRoles: roles,
       selectedJobId: selectedJobId.value,
       selectedJobTitle: topJob?.title ?? '',
-      topMatchScore: topJob?.matchScore ?? 0,
+      topMatchScore: effectiveMatchScore.value,
       studentDimSnapshot: studentDim.value,
     },
   })
@@ -160,6 +160,13 @@ const recommendedIds = computed<Set<string>>(() => {
 
 const selectedJob = computed(() => JOB_PORTRAITS.find(j => j.id === selectedJobId.value) ?? null)
 
+/* 统一匹配度：与气泡图一致，推荐岗位 +0.2 */
+const effectiveMatchScore = computed(() => {
+  if (!selectedJob.value) return 0
+  const raw = selectedJob.value.matchScore
+  return recommendedIds.value.has(selectedJob.value.id) ? Math.min(1, raw + 0.2) : raw
+})
+
 /* ══ 学生七维 ══ */
 const studentDim = computed(() => {
   const skills = resumeStore.parsedSkills
@@ -229,11 +236,31 @@ const bubbleLayout = computed<BubbleItem[]>(() => {
     .map(j => ({ ...j, matchScore: recommendedIds.value.has(j.id) ? Math.min(1, j.matchScore + 0.2) : j.matchScore }))
     .sort((a, b) => b.matchScore - a.matchScore)
 
+  /* 心仪岗位方向强制占位：若有 evaluatingRole，保证该方向至少 1 个气泡 */
+  const roleToIds: Record<string, string[]> = {
+    '前端开发': ['fe-junior', 'fe-mid', 'fe-react-junior', 'fe-vis-junior'],
+    '后端开发': ['be-java-junior', 'be-java-mid', 'be-go-junior', 'be-python-junior'],
+    '测试开发': ['qa-junior', 'qa-mid', 'qa-plat-junior', 'qa-perf-junior'],
+    '数据分析': ['da-biz-junior', 'da-biz-mid', 'da-dev-junior', 'da-growth-junior'],
+    '机器学习工程师': ['algo-recsys-junior', 'algo-recsys-mid', 'dl-junior', 'ai-llm-junior'],
+  }
+  const evalRole = resumeStore.evaluatingRole
+  let pinnedJob: (typeof weighted)[0] | null = null
+  if (evalRole) {
+    const ids = new Set(roleToIds[evalRole] ?? [])
+    pinnedJob = weighted.find(j => ids.has(j.id)) ?? null
+  }
+
   // 过滤：matchScore > 0.4 优先，最多取 8 个；不足时按分数补足
   const highScore = weighted.filter(j => j.matchScore > 0.4)
-  const sorted = highScore.length >= 8
+  let sorted = highScore.length >= 8
     ? highScore.slice(0, 8)
     : weighted.slice(0, Math.min(8, weighted.length))
+
+  // 确保 pinnedJob 在列表中
+  if (pinnedJob && !sorted.some(j => j.id === pinnedJob!.id)) {
+    sorted = [pinnedJob, ...sorted.slice(0, 7)]
+  }
 
   const circles = sorted.map(j => ({ id: j.id, r: Math.max(16, Math.round(12 + j.matchScore * 28)) }))
   const packed = circlePack(circles)
@@ -375,8 +402,9 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
   const selId = selectedJob.value.id
   const selLineId = selectedJob.value.lineId
 
-  /* ── 1. 收集同 lineId 内晋升链（BFS 向上 + 1 级向下）── */
+  /* ── 1. 收集同 lineId 内晋升链（双向 BFS，找到完整连通分量）── */
   const promoteAdj = new Map<string, Array<typeof CAREER_PATH_EDGES[0]>>()
+  const reverseAdj = new Map<string, Array<typeof CAREER_PATH_EDGES[0]>>()
   for (const e of CAREER_PATH_EDGES) {
     if (e.type !== 'promote' || !CLIMB_JOB_IDS.has(e.fromId) || !CLIMB_JOB_IDS.has(e.toId)) continue
     const fj = JOB_PORTRAITS.find(j => j.id === e.fromId)
@@ -384,6 +412,8 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
     if (fj?.lineId !== selLineId || tj?.lineId !== selLineId) continue
     if (!promoteAdj.has(e.fromId)) promoteAdj.set(e.fromId, [])
     promoteAdj.get(e.fromId)!.push(e)
+    if (!reverseAdj.has(e.toId)) reverseAdj.set(e.toId, [])
+    reverseAdj.get(e.toId)!.push(e)
   }
   const promotionEdges: typeof CAREER_PATH_EDGES = []
   const promotionIds = new Set<string>([selId])
@@ -395,12 +425,11 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
         promotionIds.add(e.toId); promotionEdges.push(e); queue.push(e.toId)
       }
     }
-  }
-  for (const e of CAREER_PATH_EDGES) {
-    if (e.type !== 'promote' || e.toId !== selId || !CLIMB_JOB_IDS.has(e.fromId)) continue
-    const fj = JOB_PORTRAITS.find(j => j.id === e.fromId)
-    if (fj?.lineId !== selLineId) continue
-    if (!promotionIds.has(e.fromId)) { promotionIds.add(e.fromId); promotionEdges.push(e) }
+    for (const e of (reverseAdj.get(cur) ?? [])) {
+      if (!promotionIds.has(e.fromId)) {
+        promotionIds.add(e.fromId); promotionEdges.push(e); queue.push(e.fromId)
+      }
+    }
   }
 
   /* ── 2. 转岗边：每个晋升节点最多 2 条转岗（优先出边）── */
@@ -413,8 +442,23 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
     if (e.type !== 'transfer' || !CLIMB_JOB_IDS.has(e.fromId) || !CLIMB_JOB_IDS.has(e.toId)) continue
     if (promotionIds.has(e.fromId) || promotionIds.has(e.toId)) allTransferCandidates.push(e)
   }
-  // 优先出边（fromId 在晋升链内），每个节点最多 2 条
+  // 按优先级排序：选中岗位直接相关 > 同 lineId > 跨 lineId
+  allTransferCandidates.sort((a, b) => {
+    const aDirectly = (a.fromId === selId || a.toId === selId) ? 0 : 1
+    const bDirectly = (b.fromId === selId || b.toId === selId) ? 0 : 1
+    if (aDirectly !== bDirectly) return aDirectly - bDirectly
+    const aOther = promotionIds.has(a.fromId) ? a.toId : a.fromId
+    const bOther = promotionIds.has(b.fromId) ? b.toId : b.fromId
+    const aJob = JOB_PORTRAITS.find(j => j.id === aOther)
+    const bJob = JOB_PORTRAITS.find(j => j.id === bOther)
+    const aSame = aJob?.lineId === selLineId ? 0 : 1
+    const bSame = bJob?.lineId === selLineId ? 0 : 1
+    return aSame - bSame
+  })
+  // 每个晋升节点最多 2 条，全局最多 4 条
+  const MAX_TRANSFERS = 4
   for (const e of allTransferCandidates) {
+    if (transferEdges.length >= MAX_TRANSFERS) break
     const srcId = promotionIds.has(e.fromId) ? e.fromId : e.toId
     const tgtId = srcId === e.fromId ? e.toId : e.fromId
     if ((nodeTransferCount.get(srcId) ?? 0) >= 2) continue
@@ -432,7 +476,7 @@ const climbLayout = computed<{ nodes: ClimbNode[]; ropes: ClimbRope[] }>(() => {
 
   /* ── 4. 布局：选中岗位底部居中，晋升链向上，转岗横向 ── */
   const pad = 55
-  const mainLineJobs = allJobs.filter(j => j.lineId === selLineId)
+  const mainLineJobs = allJobs.filter(j => promotionIds.has(j.id))
     .sort((a, b) => (LEVEL_ORDER[a.level] ?? 0) - (LEVEL_ORDER[b.level] ?? 0))
   const transferJobs = allJobs.filter(j => !promotionIds.has(j.id))
 
@@ -648,7 +692,7 @@ const reportText = computed(() => {
   if (!job) return ''
   const gaps = dimGaps.value.filter(d => d.gap > 0).map(d => `${d.name}（差 ${d.gap} 分）`).join('、') || '无明显差距'
   const plan = growthPlan.value.map(s => `**${s.phaseLabel}**：${s.goal}`).join('\n')
-  return `# 职业生涯发展报告\n\n**学生**：${user}    **目标岗位**：${job.title}    **生成日期**：${new Date().toLocaleDateString('zh-CN')}\n\n## 岗位匹配摘要\n\n根据简历能力画像分析，系统匹配度最高岗位为「${job.title}」，匹配度 ${Math.round(job.matchScore * 100)}%。\n${job.desc}。工资区间：${job.salaryRange}\n\n## 七维能力差距\n\n主要待补齐维度：${gaps}\n\n## 个性化成长计划\n\n${plan}\n\n## 关键技能要求\n\n${job.keySkills.map(s => `- ${s}`).join('\n')}\n`
+  return `# 职业生涯发展报告\n\n**学生**：${user}    **目标岗位**：${job.title}    **生成日期**：${new Date().toLocaleDateString('zh-CN')}\n\n## 岗位匹配摘要\n\n根据简历能力画像分析，系统匹配度最高岗位为「${job.title}」，匹配度 ${Math.round(effectiveMatchScore.value * 100)}%。\n${job.desc}。工资区间：${job.salaryRange}\n\n## 七维能力差距\n\n主要待补齐维度：${gaps}\n\n## 个性化成长计划\n\n${plan}\n\n## 关键技能要求\n\n${job.keySkills.map(s => `- ${s}`).join('\n')}\n`
 })
 
 /* ══ Markdown → HTML ══ */
@@ -687,7 +731,7 @@ function autoFillMissing() {
   const text = reportTextEditable.value
   let patched = text
   if (!text.includes('岗位匹配摘要') && selectedJob.value) {
-    patched += `\n\n## 岗位匹配摘要\n\n匹配度 ${Math.round(selectedJob.value.matchScore * 100)}%。${selectedJob.value.desc}\n`
+    patched += `\n\n## 岗位匹配摘要\n\n匹配度 ${Math.round(effectiveMatchScore.value * 100)}%。${selectedJob.value.desc}\n`
   }
   if (!text.includes('七维能力差距')) {
     const gaps = dimGaps.value.filter(d => d.gap > 0).map(d => `${d.name}（差 ${d.gap} 分）`).join('、') || '无明显差距'
@@ -794,6 +838,7 @@ function selectJob(id: string) {
   }
 }
 function goBack() { router.push({ name: 'student-career-navigation' }) }
+function goToFavorites() { router.push({ name: 'student-favorites' }) }
 function goToLearningCenter() {
   if (!selectedJob.value) return
   router.push({ name: 'student-learning', query: { role: selectedJob.value.title } })
@@ -840,7 +885,6 @@ onBeforeUnmount(() => {
           <Icon :icon="reportSaved ? 'lucide:check' : 'lucide:save'" :width="12"/>
           <span>{{ reportSaved ? '已保存' : '保存报告' }}</span>
         </button>
-        <UserInfoBar />
         <!-- 导出按钮（仅报告模式） -->
         <div v-if="activeMode === 'report'" class="cr-export-wrap">
           <button class="cr-export-btn" @click="showExportMenu = !showExportMenu">
@@ -856,6 +900,10 @@ onBeforeUnmount(() => {
         <button v-else class="cr-report-btn" :disabled="!selectedJob" @click="switchToReport">
           <Icon icon="lucide:file-text" :width="12"/><span>生成报告</span>
         </button>
+        <button class="cr-my-reports-btn" @click="router.push({ name: 'student-my-reports' })">
+          <Icon icon="lucide:book-open" :width="12"/><span>我的报告</span>
+        </button>
+        <UserInfoBar />
       </div>
     </header>
 
@@ -1019,9 +1067,9 @@ onBeforeUnmount(() => {
               <circle cx="40" cy="40" r="34" fill="none"
                 :stroke="LINE_COLORS[selectedJob.lineId] ?? '#8B2500'"
                 stroke-width="5" stroke-linecap="round"
-                :stroke-dasharray="`${Math.round(selectedJob.matchScore * 213.6)} 213.6`"
+                :stroke-dasharray="`${Math.round(effectiveMatchScore * 213.6)} 213.6`"
                 transform="rotate(-90 40 40)"/>
-              <text x="40" y="38" text-anchor="middle" class="cr-hero-pct">{{ Math.round(selectedJob.matchScore * 100) }}%</text>
+              <text x="40" y="38" text-anchor="middle" class="cr-hero-pct">{{ Math.round(effectiveMatchScore * 100) }}%</text>
               <text x="40" y="50" text-anchor="middle" class="cr-hero-pct-label">匹配度</text>
             </svg>
           </div>
@@ -1260,6 +1308,10 @@ onBeforeUnmount(() => {
       <button v-if="activeMode === 'analysis'" class="cr-footer-go" @click="switchToReport">
         进入报告编辑 <Icon icon="lucide:arrow-right" :width="11"/>
       </button>
+      <button class="cr-footer-fav" @click="goToFavorites">
+        <Icon icon="lucide:heart" :width="11"/>
+        查看心仪岗位匹配度
+      </button>
     </footer>
 
   </div>
@@ -1334,6 +1386,14 @@ onBeforeUnmount(() => {
 }
 .cr-save-btn:hover:not(:disabled) { background: rgba(139,105,20,0.3); }
 .cr-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cr-my-reports-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: var(--radius-sm); font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+  background: rgba(139,105,20,0.15); border: 1px solid rgba(196,150,30,0.4);
+  color: rgba(139,105,20,1);
+}
+.cr-my-reports-btn:hover { background: rgba(139,105,20,0.3); }
 
 .cr-export-btn:hover { background: color-mix(in srgb, var(--primary-100) 15%, var(--bg-200) 85%); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(139,37,0,0.12); }
 .cr-export-menu {
@@ -1368,6 +1428,13 @@ onBeforeUnmount(() => {
   transition: background 300ms ease; border-radius: var(--radius-sm);
 }
 .cr-footer-go:hover { background: rgba(139,37,0,0.06); }
+.cr-footer-fav {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 1px solid rgba(139,37,0,0.25); color: var(--primary-100);
+  cursor: pointer; font-size: 10px; padding: 2px 10px; font-family: var(--font-ui);
+  transition: background 300ms ease; border-radius: var(--radius-sm);
+}
+.cr-footer-fav:hover { background: rgba(139,37,0,0.06); }
 
 /* ══ 分析模式主布局 ══ */
 .cr-main {

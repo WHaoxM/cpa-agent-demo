@@ -7,6 +7,7 @@ export const useReportStore = defineStore(
   'report',
   () => {
     const records = ref<ReportRecord[]>([])
+    const mockInitialized = ref(false)
 
     const portraitRecords = computed(() =>
       records.value.filter(r => r.type === 'portrait').sort(
@@ -71,6 +72,7 @@ export const useReportStore = defineStore(
 
     return {
       records,
+      mockInitialized,
       portraitRecords,
       careerRecords,
       latestPortrait,
@@ -85,7 +87,7 @@ export const useReportStore = defineStore(
     persist: {
       key: 'report-store',
       storage: localStorage,
-      pick: ['records'],
+      pick: ['records', 'mockInitialized'],
     },
   },
 )

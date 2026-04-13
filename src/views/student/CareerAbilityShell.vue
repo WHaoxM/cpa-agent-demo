@@ -363,8 +363,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
           <span>返回</span>
         </button>
         <div class="shell-brand">
-          <span class="shell-brand__icon">舆</span>
-          <span class="shell-brand__title">职业发展中心 / 职业能力复合图谱 · {{ roleName }}</span>
+          <span class="shell-brand__title">职业能力复合图谱 · {{ roleName }}</span>
         </div>
       </div>
 
@@ -456,12 +455,7 @@ watch(showEdgeLabels, () => { if (chart) chart.setOption({ series: [{ links: bui
 }
 .shell-back:hover { border-color: var(--primary-100); background: rgba(139,37,0,0.06); }
 
-.shell-brand { display: flex; align-items: center; gap: 8px; }
-.shell-brand__icon {
-  width: 30px; height: 30px; display: grid; place-items: center;
-  border: 1.5px solid var(--primary-100); color: var(--primary-100); font-size: 15px; font-weight: 600;
-  transform: rotate(-3deg);
-}
+.shell-brand { display: flex; align-items: center; }
 .shell-brand__title {
   font-size: 15px; font-weight: 600; letter-spacing: 0.06em; color: var(--text-100);
   white-space: nowrap;

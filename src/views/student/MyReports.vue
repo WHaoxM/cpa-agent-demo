@@ -42,9 +42,12 @@ function removeAndCloseOverlay(id: string) {
 
 onMounted(async () => {
   await reportStore.fetchReportList()
-  if (reportStore.records.length === 0) {
-    // [MOCK] 后端接口未接通时，回填本地演示报告数据。
-    reportStore.records.push(...mockReportRecords.map(item => ({ ...item })))
+  if (!reportStore.mockInitialized) {
+    // [MOCK] 后端接口未接通时，回填本地演示报告数据。仅首次触发。
+    if (reportStore.records.length === 0) {
+      reportStore.records.push(...mockReportRecords.map(item => ({ ...item })))
+    }
+    reportStore.mockInitialized = true
   }
 })
 </script>
