@@ -1,3 +1,6 @@
+/**
+ * 主题调色板 composable — 读取当前 CSS 变量生成调色板对象，供图表/组件使用
+ */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 export type ThemePalette = {

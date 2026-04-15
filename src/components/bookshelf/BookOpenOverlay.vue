@@ -1,3 +1,4 @@
+<!-- 组件：书架书本展开浮层；点击书架中的书后弹出的详情/阅读面板 -->
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'

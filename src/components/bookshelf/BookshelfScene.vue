@@ -1,3 +1,4 @@
+<!-- 组件：3D 书架场景；使用 GSAP 驱动书本动画与交互 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { gsap } from '@/plugins/gsap'

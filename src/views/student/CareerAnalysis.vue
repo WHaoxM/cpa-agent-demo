@@ -1217,6 +1217,24 @@ function stopAllSimulations() {
   _innerSims.forEach(s => s.stop()); _innerSims = []
 }
 
+function getBubbleTextColor(color: string, isSelected = false): string {
+  const normalized = color.trim().replace(/^#/, '')
+  const hex = normalized.length === 3
+    ? normalized.split('').map(char => char + char).join('')
+    : normalized
+  if (!/^[\da-fA-F]{6}$/.test(hex)) {
+    return isSelected ? 'rgba(255,252,246,0.99)' : 'rgba(255,252,246,0.96)'
+  }
+  const r = Number.parseInt(hex.slice(0, 2), 16)
+  const g = Number.parseInt(hex.slice(2, 4), 16)
+  const b = Number.parseInt(hex.slice(4, 6), 16)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  if (brightness >= 160) {
+    return isSelected ? 'rgba(30,18,8,0.98)' : 'rgba(43,27,13,0.96)'
+  }
+  return isSelected ? 'rgba(255,252,246,0.99)' : 'rgba(255,252,246,0.96)'
+}
+
 function initBubbleChart() {
   const svg = bubbleSvgRef.value
   if (!svg) return
@@ -1230,6 +1248,8 @@ function initBubbleChart() {
   const JOB_R = Math.min(32, Math.max(20, scale / 13))
   const DOMAIN_R = JOB_R * 2.6 + 4
   const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+  const LABEL_PADDING = 10
+  const DOMAIN_LABEL_Y = -DOMAIN_R - 7
 
   // ── defs ──
   const defs = el.append('defs')
@@ -1314,9 +1334,10 @@ function initBubbleChart() {
     .attr('stroke-opacity', 0.28)
 
   // 领域名标签（大气泡顶部外侧）
-  domainGroups.append('text')
+  const domainLabels = domainGroups.append('text')
     .attr('class', 'domain-label')
-    .attr('y', -DOMAIN_R - 7)
+    .attr('x', 0)
+    .attr('y', DOMAIN_LABEL_Y)
     .attr('text-anchor', 'middle')
     .attr('dominant-baseline', 'auto')
     .attr('fill', d => d.color)
@@ -1355,7 +1376,7 @@ function initBubbleChart() {
       .attr('class', 'job-text')
       .attr('text-anchor', 'middle')
       .attr('dominant-baseline', 'central')
-      .attr('fill', 'rgba(62,48,32,0.92)')
+      .attr('fill', d => getBubbleTextColor(d.domainColor))
       .attr('font-size', Math.max(8, JOB_R * 0.36))
       .attr('font-family', FONT)
       .attr('font-weight', '600')
@@ -1508,6 +1529,29 @@ function initBubbleChart() {
     })
     .on('tick', () => {
       domainGroups.attr('transform', d => `translate(${d.x ?? W / 2},${d.y ?? H / 2})`)
+      const svgRect = svg.getBoundingClientRect()
+      domainLabels
+        .attr('x', 0)
+        .attr('y', DOMAIN_LABEL_Y)
+        .each(function () {
+          const label = d3.select(this)
+          const rect = (this as SVGTextElement).getBoundingClientRect()
+          let offsetX = 0
+          let offsetY = 0
+          const left = rect.left - svgRect.left
+          const right = rect.right - svgRect.left
+          const top = rect.top - svgRect.top
+          const bottom = rect.bottom - svgRect.top
+          if (left < LABEL_PADDING) offsetX += LABEL_PADDING - left
+          if (right > W - LABEL_PADDING) offsetX -= right - (W - LABEL_PADDING)
+          if (top < LABEL_PADDING) offsetY += LABEL_PADDING - top
+          if (bottom > H - LABEL_PADDING) offsetY -= bottom - (H - LABEL_PADDING)
+          if (offsetX !== 0 || offsetY !== 0) {
+            label
+              .attr('x', offsetX)
+              .attr('y', DOMAIN_LABEL_Y + offsetY)
+          }
+        })
     })
 
   updateBubbleSelection()
@@ -1529,7 +1573,7 @@ function updateBubbleSelection() {
       .attr('filter', isSelected ? 'url(#f-ink-sel)' : 'url(#f-ink-bleed)')
     g.select('.job-text')
       .attr('font-weight', isSelected ? '700' : '600')
-      .attr('fill', isSelected ? 'rgba(30,18,8,0.98)' : 'rgba(62,48,32,0.92)')
+      .attr('fill', getBubbleTextColor(d.domainColor, isSelected))
   })
 
   d3.select(svg).selectAll<SVGCircleElement, DomainNode>('.domain-bg').each(function (d) {

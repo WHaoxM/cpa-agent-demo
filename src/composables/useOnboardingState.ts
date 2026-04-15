@@ -1,3 +1,6 @@
+/**
+ * 新手引导状态 — 判断各业务步骤是否已完成，用于首页引导卡片
+ */
 import { computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
 import { useResumeStore } from '@/stores/resume'

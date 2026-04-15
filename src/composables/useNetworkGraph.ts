@@ -1,3 +1,6 @@
+/**
+ * 知识图谱网络 — D3 force 布局数据与交互状态管理
+ */
 import { computed, ref, type Ref } from 'vue'
 import type {
   KnowledgeNode,

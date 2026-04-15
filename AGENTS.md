@@ -23,13 +23,20 @@
 
 ## 目录职责
 
-- `src/views/`：页面入口，按角色拆分在 `student/`、`teacher/`、`admin/` 下。
+- `src/views/`：页面入口，按角色拆分在 `student/`、`admin/` 下，公共课程页在 `course/` 下。
 - `src/router/routes.ts`：全部路由定义。
 - `src/router/index.ts`：路由守卫、标题设置、登录态与角色校验。
-- `src/stores/`：Pinia store，项目使用 setup store 风格。
+- `src/stores/`：Pinia store，项目使用 setup store 风格。统一由 `stores/index.ts` 导出。
 - `src/mock/data.ts`：演示数据与查询辅助函数。
 - `src/types/index.ts`：领域类型定义。新增实体时先改这里，再改 mock/store/view。
-- `src/components/charts/`：图表组件，优先复用，不要在页面里重复造轮子。
+- `src/components/charts/`：D3.js / ECharts 图表组件（10 个），优先复用，不要在页面里重复造轮子。
+- `src/components/book/`：古籍风格 UI 组件（BookPage、BrushText、CloudTabNav、SealStamp）。
+- `src/components/bookshelf/`：书架 3D 场景与展开浮层。
+- `src/composables/`：Vue Composition API 可复用逻辑（10 个），包含图谱数据、Agent 流程、动画、主题等。
+- `src/api/`：API 接口签名（当前为 mock 实现），预留后端替换。
+- `src/plugins/gsap.ts`：GSAP 插件注册（ScrollTrigger / TextPlugin / MotionPath）。
+- `src/constants/icons.ts`：Iconify 图标常量集合。
+- `src/utils/index.ts`：工具函数（防抖等）。
 - `src/assets/theme.css`：主题变量、Element Plus token 映射、全局动效与背景。
 - `src/assets/main.css`：页面容器、卡片、常用布局样式。
 - `design-system/course-management/MASTER.md`：设计参考文档，不是运行时真相；如果和现有实现冲突，以项目现有代码和主题系统为准。

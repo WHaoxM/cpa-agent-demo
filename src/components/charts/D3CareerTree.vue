@@ -1,3 +1,4 @@
+<!-- D3 职业成长树：展示职业路径与节点关系 -->
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as d3 from 'd3'

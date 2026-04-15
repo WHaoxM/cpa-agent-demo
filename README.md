@@ -1,99 +1,153 @@
 # 课程管理系统 (Course Management System)
 
-基于 Vue 3 + TypeScript + Element Plus + D3.js 的纯前端课程管理系统演示项目。
+基于 Vue 3 + TypeScript + Vite + Element Plus + D3.js 的纯前端课程管理与职业发展演示项目。
 
 ## 技术栈
 
-- **Vue 3** - 渐进式 JavaScript 框架
-- **TypeScript** - 类型安全的 JavaScript 超集  
+- **Vue 3** (v3.5) - 渐进式 JavaScript 框架，使用 Composition API + `<script setup>`
+- **TypeScript** (v5.9) - 类型安全的 JavaScript 超集
+- **Vite** (v7) - 下一代前端构建工具
 - **Element Plus** - Vue 3 组件库
-- **Vue Router** - 官方路由管理器
-- **Pinia** - Vue 状态管理方案
-- **D3.js** - 数据可视化库
-- **WangEditor** - 富文本编辑器
-- **Vite** - 下一代前端构建工具
+- **Vue Router** (v5) - 官方路由管理器
+- **Pinia** (v3) + pinia-plugin-persistedstate - 状态管理与持久化
+- **D3.js** (v7) - 数据可视化（雷达图、弦图、热力日历、Treemap 等）
+- **ECharts** (v5) + echarts-gl - 3D 图表与地图
+- **GSAP** (v3) - 高性能动画引擎（ScrollTrigger / TextPlugin / MotionPath）
+- **Three.js** - 3D 场景渲染
+- **Tiptap** - 富文本编辑器（简历描述字段）
+- **Iconify** + Element Plus Icons - 图标体系
 
 ## 功能特性
 
-### 1. 三角色权限系统
-- **学生端**：学习中心、笔记管理、错题本、AI 助手、学习报告
-- **教师端**：课程管理、学生管理、作业批改、班级报告、学情监控
-- **管理员端**：用户管理、内容审核、系统监控
+### 三角色权限系统
 
-### 2. 数据可视化（D3.js）
-- **堆叠柱状图**：学习进度统计
-- **折线图**：成绩趋势分析、活跃度统计
-- **雷达图**：知识点掌握情况
-- **饼图**：作业完成情况、用户分布
-- **直方图**：成绩分布
-- **横向柱状图**：知识点错误率排行、学生排名
+- **学生端**：技能提升、职业分析、职途导航、职业能力图谱、课程体系图谱、心仪岗位、个人能力画像、职业生涯报告、快速制作简历、我的报告、AI 助手、技能自评
+- **管理员端**：岗位数据集管理、知识库维护
+- **公共页面**：首页（HomeCenter）、个人中心、消息中心
 
-### 3. 核心功能模块
+### 学生端核心模块
 
-#### 学生端
-- 视频播放器（模拟进度、倍速、全屏）
-- 章节测验（单选、多选、填空）
-- 富文本笔记编辑器
-- 错题自动记录与练习
-- AI 对话助手
+| 模块 | 路由 | 说明 |
+|------|------|------|
+| 技能提升 | `student/learning` | 课程学习中心，视频播放、章节测验、笔记 |
+| 职业分析 | `student/career-analysis` | 羊皮卷舆图风格的水墨散点气泡地图 + 职业洞察 |
+| 职途导航 | `student/career-navigation` | 简历导入与人岗匹配 |
+| 职业能力图谱 | `student/career-ability` | Shell 容器 + 图谱/双栏/工作台三视图切换 |
+| 课程体系 | `student/course-system` | 5 大领域 × 15 细分职业的分层网络关系图 |
+| 心仪岗位 | `student/favorites` | 收藏的目标岗位、薪资筛选与人岗匹配入口 |
+| 个人能力画像 | `student/career-portrait` | Agent 驱动的多维能力雷达 + 分阶段报告 |
+| 职业生涯报告 | `student/career-report` | D3 力导向气泡图 + 七维评估 + 成长计划 |
+| 快速制作简历 | `student/resume-builder` | 仿 magicv.art 三栏简历编辑器 |
+| 我的报告 | `student/my-reports` | 书架式报告管理与查看 |
+| AI 助手 | `student/ai-assistant` | 学习问答台，预设回复 |
+| 技能自评 | `exams` | 按职业方向/细分赛道的技能评估 |
 
-#### 教师端
-- 课程创建与编辑
-- 学生进度追踪
-- 作业批改与评分
-- 班级数据分析
+### 管理员端模块
 
-#### 管理员端
-- 用户权限管理
-- 课程内容审核
-- 系统数据统计
+| 模块 | 路由 | 说明 |
+|------|------|------|
+| 岗位数据集 | `admin/job-dataset` | 岗位数据的增删改查管理 |
+| 知识库维护 | `admin/knowledge-base` | 本地知识库内容管理 |
+
+### 数据可视化组件（D3.js / ECharts）
+
+| 组件 | 说明 |
+|------|------|
+| `D3RadarChart` | 多边形雷达图，双系列对比（个人能力 vs 岗位要求） |
+| `D3ChordDiagram` | 技能亲和力弦图，渐变 Ribbon + 外弧刻度 |
+| `D3HeatCalendar` | GitHub 风格学习热力日历（52×7） |
+| `D3Treemap` | 课程结构 Treemap 图 |
+| `D3WeeklyTrend` | 周学习量趋势图（面积 + 折线） |
+| `D3ArcGauge` | 半圆弧量规，展示能力值与目标值差距 |
+| `D3CourseProgress` | 课程进度分布 |
+| `D3ErrorMatrix` | 错题矩阵热力图（知识点 × 难度） |
+| `D3FlowField` | 首页背景粒子流场 |
+| `D3CareerTree` | 职业成长树 |
 
 ## 项目结构
 
 ```
 src/
+├── api/                  # API 接口层（当前为 mock 实现，预留后端替换）
+│   └── report.ts
+├── assets/               # 静态资源、主题变量
+│   ├── theme.css         # 主题 CSS 变量、Element Plus token 映射
+│   └── main.css          # 页面容器、卡片、布局样式
 ├── components/
-│   └── charts/           # D3.js 图表组件
+│   ├── charts/           # D3.js / ECharts 图表组件（10 个）
+│   ├── book/             # 古籍风格 UI 组件（BookPage、BrushText、CloudTabNav、SealStamp）
+│   ├── bookshelf/        # 书架 3D 场景与展开浮层
+│   ├── UserInfoBar.vue   # 右上角用户信息栏
+│   ├── TiptapEditor.vue  # Tiptap 富文本编辑器封装
+│   └── ...
+├── composables/          # Vue Composition API 可复用逻辑（10 个）
+│   ├── useAbilityGraph.ts      # 职业能力图谱数据 & 同心圆布局
+│   ├── useAgentPortrait.ts     # 简历解析后的技能结构与 Agent 画像流程
+│   ├── useCareerInsights.ts    # 5 大职业方向洞察数据
+│   ├── useCourseSystem.ts      # 课程体系分层网络关系图数据
+│   ├── useGraphGeneration.ts   # 模拟 SSE 图谱生成流程
+│   ├── useNetworkGraph.ts      # 知识图谱网络 D3 force 布局
+│   ├── useOnboardingState.ts   # 新手引导状态判断
+│   ├── usePageEntrance.ts      # 页面入场动画 composable
+│   ├── useResizeObserver.ts    # 通用 ResizeObserver
+│   └── useThemePalette.ts      # 主题调色板读取
+├── constants/
+│   └── icons.ts          # 图标常量集合
 ├── layouts/
-│   └── AppLayout.vue     # 主布局
+│   └── AppLayout.vue     # 应用主框架（侧边栏 + 顶栏 + router-view）
 ├── mock/
-│   └── data.ts           # 模拟数据
+│   └── data.ts           # 演示数据与查询辅助函数
+├── plugins/
+│   └── gsap.ts           # GSAP 插件注册（ScrollTrigger / TextPlugin / MotionPath）
 ├── router/
-│   ├── index.ts          # 路由配置
-│   └── routes.ts         # 路由定义
-├── stores/
-│   ├── pinia.ts          # Pinia 配置
+│   ├── index.ts          # 路由守卫、标题设置、登录态与角色校验
+│   └── routes.ts         # 全部路由定义
+├── stores/               # Pinia setup store
+│   ├── index.ts          # 统一导出
 │   ├── user.ts           # 用户状态
+│   ├── auth.ts           # 认证与登录
 │   ├── course.ts         # 课程状态
-│   └── learning.ts       # 学习状态
+│   ├── learning.ts       # 学习记录与进度
+│   ├── theme.ts          # 多主题系统
+│   ├── report.ts         # 报告管理
+│   ├── resume.ts         # 简历与技能解析
+│   ├── knowledgeGraph.ts # 知识图谱状态
+│   └── pinia.ts          # Pinia 实例 + 持久化插件
 ├── types/
-│   └── index.ts          # TypeScript 类型定义
+│   └── index.ts          # 领域类型定义
+├── utils/
+│   └── index.ts          # 工具函数（防抖等）
 ├── views/
-│   ├── student/          # 学生端页面
-│   ├── teacher/          # 教师端页面
-│   ├── admin/            # 管理员端页面
-│   ├── LoginView.vue
-│   ├── DashboardView.vue
-│   └── NotFoundView.vue
+│   ├── student/          # 学生端页面（12 个 .vue）
+│   ├── admin/            # 管理员端页面（2 个 .vue）
+│   ├── course/           # 公共课程页（ExamsView、MessagesView）
+│   ├── HomeCenter.vue    # 首页
+│   ├── LoginView.vue     # 登录页
+│   ├── ProfileView.vue   # 个人中心
+│   └── NotFoundView.vue  # 404
 └── main.ts
 ```
 
 ## 安装与运行
 
-### 1. 安装依赖
 ```bash
+# 安装依赖
 npm install
-```
 
-### 2. 启动开发服务器
-```bash
+# 启动开发服务器（自动打开浏览器）
 npm run dev
+
+# 类型检查
+npm run type-check
+
+# 生产构建（含类型检查）
+npm run build
+
+# 预览构建产物
+npm run preview
 ```
 
-### 3. 构建生产版本
-```bash
-npm run build
-```
+**Node 版本要求**：`^20.19.0 || >=22.12.0`
 
 ## 测试账号
 
@@ -105,76 +159,49 @@ npm run build
 | 教师 | teacher001 | 123456 |
 | 管理员 | admin001 | 123456 |
 
-## D3.js 图表使用说明
-
-### 组件封装原则
-所有图表组件均遵循以下设计原则：
-1. **响应式**：监听容器大小变化自动重绘
-2. **数据驱动**：通过 props 传入数据，监听变化自动更新
-3. **交互性**：支持 hover 提示、过渡动画
-4. **类型安全**：完整的 TypeScript 类型定义
-
-### 使用示例
-```vue
-<ScoreLineChart
-  :data="[
-    { date: '第一周', score: 75 },
-    { date: '第二周', score: 82 }
-  ]"
-  :width="600"
-  :height="350"
-  title="成绩趋势"
-  :show-area="true"
-/>
-```
-
 ## 角色权限说明
 
 系统通过路由守卫实现角色权限控制：
-- 未登录用户只能访问登录页
-- 学生只能访问 `/app/student/*` 路由
-- 教师只能访问 `/app/teacher/*` 路由
-- 管理员只能访问 `/app/admin/*` 路由
+
+- 未登录用户只能访问登录页 `/login`
+- 登录后默认进入 `/app/dashboard`
+- 学生可访问 `student/*` 及公共路由
+- 管理员可访问 `admin/*` 及公共路由
+- 越权访问自动重定向到首页
+
+## D3.js 图表封装原则
+
+1. **响应式**：通过 `useResizeObserver` 监听容器大小变化自动重绘
+2. **数据驱动**：通过 props 传入数据，watch 监听变化自动更新
+3. **交互性**：支持 hover 提示、过渡动画
+4. **类型安全**：完整的 TypeScript 类型定义
+5. **生命周期管理**：`onBeforeUnmount` 时自动 dispose，防止内存泄漏
 
 ## 数据存储
 
 使用 Pinia + pinia-plugin-persistedstate 实现数据持久化：
 - 用户登录状态存储在 localStorage
 - 学习进度自动同步
-- 笔记内容实时保存
-
-## 浏览器支持
-
-- Chrome 80+
-- Firefox 75+
-- Safari 13+
-- Edge 80+
-
-## 开发建议
-
-1. 使用 VS Code 配合 Vue 官方插件获得最佳开发体验
-2. 安装 Vue DevTools 浏览器扩展进行调试
-3. 建议开启浏览器开发者工具的 Custom Object Formatter
+- 简历与技能解析结果持久化
+- 报告记录持久化
 
 ## 注意事项
 
 本项目为纯前端演示项目，所有数据均为模拟数据：
 - 视频播放为模拟实现
 - AI 助手为预设回复
+- 简历解析为本地 mock
+- Agent 画像为模拟 SSE 流程
 - 文件上传为前端模拟
 
-实际部署时需要对接后端 API。
+`src/api/` 目录已预留接口签名，后续可替换为真实后端调用。
 
-## 推荐设置
+## 推荐开发环境
 
-[VS Code](https://code.visualstudio.com/) + Vue (Official)
-
-## 浏览器需要装备的扩展
-
-- 基于Chrome:
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-- 基于Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+- [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) 插件
+- 浏览器扩展：
+  - Chrome: [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
+  - Firefox: [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
 
 ## 许可证
 
