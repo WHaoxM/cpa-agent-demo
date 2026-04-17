@@ -80,6 +80,7 @@ const studentMenus = [
   { index: '/app/exams', icon: ICONS.checkSquare, title: '技能自评' },
   // ── 能力匹配 ──
   { index: '/app/student/career-navigation', icon: ICONS.route, title: '职途导航' },
+  { index: '/app/student/skill-graph', icon: ICONS.layers, title: '技能图谱' },
   // ── 学习执行 ──
   { index: '/app/student/learning', icon: ICONS.trendingUp, title: '技能提升' },
   // ── 成果追踪 ──

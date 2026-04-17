@@ -24,12 +24,29 @@ const route = useRoute()
 const router = useRouter()
 const learningStore = useLearningStore()
 
+const graphMode = computed<'focus' | 'overview'>(() => (
+  route.name === 'student-skill-graph' ? 'overview' : 'focus'
+))
+const isOverviewMode = computed(() => graphMode.value === 'overview')
+
 const roleName = computed(() => {
   const qr = route.query.role as string | undefined
   if (qr) return qr
   if (learningStore.targetRoles.length > 0) return learningStore.targetRoles[0]!.role
   return '前端开发'
 })
+
+const pageTitle = computed(() => (
+  isOverviewMode.value ? '技能图谱 · 15个职业总览' : `课程体系图谱 · ${roleName.value}`
+))
+const pageSubtitle = computed(() => (
+  isOverviewMode.value
+    ? '从功能导航进入，展示本地 mock 中已存在的 15 个职业节点与跨层技能关系。'
+    : `当前按职业流程聚焦展示 ${roleName.value} 的分层技能与课程体系。`
+))
+const pageModeLabel = computed(() => (
+  isOverviewMode.value ? '功能导航入口' : '流程聚焦入口'
+))
 
 function resolveJobNode(role: string): { domainId: string; jobIndex: number } | null {
   for (const d of CAREER_DOMAINS) {
@@ -44,7 +61,9 @@ function resolveJobNode(role: string): { domainId: string; jobIndex: number } | 
 
 function goBack() { router.back() }
 function goToLearningCenter() {
-  router.push({ name: 'student-learning', query: { role: roleName.value } })
+  const targetRole = learningCenterRole.value
+  if (!targetRole) return
+  router.push({ name: 'student-learning', query: { role: targetRole } })
 }
 
 /* ═══ 状态 ═══ */
@@ -131,7 +150,7 @@ function seededRand(seed: number): number {
   return x - Math.floor(x)
 }
 
-function compute3DPositions(allNodes: CourseNode[]): Map<string, THREE.Vector3> {
+function compute3DPositions(allNodes: CourseNode[], mode: 'focus' | 'overview'): Map<string, THREE.Vector3> {
   const map = new Map<string, THREE.Vector3>()
   const tierBuckets = new Map<SkillTier, CourseNode[]>()
   for (const n of allNodes) {
@@ -148,7 +167,10 @@ function compute3DPositions(allNodes: CourseNode[]): Map<string, THREE.Vector3> 
 
     if (tier === 'job') {
       bucket.forEach(n => {
-        map.set(n.id, new THREE.Vector3(0, y, 0))
+        map.set(
+          n.id,
+          mode === 'overview' ? computeOverviewJobPosition(n, y) : new THREE.Vector3(0, y, 0),
+        )
       })
       continue
     }
@@ -166,6 +188,29 @@ function compute3DPositions(allNodes: CourseNode[]): Map<string, THREE.Vector3> 
     })
   }
   return map
+}
+
+function computeOverviewJobPosition(node: CourseNode, y: number): THREE.Vector3 {
+  const domainIndex = Math.max(CAREER_DOMAINS.findIndex(d => d.id === node.domainId), 0)
+  const idParts = node.id.split('-')
+  const jobIndex = Number(idParts[idParts.length - 1] ?? 0)
+  const domainAngle = -Math.PI / 2 + domainIndex * ((Math.PI * 2) / CAREER_DOMAINS.length)
+  const radius = 5.8
+  const tangentX = -Math.sin(domainAngle)
+  const tangentZ = Math.cos(domainAngle)
+  const center = new THREE.Vector3(
+    Math.cos(domainAngle) * radius,
+    y,
+    Math.sin(domainAngle) * radius,
+  )
+  const spread = (jobIndex - 1) * 1.55
+  const radialOffset = jobIndex === 1 ? 0.32 : 0
+
+  return center.add(new THREE.Vector3(
+    tangentX * spread + Math.cos(domainAngle) * radialOffset,
+    0,
+    tangentZ * spread + Math.sin(domainAngle) * radialOffset,
+  ))
 }
 
 /* ═══ 成长路径追溯 ═══ */
@@ -264,6 +309,29 @@ const JOB_NAME_MAP = new Map<string, { name: string; domainId: string }>(
     d.jobs.map((jobName, ji) => [`job-${d.id}-${ji}`, { name: jobName, domainId: d.id }] as const),
   ),
 )
+const selectedCareerName = computed(() => {
+  if (!selectedCareerId.value) return ''
+  return JOB_NAME_MAP.get(selectedCareerId.value)?.name ?? ''
+})
+const learningCenterRole = computed(() => (
+  isOverviewMode.value ? selectedCareerName.value : roleName.value
+))
+const canGoToLearningCenter = computed(() => Boolean(learningCenterRole.value))
+const learningButtonLabel = computed(() => {
+  if (!isOverviewMode.value) return '查看岗位课程'
+  return selectedCareerName.value ? `查看 ${selectedCareerName.value} 课程` : '选择岗位后查看课程'
+})
+const legendTip = computed(() => (
+  isOverviewMode.value
+    ? '点击岗位节点，可切换查看该职业的全链路技能。'
+    : '点击岗位节点，高亮当前职业的全链路技能。'
+))
+const hintText = computed(() => (
+  isOverviewMode.value
+    ? '拖拽旋转 · 滚轮缩放 · 右键平移 · 点击岗位切换职业视角 · 双击重置'
+    : '拖拽旋转 · 滚轮缩放 · 右键平移 · 点击节点查看详情 · 点击岗位高亮全链路 · 双击重置'
+))
+
 const relatedCareers = computed(() => {
   if (!selectedNode.value) return []
   const careers = selectedNode.value.relatedCareers ?? []
@@ -441,7 +509,7 @@ function buildPlatforms() {
 /* ═══ 构建节点 ═══ */
 function buildNodes() {
   if (!scene) return
-  const posMap = compute3DPositions(nodes.value)
+  const posMap = compute3DPositions(nodes.value, graphMode.value)
   const labelContainer = graphContainerEl.value
   for (const n of nodes.value) {
     const pos = posMap.get(n.id)
@@ -724,8 +792,13 @@ async function loadData() {
   const resolved = resolveJobNode(roleName.value)
   const matchedJobId = resolved ? `job-${resolved.domainId}-${resolved.jobIndex}` : null
 
+  selectedSkillId.value = null
+  selectedCareerId.value = null
+  highlightTier.value = null
+
   const filteredNodes = data.nodes.filter(n => {
     if (n.tier !== 'job') return true
+    if (isOverviewMode.value) return true
     return n.id === matchedJobId
   })
   const nodeIdSet = new Set(filteredNodes.map(n => n.id))
@@ -748,7 +821,7 @@ onBeforeUnmount(() => {
   gsapCtx?.revert()
   disposeScene()
 })
-watch(roleName, () => loadData())
+watch([roleName, graphMode], () => loadData())
 
 const legendTiers = TIER_ORDER.slice().reverse() as SkillTier[]
 
@@ -771,10 +844,14 @@ const importanceLabels: Record<string, string> = {
           <span>返回</span>
         </button>
         <div class="cs-brand">
-          <span class="cs-brand__title">课程体系图谱 · {{ roleName }}</span>
+          <div class="cs-brand__meta">
+            <span class="cs-brand__title">{{ pageTitle }}</span>
+            <span class="cs-brand__mode">{{ pageModeLabel }}</span>
+          </div>
+          <span class="cs-brand__subtitle">{{ pageSubtitle }}</span>
         </div>
       </div>
-      <div class="cs-header__right">
+      <div v-if="!isOverviewMode" class="cs-header__right">
         <UserInfoBar />
       </div>
     </header>
@@ -799,9 +876,9 @@ const importanceLabels: Record<string, string> = {
             <Icon :icon="showLabels ? 'lucide:tag' : 'lucide:tag-off'" :width="14" />
             <span>{{ showLabels ? '隐藏节点名称' : '显示节点名称' }}</span>
           </button>
-          <button class="cs-tools__btn cs-tools__btn--learning" @click="goToLearningCenter">
+          <button class="cs-tools__btn cs-tools__btn--learning" :disabled="!canGoToLearningCenter" @click="goToLearningCenter">
             <Icon icon="lucide:book-open" :width="14" />
-            <span>查看岗位课程</span>
+            <span>{{ learningButtonLabel }}</span>
           </button>
         </div>
 
@@ -831,7 +908,7 @@ const importanceLabels: Record<string, string> = {
               <span class="cs-legend__dot" :style="{ background: DOMAIN_COLORS[dom.id] }"></span>
               <span>{{ dom.name }}</span>
             </div>
-            <div class="cs-legend__tip">点击岗位节点，高亮全链路技能。</div>
+            <div class="cs-legend__tip">{{ legendTip }}</div>
           </div>
         </div>
 
@@ -928,7 +1005,7 @@ const importanceLabels: Record<string, string> = {
         <!-- 操作提示 -->
         <div class="cs-hint">
           <Icon icon="lucide:mouse-pointer-2" :width="12" />
-          <span>拖拽旋转 · 滚轮缩放 · 右键平移 · 点击节点查看详情 · 点击岗位高亮全链路 · 双击重置</span>
+          <span>{{ hintText }}</span>
         </div>
       </div>
     </div>
@@ -959,7 +1036,7 @@ const importanceLabels: Record<string, string> = {
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.cs-header__left { display: flex; align-items: center; gap: 14px; }
+.cs-header__left { display: flex; align-items: flex-start; gap: 14px; }
 .cs-header__right { display: flex; align-items: center; gap: 16px; }
 
 .cs-back {
@@ -973,10 +1050,39 @@ const importanceLabels: Record<string, string> = {
 }
 .cs-back:hover { border-color: #aaa; color: #222; }
 
-.cs-brand { display: flex; align-items: center; }
+.cs-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.cs-brand__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 .cs-brand__title {
   font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
   color: #222; white-space: nowrap;
+}
+.cs-brand__mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(192,74,43,0.08);
+  border: 1px solid rgba(192,74,43,0.18);
+  color: #9F3B23;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+.cs-brand__subtitle {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #7A736B;
 }
 
 
@@ -1074,6 +1180,13 @@ const importanceLabels: Record<string, string> = {
   color: #222;
   border-color: #bbb;
   background: #fff;
+}
+.cs-tools__btn:disabled {
+  cursor: not-allowed;
+  color: #A8A29E;
+  border-color: #E7E5E4;
+  background: rgba(255,255,255,0.8);
+  box-shadow: none;
 }
 .cs-tools__btn.is-active {
   color: #C04A2B;
@@ -1443,12 +1556,14 @@ const importanceLabels: Record<string, string> = {
   .cs-tools__btn span { display: none; }
   .cs-hint { display: none; }
   .cs-brand__title { font-size: 13px; }
+  .cs-brand__subtitle { display: none; }
   .cs-panel { width: 220px; top: 10px; right: 10px; bottom: 10px; }
 }
 @media (max-width: 640px) {
   .cs-header { padding: 8px 12px; }
   .cs-back span { display: none; }
   .cs-brand__title { font-size: 12px; }
+  .cs-brand__mode { display: none; }
   .uib__text { display: none; }
   .cs-legend { display: none; }
   .cs-panel {

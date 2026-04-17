@@ -91,6 +91,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { title: '课程体系', requiresAuth: true, roles: [UserRole.STUDENT], immersive: true },
       },
       {
+        path: 'student/skill-graph',
+        name: 'student-skill-graph',
+        component: () => import('@/views/student/CourseSystemGraph.vue'),
+        meta: { title: '技能图谱', requiresAuth: true, roles: [UserRole.STUDENT], immersive: true, keepTopNav: true },
+      },
+      {
         path: 'student/career-ability/graph',
         name: 'career-ability-graph',
         redirect: to => ({ name: 'career-ability', query: to.query }),
