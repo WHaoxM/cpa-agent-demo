@@ -1741,7 +1741,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
             <div class="kpi-label">岗位需求总量 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
-            <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.demandTotal.toLocaleString() }}</span></div>
+            <div class="kpi-val"><span class="kpi-num">14,518</span></div>
             <div class="kpi-tooltip kpi-tooltip--right" v-show="showDemandTip">
               <div class="tooltip-header">需求趋势说明</div>
               <div class="tooltip-body">
