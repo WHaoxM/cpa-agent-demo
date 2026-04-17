@@ -118,6 +118,10 @@ const nodeMeshes = new Map<string, THREE.Mesh>()
 const edgeMeshes: { mesh: THREE.Mesh; edge: CourseEdge }[] = []
 const labelDivs = new Map<string, HTMLDivElement>()
 let posMap3D = new Map<string, THREE.Vector3>()
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 12, 28)
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 7, 0)
+const VIEW_RESET_DURATION = 0.6
+let viewResetTimeline: ReturnType<typeof gsap.timeline> | null = null
 
 /* ═══ 五域配色 ═══ */
 const DOMAIN_COLORS: Record<string, string> = {
@@ -446,8 +450,8 @@ function initScene() {
   scene.background = createModernBgTexture()
 
   camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 200)
-  camera.position.set(0, 12, 28)
-  camera.lookAt(0, 7, 0)
+  camera.position.copy(DEFAULT_CAMERA_POSITION)
+  camera.lookAt(DEFAULT_CAMERA_TARGET)
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
   renderer.setSize(w, h)
@@ -465,7 +469,7 @@ function initScene() {
   controls.minDistance = 8
   controls.maxDistance = 50
   controls.maxPolarAngle = Math.PI * 0.48
-  controls.target.set(0, 7, 0)
+  controls.target.copy(DEFAULT_CAMERA_TARGET)
   controls.update()
 
   renderer.domElement.addEventListener('click', handleClick)
@@ -481,6 +485,56 @@ function initScene() {
     }
   }
   loop()
+}
+
+function applyDefaultView() {
+  if (!camera || !controls) return
+  controls.enabled = true
+  camera.position.copy(DEFAULT_CAMERA_POSITION)
+  controls.target.copy(DEFAULT_CAMERA_TARGET)
+  camera.lookAt(DEFAULT_CAMERA_TARGET)
+  controls.update()
+}
+
+function resetView(animate = true) {
+  if (!camera || !controls) return
+
+  viewResetTimeline?.kill()
+  viewResetTimeline = null
+  gsap.killTweensOf(camera.position)
+  gsap.killTweensOf(controls.target)
+
+  if (!animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    applyDefaultView()
+    return
+  }
+
+  controls.enabled = false
+  viewResetTimeline = gsap.timeline({
+    defaults: { duration: VIEW_RESET_DURATION, ease: 'power2.out' },
+    onUpdate: () => {
+      controls?.update()
+    },
+    onComplete: () => {
+      if (!camera || !controls) return
+      camera.lookAt(controls.target)
+      controls.enabled = true
+      controls.update()
+      viewResetTimeline = null
+    },
+  })
+
+  viewResetTimeline
+    .to(camera.position, {
+      x: DEFAULT_CAMERA_POSITION.x,
+      y: DEFAULT_CAMERA_POSITION.y,
+      z: DEFAULT_CAMERA_POSITION.z,
+    }, 0)
+    .to(controls.target, {
+      x: DEFAULT_CAMERA_TARGET.x,
+      y: DEFAULT_CAMERA_TARGET.y,
+      z: DEFAULT_CAMERA_TARGET.z,
+    }, 0)
 }
 
 /* ═══ 构建分层平台 ═══ */
@@ -716,11 +770,13 @@ function handleHover(event: MouseEvent) {
   renderer.domElement.style.cursor = newHover ? 'pointer' : ''
 }
 
-function handleDblClick() {
+function handleDblClick(event: MouseEvent) {
+  event.preventDefault()
   selectedSkillId.value = null
   selectedCareerId.value = null
   highlightTier.value = null
   updateHighlight()
+  resetView()
 }
 
 function closePanel() {
@@ -750,10 +806,20 @@ function playEntrance() {
   if (!shellRef.value || !camera) return
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const cam = camera
-  const startPos = { x: cam.position.x, y: cam.position.y + 8, z: cam.position.z + 12 }
+  const startPos = {
+    x: DEFAULT_CAMERA_POSITION.x,
+    y: DEFAULT_CAMERA_POSITION.y + 8,
+    z: DEFAULT_CAMERA_POSITION.z + 12,
+  }
   cam.position.set(startPos.x, startPos.y, startPos.z)
   return gsap.context(() => {
-    gsap.to(cam.position, { x: 0, y: 12, z: 28, duration: 1.4, ease: 'power3.out' })
+    gsap.to(cam.position, {
+      x: DEFAULT_CAMERA_POSITION.x,
+      y: DEFAULT_CAMERA_POSITION.y,
+      z: DEFAULT_CAMERA_POSITION.z,
+      duration: 1.4,
+      ease: 'power3.out',
+    })
     gsap.from('.cs-header', { y: -28, opacity: 0, duration: 0.5, ease: 'power3.out' })
     gsap.from('.cs-legend', { y: 16, opacity: 0, duration: 0.5, ease: 'power2.out', delay: 0.55 })
   }, shellRef.value)
@@ -765,6 +831,8 @@ function disposeScene() {
   renderer?.domElement.removeEventListener('click', handleClick)
   renderer?.domElement.removeEventListener('mousemove', handleHover)
   renderer?.domElement.removeEventListener('dblclick', handleDblClick)
+  viewResetTimeline?.kill()
+  viewResetTimeline = null
   controls?.dispose()
   for (const [, mesh] of nodeMeshes) {
     (mesh.material as THREE.Material).dispose()
@@ -871,14 +939,17 @@ const importanceLabels: Record<string, string> = {
           <span class="cs-tooltip__tier">{{ hoverTooltip.tier }}</span>
         </div>
 
+        <div class="cs-primary-action">
+          <button class="cs-tools__btn cs-tools__btn--learning" :disabled="!canGoToLearningCenter" @click="goToLearningCenter">
+            <Icon icon="lucide:book-open" :width="14" />
+            <span>{{ learningButtonLabel }}</span>
+          </button>
+        </div>
+
         <div class="cs-tools">
           <button class="cs-tools__btn" :class="{ 'is-active': showLabels }" @click="toggleLabels">
             <Icon :icon="showLabels ? 'lucide:tag' : 'lucide:tag-off'" :width="14" />
             <span>{{ showLabels ? '隐藏节点名称' : '显示节点名称' }}</span>
-          </button>
-          <button class="cs-tools__btn cs-tools__btn--learning" :disabled="!canGoToLearningCenter" @click="goToLearningCenter">
-            <Icon icon="lucide:book-open" :width="14" />
-            <span>{{ learningButtonLabel }}</span>
           </button>
         </div>
 
@@ -1155,7 +1226,16 @@ const importanceLabels: Record<string, string> = {
   border-left: 1px solid rgba(255,255,255,0.2);
 }
 
-/* ═══ 右上工具栏 ═══ */
+/* ═══ 顶部工具栏 ═══ */
+.cs-primary-action {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 7;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
 .cs-tools {
   position: absolute;
   top: 16px; right: 16px; z-index: 5;
@@ -1552,8 +1632,10 @@ const importanceLabels: Record<string, string> = {
   .cs-bookmarks { top: 6%; max-height: 52%; gap: 1px; }
   .cs-bookmark { font-size: 10px; padding: 6px 10px 6px 8px; }
   .cs-bookmark__label { display: none; }
+  .cs-primary-action { top: 10px; left: 10px; }
   .cs-tools { top: 10px; right: 10px; }
-  .cs-tools__btn span { display: none; }
+  .cs-tools__btn span,
+  .cs-primary-action .cs-tools__btn span { display: none; }
   .cs-hint { display: none; }
   .cs-brand__title { font-size: 13px; }
   .cs-brand__subtitle { display: none; }
