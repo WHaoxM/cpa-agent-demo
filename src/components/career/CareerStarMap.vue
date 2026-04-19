@@ -7,10 +7,14 @@ import type { BubbleDomain } from '@/composables/useCareerInsights'
 const props = withDefaults(defineProps<{
   userName?: string
   statusText?: string
+  theme?: 'light' | 'dark'
 }>(), {
   userName: '',
   statusText: '探索 5 大领域 · 15 个职业方向',
+  theme: 'light',
 })
+
+const isDark = computed(() => props.theme === 'dark')
 
 const JOB_DESCRIPTIONS: Record<string, string> = {
   'Vue 前端工程师': '使用 Vue 生态构建交互丰富的 Web 应用，关注组件化与工程化实践。',
@@ -31,21 +35,21 @@ const JOB_DESCRIPTIONS: Record<string, string> = {
 }
 
 const JOB_SHORT: Record<string, string> = {
-  'Vue 前端工程师': 'Vue',
-  'React 前端工程师': 'React',
-  '可视化工程师': '可视化',
-  'Java 后端工程师': 'Java',
-  'Go 后端工程师': 'Go',
-  'Python 后端工程师': 'Python',
-  '自动化测试工程师': '自动化',
-  '质量平台工程师': '质量',
-  '性能测试工程师': '性能',
-  '商业数据分析师': '商业',
-  '数据开发工程师': '数仓',
-  '增长分析师': '增长',
-  '算法工程师': '算法',
+  'Vue 前端工程师': 'Vue前端',
+  'React 前端工程师': 'React前端',
+  '可视化工程师': '数据可视化',
+  'Java 后端工程师': 'Java后端',
+  'Go 后端工程师': 'Go后端',
+  'Python 后端工程师': 'Python后端',
+  '自动化测试工程师': '自动化测试',
+  '质量平台工程师': '测试平台',
+  '性能测试工程师': '性能测试',
+  '商业数据分析师': '商业数分',
+  '数据开发工程师': '数据开发',
+  '增长分析师': '增长数分',
+  '算法工程师': '算法工程',
   '深度学习工程师': '深度学习',
-  'AI 应用工程师': 'AI应用',
+  'AI 应用工程师': 'AI应用开发',
 }
 
 interface StarNode {
@@ -101,9 +105,10 @@ const starNodes = computed<StarNode[]>(() => {
       const radius = RING_RADII[domainIndex]!
       const angleDeg = BASE_ANGLES_DEG[domainIndex]! + jobIndex * 120
       const angle = (angleDeg * Math.PI) / 180
+      const shortName = JOB_SHORT[jobName] ?? jobName.slice(0, 3)
       const cx = centerX + radius * Math.cos(angle)
       const cy = centerY + radius * Math.sin(angle)
-      const labelRadius = radius + 22
+      const labelRadius = radius + 24 + Math.max(shortName.length - 4, 0) * 4
       const lx = centerX + labelRadius * Math.cos(angle)
       const ly = centerY + labelRadius * Math.sin(angle)
       const cosAngle = Math.cos(angle)
@@ -112,7 +117,7 @@ const starNodes = computed<StarNode[]>(() => {
       return {
         key: `${domain.id}-${jobIndex}`,
         jobName,
-        shortName: JOB_SHORT[jobName] ?? jobName.slice(0, 3),
+        shortName,
         description: JOB_DESCRIPTIONS[jobName] ?? '',
         domainId: domain.id,
         domainName: domain.name,
@@ -198,28 +203,28 @@ function closeStarPopup() {
 </script>
 
 <template>
-  <div class="rp-right">
+  <div class="rp-right" :class="{ 'rp-right--dark': isDark }">
     <div class="rp-orbital-scene">
       <div class="rp-orbital-field" @click="closeStarPopup">
         <svg class="rp-orbital-svg" viewBox="0 0 520 520" fill="none" aria-hidden="true">
           <defs>
             <radialGradient id="rpCG2" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#BE2A00" stop-opacity="0.07"/>
-              <stop offset="60%" stop-color="#BE2A00" stop-opacity="0.02"/>
+              <stop offset="0%" stop-color="#BE2A00" :stop-opacity="isDark ? 0.18 : 0.07"/>
+              <stop offset="60%" stop-color="#BE2A00" :stop-opacity="isDark ? 0.06 : 0.02"/>
               <stop offset="100%" stop-color="#BE2A00" stop-opacity="0"/>
             </radialGradient>
             <pattern id="rpGrid" x="0" y="0" width="26" height="26" patternUnits="userSpaceOnUse">
-              <circle cx="13" cy="13" r="0.7" fill="rgba(0,0,0,0.07)"/>
+              <circle cx="13" cy="13" r="0.7" :fill="isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.07)'"/>
             </pattern>
             <filter id="rpNoise" x="0" y="0" width="100%" height="100%">
               <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch" result="n"/>
               <feColorMatrix type="saturate" values="0" in="n" result="g"/>
-              <feComponentTransfer in="g"><feFuncA type="linear" slope="0.025"/></feComponentTransfer>
+              <feComponentTransfer in="g"><feFuncA type="linear" :slope="isDark ? 0.01 : 0.025"/></feComponentTransfer>
             </filter>
           </defs>
 
-          <rect width="520" height="520" fill="url(#rpGrid)" opacity="0.85"/>
-          <rect width="520" height="520" filter="url(#rpNoise)"/>
+          <rect width="520" height="520" fill="url(#rpGrid)" :opacity="isDark ? 0.3 : 0.85"/>
+          <rect v-if="!isDark" width="520" height="520" filter="url(#rpNoise)"/>
 
           <g class="rp-dots">
             <circle cx="42" cy="88" r="1.2"/><circle cx="480" cy="62" r="1.5"/><circle cx="310" cy="30" r="1.0"/>
@@ -235,7 +240,7 @@ function closeStarPopup() {
             <circle cx="30" cy="470" r="0.8"/><circle cx="260" cy="505" r="0.9"/><circle cx="435" cy="460" r="0.7"/>
             <circle cx="185" cy="340" r="0.8"/><circle cx="340" cy="370" r="0.7"/><circle cx="470" cy="400" r="0.8"/>
           </g>
-          <g stroke="rgba(0,0,0,0.05)" stroke-width="0.8">
+          <g :stroke="isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'" stroke-width="0.8">
             <line x1="46" y1="38" x2="52" y2="38"/><line x1="49" y1="35" x2="49" y2="41"/>
             <line x1="475" y1="478" x2="481" y2="478"/><line x1="478" y1="475" x2="478" y2="481"/>
             <line x1="472" y1="28" x2="478" y2="28"/><line x1="475" y1="25" x2="475" y2="31"/>
@@ -307,12 +312,12 @@ function closeStarPopup() {
               :text-anchor="node.textAnchor"
               :dominant-baseline="node.labelBaseline"
               :class="['rp-star-label', `rp-star-label--${index}`]"
-              :style="{ fill: clickedNodeKey === node.key ? node.domainColor : 'var(--ink-700, #3D3D3D)' }"
+              :style="{ fill: clickedNodeKey === node.key ? node.domainColor : (isDark ? 'rgba(255,255,255,0.78)' : 'var(--ink-700, #3D3D3D)') }"
             >{{ node.shortName }}</text>
           </g>
         </svg>
 
-        <div class="rp-orbital-center">
+        <div v-if="!isDark" class="rp-orbital-center">
           <div class="rp-orbital-avatar">{{ userInitial }}</div>
           <span class="rp-oc-name">{{ displayName }}</span>
           <span class="rp-oc-status">{{ statusText }}</span>
@@ -340,7 +345,7 @@ function closeStarPopup() {
       </div>
     </div>
 
-    <div class="rp-right-footer">
+    <div v-if="!isDark" class="rp-right-footer">
       <div class="rp-rf-item"><span class="rp-rf-val">15</span><span class="rp-rf-lbl">职业方向</span></div>
       <span class="rp-rf-sep">|</span>
       <div class="rp-rf-item"><span class="rp-rf-val">5</span><span class="rp-rf-lbl">大领域</span></div>
@@ -373,6 +378,42 @@ function closeStarPopup() {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+}
+
+.rp-right--dark {
+  background-color: transparent;
+  background-image: none;
+}
+
+.rp-right--dark .rp-dots circle {
+  fill: rgba(255,255,255,0.15);
+}
+
+.rp-right--dark .rp-star-popup {
+  background: #1a1525;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.rp-right--dark .rp-star-popup__title {
+  color: rgba(255,255,255,0.92);
+}
+
+.rp-right--dark .rp-star-popup__desc {
+  color: rgba(255,255,255,0.58);
+}
+
+.rp-right--dark .rp-star-popup__close {
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.45);
+}
+
+.rp-right--dark .rp-orbital-scene {
+  padding: 8px;
+}
+
+.rp-right--dark .rp-orbital-field {
+  width: min(100%, calc(100vh - 100px));
 }
 
 .rp-orbital-scene {
@@ -464,7 +505,7 @@ function closeStarPopup() {
 .rp-star-node--active { filter: drop-shadow(0 0 5px currentColor); }
 
 .rp-star-label {
-  font-size: 8.5px;
+  font-size: 9px;
   font-family: var(--font-body, 'Noto Sans SC', sans-serif);
   letter-spacing: 0.02em;
   pointer-events: none;

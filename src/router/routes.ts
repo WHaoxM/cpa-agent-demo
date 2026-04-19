@@ -5,7 +5,9 @@ import { UserRole } from '@/types'
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/login',
+    name: 'landing',
+    component: () => import('@/views/LandingView.vue'),
+    meta: { title: '职导星图', public: true },
   },
   {
     path: '/login',

@@ -1,7 +1,7 @@
 ﻿<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { forceSimulation, forceCenter, forceCollide, forceManyBody, forceX, forceY, type SimulationNodeDatum } from 'd3'
+import * as d3 from 'd3'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { useResumeStore } from '@/stores/resume'
@@ -14,6 +14,7 @@ import {
   deriveStudentSevenDim, getGrowthPlan,
   type JobPortrait, type JobLevel,
 } from '@/mock/careerReportData'
+import { CAREER_DOMAINS } from '@/composables/useCareerInsights'
 import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 import { gsap } from '@/plugins/gsap'
@@ -161,10 +162,13 @@ const recommendedIds = computed<Set<string>>(() => {
 const selectedJob = computed(() => JOB_PORTRAITS.find(j => j.id === selectedJobId.value) ?? null)
 
 /* 统一匹配度：与气泡图一致，推荐岗位 +0.2 */
+function getDisplayMatchScore(job: JobPortrait | null | undefined): number {
+  if (!job) return 0
+  return recommendedIds.value.has(job.id) ? Math.min(1, job.matchScore + 0.2) : job.matchScore
+}
+
 const effectiveMatchScore = computed(() => {
-  if (!selectedJob.value) return 0
-  const raw = selectedJob.value.matchScore
-  return recommendedIds.value.has(selectedJob.value.id) ? Math.min(1, raw + 0.2) : raw
+  return getDisplayMatchScore(selectedJob.value)
 })
 
 /* ══ 学生七维 ══ */
@@ -177,66 +181,148 @@ const studentDim = computed(() => {
 /* ══ 成长计划 ══ */
 const growthPlan = computed(() => selectedJobId.value ? getGrowthPlan(selectedJobId.value) : [])
 
-/* ══ Circle Packing 气泡图布局 ══ */
-type BubbleItem = { job: JobPortrait; x: number; y: number; r: number }
+/* ══ 水墨分组气泡图 ══ */
+type ReportBubbleJob = JobPortrait & {
+  domainId: string
+  domainName: string
+  domainColor: string
+  displayMatchScore: number
+}
 
-const BB_W = 360, BB_H = 300
+type ReportBubbleGroup = {
+  domainId: string
+  domainName: string
+  domainColor: string
+  jobs: ReportBubbleJob[]
+}
 
-function circlePack(circles: Array<{ id: string; r: number }>): Array<{ id: string; x: number; y: number; r: number }> {
-  if (!circles.length) return []
-  const placed: Array<{ id: string; x: number; y: number; r: number }> = []
-  const c0 = circles[0]!
-  placed.push({ id: c0.id, r: c0.r, x: 0, y: 0 })
-  if (circles.length === 1) return placed
+interface ReportBubbleDomainNode extends d3.SimulationNodeDatum {
+  id: string
+  name: string
+  color: string
+  r: number
+  labelY: number
+  jobs: ReportBubbleJobNode[]
+  _phaseX?: number
+  _phaseY?: number
+}
 
-  const c1 = circles[1]!
-  placed.push({ id: c1.id, r: c1.r, x: c0.r + c1.r, y: 0 })
-  if (circles.length === 2) return placed
+interface ReportBubbleJobNode extends d3.SimulationNodeDatum {
+  id: string
+  title: string
+  matchScore: number
+  salaryRange: string
+  domainId: string
+  domainName: string
+  domainColor: string
+  r: number
+  _phaseX?: number
+  _phaseY?: number
+}
 
-  for (let i = 2; i < circles.length; i++) {
-    const c = circles[i]
-    if (!c) continue
-    let bestX = 0, bestY = 0, bestDist = Infinity
-    for (let a = 0; a < placed.length; a++) {
-      for (let b = a + 1; b < placed.length; b++) {
-        const pa = placed[a]!, pb = placed[b]!
-        const pts = tangentCircle(pa, pb, c.r)
-        for (const pt of pts) {
-          if (placed.every(p => Math.sqrt((pt.x - p.x) ** 2 + (pt.y - p.y) ** 2) >= p.r + c.r - 0.5)) {
-            const d = pt.x * pt.x + pt.y * pt.y
-            if (d < bestDist) { bestDist = d; bestX = pt.x; bestY = pt.y }
-          }
-        }
-      }
-    }
-    placed.push({ id: c.id, r: c.r, x: bestX, y: bestY })
+const bubbleSvgRef = ref<SVGSVGElement | null>(null)
+let bubbleResizeObserver: ResizeObserver | null = null
+let bubbleOuterSim: d3.Simulation<ReportBubbleDomainNode, undefined> | null = null
+let bubbleInnerSims: Array<d3.Simulation<ReportBubbleJobNode, undefined>> = []
+
+const REPORT_DOMAIN_ID_BY_LINE: Record<string, string> = {
+  frontend: 'frontend',
+  backend: 'backend',
+  qa: 'qa',
+  data: 'data',
+  'data-analyst': 'data',
+  algorithm: 'ml',
+  ai: 'ml',
+}
+
+const REPORT_DOMAIN_META_BY_ID = new Map(CAREER_DOMAINS.map(domain => [domain.id, domain] as const))
+
+function getReportBubbleDomainMeta(job: JobPortrait) {
+  const mappedId = REPORT_DOMAIN_ID_BY_LINE[job.lineId] ?? 'frontend'
+  const domain = REPORT_DOMAIN_META_BY_ID.get(mappedId) ?? CAREER_DOMAINS[0]!
+  return {
+    domainId: domain.id,
+    domainName: domain.name,
+    domainColor: domain.color,
   }
-  return placed
 }
 
-function tangentCircle(a: { x: number; y: number; r: number }, b: { x: number; y: number; r: number }, rc: number) {
-  const dx = b.x - a.x, dy = b.y - a.y
-  const dab = Math.sqrt(dx * dx + dy * dy)
-  if (dab < 1e-6) return []
-  const ra = a.r + rc, rb = b.r + rc
-  const cosA = (dab * dab + ra * ra - rb * rb) / (2 * dab * ra)
-  if (Math.abs(cosA) > 1) return []
-  const sinA = Math.sqrt(1 - cosA * cosA)
-  const angle = Math.atan2(dy, dx)
-  return [
-    { x: a.x + ra * Math.cos(angle + Math.asin(sinA)), y: a.y + ra * Math.sin(angle + Math.asin(sinA)) },
-    { x: a.x + ra * Math.cos(angle - Math.asin(sinA)), y: a.y + ra * Math.sin(angle - Math.asin(sinA)) },
+function getReportBubbleTextColor(color: string, isSelected = false): string {
+  const normalized = color.trim().replace(/^#/, '')
+  const hex = normalized.length === 3
+    ? normalized.split('').map(char => char + char).join('')
+    : normalized
+
+  if (!/^[\da-fA-F]{6}$/.test(hex)) {
+    return isSelected ? 'rgba(255,252,246,0.99)' : 'rgba(255,252,246,0.96)'
+  }
+
+  const r = Number.parseInt(hex.slice(0, 2), 16)
+  const g = Number.parseInt(hex.slice(2, 4), 16)
+  const b = Number.parseInt(hex.slice(4, 6), 16)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  if (brightness >= 160) {
+    return isSelected ? 'rgba(30,18,8,0.98)' : 'rgba(43,27,13,0.96)'
+  }
+  return isSelected ? 'rgba(255,252,246,0.99)' : 'rgba(255,252,246,0.96)'
+}
+
+function getReportBubbleLabel(title: string): string {
+  const compact = title.replace(/（[^）]+）/g, '').replace(/\s+/g, '')
+  const aliasRules: Array<[RegExp, string]> = [
+    [/Java后端工程师/, 'Java后端'],
+    [/Go后端工程师/, 'Go后端'],
+    [/Python后端工程师/, 'Python后端'],
+    [/推荐算法工程师/, '推荐算法'],
+    [/深度学习工程师/, '深度学习'],
+    [/LLM应用工程师/, 'LLM应用'],
+    [/商业数据分析师/, '商业数分'],
+    [/数据开发工程师/, '数据开发'],
+    [/增长分析师/, '增长数分'],
+    [/自动化测试工程师/, '自动化测试'],
+    [/质量平台工程师/, '质量平台'],
+    [/性能测试工程师/, '性能测试'],
+    [/可视化工程师/, '数据可视化'],
   ]
+
+  for (const [pattern, replacement] of aliasRules) {
+    if (pattern.test(compact)) return compact.replace(pattern, replacement)
+  }
+
+  return compact
+    .replace(/工程师/g, '')
+    .replace(/分析师/g, '分析')
+    .replace(/技术负责人/g, '负责人')
 }
 
-const bubbleLayout = computed<BubbleItem[]>(() => {
-  /* 只从 15 职业白名单中选气泡，优先推荐岗位 */
-  const weighted = [...JOB_PORTRAITS]
-    .filter(j => CLIMB_JOB_IDS.has(j.id))
-    .map(j => ({ ...j, matchScore: recommendedIds.value.has(j.id) ? Math.min(1, j.matchScore + 0.2) : j.matchScore }))
-    .sort((a, b) => b.matchScore - a.matchScore)
+function getReportBubbleLines(title: string, r: number): string[] {
+  const label = getReportBubbleLabel(title)
+  if (r < 20) return [label.slice(0, Math.min(4, label.length))]
+  if (label.length <= 4) return [label]
 
-  /* 心仪岗位方向强制占位：若有 evaluatingRole，保证该方向至少 1 个气泡 */
+  const boundary = label.search(/[a-zA-Z][^\x00-\x7F]|[^\x00-\x7F][a-zA-Z]/)
+  const split = boundary > 0 ? boundary + 1 : Math.ceil(label.length / 2)
+  const line1 = label.slice(0, split).trim()
+  const line2 = label.slice(split).trim()
+  if (!line2) return [line1]
+  return [line1, r < 24 && line2.length > 5 ? `${line2.slice(0, 4)}…` : line2]
+}
+
+function getReportBubbleTitleOffset(r: number, lineCount: number): number {
+  if (lineCount >= 2) return r >= 24 ? 4.5 : 3.5
+  return r >= 24 ? 6 : 4.5
+}
+
+function getReportBubbleScoreOffset(r: number, lineCount: number): number {
+  if (lineCount >= 2) return r >= 24 ? -Math.min(r * 0.64, 16) : -Math.min(r * 0.58, 12)
+  return r >= 24 ? -Math.min(r * 0.56, 14) : -Math.min(r * 0.5, 10)
+}
+
+const bubbleJobs = computed<ReportBubbleJob[]>(() => {
+  const weighted = [...JOB_PORTRAITS]
+    .filter(job => CLIMB_JOB_IDS.has(job.id))
+    .sort((a, b) => getDisplayMatchScore(b) - getDisplayMatchScore(a))
+
   const roleToIds: Record<string, string[]> = {
     '前端开发': ['fe-junior', 'fe-mid', 'fe-react-junior', 'fe-vis-junior'],
     '后端开发': ['be-java-junior', 'be-java-mid', 'be-go-junior', 'be-python-junior'],
@@ -244,130 +330,467 @@ const bubbleLayout = computed<BubbleItem[]>(() => {
     '数据分析': ['da-biz-junior', 'da-biz-mid', 'da-dev-junior', 'da-growth-junior'],
     '机器学习工程师': ['algo-recsys-junior', 'algo-recsys-mid', 'dl-junior', 'ai-llm-junior'],
   }
+
   const evalRole = resumeStore.evaluatingRole
-  let pinnedJob: (typeof weighted)[0] | null = null
+  let pinnedJob: JobPortrait | null = null
   if (evalRole) {
     const ids = new Set(roleToIds[evalRole] ?? [])
-    pinnedJob = weighted.find(j => ids.has(j.id)) ?? null
+    pinnedJob = weighted.find(job => ids.has(job.id)) ?? null
   }
 
-  // 过滤：matchScore > 0.4 优先，最多取 8 个；不足时按分数补足
-  const highScore = weighted.filter(j => j.matchScore > 0.4)
-  let sorted = highScore.length >= 8
-    ? highScore.slice(0, 8)
+  const highScoreJobs = weighted.filter(job => getDisplayMatchScore(job) > 0.4)
+  let selectedJobs = highScoreJobs.length >= 8
+    ? highScoreJobs.slice(0, 8)
     : weighted.slice(0, Math.min(8, weighted.length))
 
-  // 确保 pinnedJob 在列表中
-  if (pinnedJob && !sorted.some(j => j.id === pinnedJob!.id)) {
-    sorted = [pinnedJob, ...sorted.slice(0, 7)]
+  if (pinnedJob && !selectedJobs.some(job => job.id === pinnedJob.id)) {
+    selectedJobs = [pinnedJob, ...selectedJobs.slice(0, 7)]
   }
 
-  const circles = sorted.map(j => ({ id: j.id, r: Math.max(16, Math.round(12 + j.matchScore * 28)) }))
-  const packed = circlePack(circles)
-  if (!packed.length) return []
+  if (selectedJob.value && CLIMB_JOB_IDS.has(selectedJob.value.id) && !selectedJobs.some(job => job.id === selectedJob.value!.id)) {
+    selectedJobs = [selectedJob.value, ...selectedJobs.slice(0, 7)]
+  }
 
-  const minX = Math.min(...packed.map(c => c.x - c.r))
-  const maxX = Math.max(...packed.map(c => c.x + c.r))
-  const minY = Math.min(...packed.map(c => c.y - c.r))
-  const maxY = Math.max(...packed.map(c => c.y + c.r))
-  const pw = maxX - minX, ph = maxY - minY
-  const scale = Math.min((BB_W - 20) / pw, (BB_H - 20) / ph, 1.3)
-  const cx = BB_W / 2, cy = BB_H / 2
-  const ocx = (minX + maxX) / 2, ocy = (minY + maxY) / 2
-
-  return packed.map(c => {
-    const job = sorted.find(j => j.id === c.id)!
-    return {
-      job,
-      x: Math.round(cx + (c.x - ocx) * scale),
-      y: Math.round(cy + (c.y - ocy) * scale),
-      r: Math.round(c.r * scale),
-    }
-  })
+  return selectedJobs
+    .map(job => {
+      const meta = getReportBubbleDomainMeta(job)
+      return {
+        ...job,
+        ...meta,
+        displayMatchScore: getDisplayMatchScore(job),
+      }
+    })
+    .sort((a, b) => b.displayMatchScore - a.displayMatchScore)
 })
 
-/* ══ 气泡图标签断行 ══ */
-function splitBubbleTitle(title: string, r: number): string[] {
-  const max = r >= 30 ? 7 : r >= 24 ? 5 : 4
-  if (title.length <= max) return [title]
-  let split = max
-  for (let i = Math.min(max, title.length); i >= 2; i--) {
-    const ch = title[i] ?? ''
-    const prev = title[i - 1] ?? ''
-    if (prev === ' ') { split = i; break }
-    if (/[a-zA-Z0-9]/.test(prev) && !/[a-zA-Z0-9]/.test(ch)) { split = i; break }
-    if (!/[a-zA-Z0-9\s]/.test(prev) && /[a-zA-Z]/.test(ch)) { split = i; break }
+const bubbleGroups = computed<ReportBubbleGroup[]>(() => {
+  const groups = new Map<string, ReportBubbleGroup>()
+  bubbleJobs.value.forEach(job => {
+    const existing = groups.get(job.domainId)
+    if (existing) {
+      existing.jobs.push(job)
+      return
+    }
+    groups.set(job.domainId, {
+      domainId: job.domainId,
+      domainName: job.domainName,
+      domainColor: job.domainColor,
+      jobs: [job],
+    })
+  })
+
+  return [...groups.values()]
+    .map(group => ({
+      ...group,
+      jobs: [...group.jobs].sort((a, b) => b.displayMatchScore - a.displayMatchScore),
+    }))
+    .sort(
+      (a, b) => CAREER_DOMAINS.findIndex(domain => domain.id === a.domainId)
+        - CAREER_DOMAINS.findIndex(domain => domain.id === b.domainId),
+    )
+})
+
+function stopBubbleChart() {
+  if (bubbleOuterSim) {
+    bubbleOuterSim.stop()
+    bubbleOuterSim = null
   }
-  const line1 = title.slice(0, split).trimEnd()
-  const rest = title.slice(split).trimStart()
-  if (!rest) return [line1]
-  if (rest.length <= max) return [line1, rest]
-  return [line1, rest.slice(0, max - 1) + '…']
+  bubbleInnerSims.forEach(sim => sim.stop())
+  bubbleInnerSims = []
 }
 
-/* ══ D3 Force Simulation（气泡漂浮动画）══ */
-type SimNode = SimulationNodeDatum & { id: string; r: number; job: JobPortrait }
-type RenderNode = { id: string; x: number; y: number; r: number; job: JobPortrait }
+function makeElasticCollideForce<N extends d3.SimulationNodeDatum & { r: number }>(nodes: N[], restitution = 0.68) {
+  return () => {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let k = i + 1; k < nodes.length; k++) {
+        const a = nodes[i]!
+        const b = nodes[k]!
+        const dx = (b.x ?? 0) - (a.x ?? 0)
+        const dy = (b.y ?? 0) - (a.y ?? 0)
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1e-6
+        const minDistance = a.r + b.r + 2
+        if (dist >= minDistance) continue
 
-const simNodes = ref<RenderNode[]>([])
-let _sim: ReturnType<typeof forceSimulation<SimNode>> | null = null
-let _orbitAngle = 0
+        const overlap = minDistance - dist
+        const m1 = a.r * a.r
+        const m2 = b.r * b.r
+        const total = m1 + m2
+        const nx = dx / dist
+        const ny = dy / dist
 
-function startSim(items: BubbleItem[]) {
-  _sim?.stop()
-  if (!items.length) { simNodes.value = []; return }
+        a.x = (a.x ?? 0) - nx * overlap * (m2 / total)
+        a.y = (a.y ?? 0) - ny * overlap * (m2 / total)
+        b.x = (b.x ?? 0) + nx * overlap * (m1 / total)
+        b.y = (b.y ?? 0) + ny * overlap * (m1 / total)
 
-  const nodes: SimNode[] = items.map(item => ({
-    id: item.job.id,
-    x: item.x, y: item.y,
-    r: item.r,
-    job: item.job,
-    vx: 0, vy: 0,
-  }))
+        const dvx = (a.vx ?? 0) - (b.vx ?? 0)
+        const dvy = (a.vy ?? 0) - (b.vy ?? 0)
+        const dvn = dvx * nx + dvy * ny
+        if (dvn <= 0) continue
 
-  /* 最大气泡固定在中心 */
-  const largest = nodes.reduce((a, b) => a.r > b.r ? a : b)
-  largest.fx = BB_W / 2
-  largest.fy = BB_H / 2
+        const impulse = (1 + restitution) * dvn / (1 / m1 + 1 / m2)
+        a.vx = (a.vx ?? 0) - (impulse / m1) * nx
+        a.vy = (a.vy ?? 0) - (impulse / m1) * ny
+        b.vx = (b.vx ?? 0) + (impulse / m2) * nx
+        b.vy = (b.vy ?? 0) + (impulse / m2) * ny
+      }
+    }
+  }
+}
 
-  const nonCenter = nodes.filter(n => n.fx === undefined)
-  const nCount = nonCenter.length
-  const cx = BB_W / 2, cy = BB_H / 2
-  /* 轨道半径：最大气泡半径 + 平均小泡半径 + 间距，确保不遮挡 */
-  const avgR = nCount > 0 ? nonCenter.reduce((s, n) => s + n.r, 0) / nCount : 20
-  const orbitR = largest.r + avgR + 8
-  _orbitAngle = 0
+function initBubbleChart() {
+  const svg = bubbleSvgRef.value
+  if (!svg) return
 
-  _sim = forceSimulation(nodes)
-    /* 核心轨道力：每 tick 推进旋转角，驱动各气泡沿轨道环追踪 */
-    .force('orbit', () => {
-      _orbitAngle += 0.0005  /* rad/tick，约 45s 一圈（60fps）*/
-      nonCenter.forEach((n, i) => {
-        const angle = _orbitAngle + i * (2 * Math.PI / nCount)
-        const tx = cx + Math.cos(angle) * orbitR
-        const ty = cy + Math.sin(angle) * orbitR
-        /* 弹簧力：朝轨道目标位置施力，驱动旋转 */
-        n.vx = (n.vx ?? 0) + (tx - (n.x ?? cx)) * 0.09
-        n.vy = (n.vy ?? 0) + (ty - (n.y ?? cy)) * 0.09
+  stopBubbleChart()
+
+  const groups = bubbleGroups.value
+  const root = d3.select(svg)
+  root.selectAll('*').remove()
+  if (!groups.length) return
+
+  const width = svg.clientWidth || 360
+  const height = svg.clientHeight || 300
+  const minSide = Math.min(width, height)
+  const baseJobR = Math.min(30, Math.max(18, minSide / 15))
+  const labelPadding = 12
+  const fontFamily = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif'
+
+  const defs = root.append('defs')
+
+  const inkBleedFilter = defs.append('filter')
+    .attr('id', 'cr-bubble-ink-bleed')
+    .attr('x', '-18%').attr('y', '-18%').attr('width', '136%').attr('height', '136%')
+  inkBleedFilter.append('feTurbulence')
+    .attr('type', 'fractalNoise').attr('baseFrequency', 0.045)
+    .attr('numOctaves', 3).attr('seed', 7).attr('result', 'noise')
+  inkBleedFilter.append('feDisplacementMap')
+    .attr('in', 'SourceGraphic').attr('in2', 'noise').attr('scale', 3).attr('result', 'displaced')
+  inkBleedFilter.append('feGaussianBlur')
+    .attr('in', 'displaced').attr('stdDeviation', 0.6)
+
+  const selectedFilter = defs.append('filter')
+    .attr('id', 'cr-bubble-ink-selected')
+    .attr('x', '-35%').attr('y', '-35%').attr('width', '170%').attr('height', '170%')
+  selectedFilter.append('feGaussianBlur')
+    .attr('in', 'SourceAlpha').attr('stdDeviation', 5).attr('result', 'blur')
+  selectedFilter.append('feFlood')
+    .attr('flood-color', 'rgba(190,42,0,0.35)').attr('result', 'color')
+  selectedFilter.append('feComposite')
+    .attr('in', 'color').attr('in2', 'blur').attr('operator', 'in').attr('result', 'glow')
+  const selectedMerge = selectedFilter.append('feMerge')
+  selectedMerge.append('feMergeNode').attr('in', 'glow')
+  selectedMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+
+  groups.forEach(group => {
+    const jobGradient = defs.append('radialGradient')
+      .attr('id', `cr-job-${group.domainId}`)
+      .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
+    jobGradient.append('stop').attr('offset', '0%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.92)
+    jobGradient.append('stop').attr('offset', '52%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.8)
+    jobGradient.append('stop').attr('offset', '80%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.36)
+    jobGradient.append('stop').attr('offset', '100%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.06)
+
+    const domainGradient = defs.append('radialGradient')
+      .attr('id', `cr-domain-${group.domainId}`)
+      .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
+    domainGradient.append('stop').attr('offset', '0%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.02)
+    domainGradient.append('stop').attr('offset', '58%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.05)
+    domainGradient.append('stop').attr('offset', '88%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.16)
+    domainGradient.append('stop').attr('offset', '100%').attr('stop-color', group.domainColor).attr('stop-opacity', 0.22)
+  })
+
+  const domainCount = groups.length
+  const angleStep = domainCount > 0 ? (Math.PI * 2) / domainCount : 0
+  const spread = Math.min(width, height) * (domainCount <= 2 ? 0.22 : 0.28)
+
+  const domainNodes: ReportBubbleDomainNode[] = groups.map((group, index) => {
+    const jobs: ReportBubbleJobNode[] = group.jobs.map(job => ({
+      id: job.id,
+      title: job.title,
+      matchScore: job.displayMatchScore,
+      salaryRange: job.salaryRange,
+      domainId: group.domainId,
+      domainName: group.domainName,
+      domainColor: group.domainColor,
+      r: Math.max(16, Math.round(12 + job.displayMatchScore * 18)),
+      x: (Math.random() - 0.5) * 20,
+      y: (Math.random() - 0.5) * 20,
+    }))
+
+    const maxJobR = d3.max(jobs, job => job.r) ?? baseJobR
+    const avgJobR = d3.mean(jobs, job => job.r) ?? baseJobR
+    const domainRadius = Math.max(maxJobR * 2.1 + 10, maxJobR + avgJobR + jobs.length * 8)
+
+    let x = width / 2
+    let y = height / 2
+    if (domainCount === 2) {
+      x = width / 2 + (index === 0 ? -1 : 1) * spread * 0.92
+    } else if (domainCount > 2) {
+      const angle = angleStep * index - Math.PI / 2
+      x = width / 2 + Math.cos(angle) * spread
+      y = height / 2 + Math.sin(angle) * spread * 0.86
+    }
+
+    return {
+      id: group.domainId,
+      name: group.domainName,
+      color: group.domainColor,
+      r: domainRadius,
+      labelY: -domainRadius - 8,
+      jobs,
+      x,
+      y,
+    }
+  })
+
+  const domainGroups = root.selectAll<SVGGElement, ReportBubbleDomainNode>('g.cr-domain-group')
+    .data(domainNodes)
+    .enter()
+    .append('g')
+    .attr('class', 'cr-domain-group')
+
+  domainGroups.append('circle')
+    .attr('class', 'domain-bg')
+    .attr('r', domain => domain.r)
+    .attr('fill', domain => `url(#cr-domain-${domain.id})`)
+    .attr('stroke', domain => domain.color)
+    .attr('stroke-width', 0.8)
+    .attr('stroke-opacity', 0.28)
+
+  const domainLabels = domainGroups.append('text')
+    .attr('class', 'domain-label')
+    .attr('x', 0)
+    .attr('y', domain => domain.labelY)
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'auto')
+    .attr('fill', domain => domain.color)
+    .attr('font-size', 12)
+    .attr('font-weight', '700')
+    .attr('font-family', 'KaiTi, STKaiti, serif')
+    .attr('paint-order', 'stroke')
+    .attr('stroke', 'rgba(245,245,243,0.92)')
+    .attr('stroke-width', 3)
+    .text(domain => domain.name)
+
+  domainNodes.forEach((domainNode, index) => {
+    const domainGroup = d3.select(domainGroups.nodes()[index]!)
+    const jobNodes = domainNode.jobs
+
+    const jobGroups = domainGroup.selectAll<SVGGElement, ReportBubbleJobNode>('g.job-node')
+      .data(jobNodes)
+      .enter()
+      .append('g')
+      .attr('class', 'job-node')
+      .style('cursor', 'pointer')
+      .on('click', (_event, job) => {
+        selectJob(job.id)
+      })
+
+    jobGroups.append('circle')
+      .attr('class', 'job-circle')
+      .attr('r', job => job.r)
+      .attr('fill', job => `url(#cr-job-${job.domainId})`)
+      .attr('stroke', 'none')
+      .attr('filter', 'url(#cr-bubble-ink-bleed)')
+
+    jobGroups.append('text')
+      .attr('class', 'job-text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('fill', job => getReportBubbleTextColor(job.domainColor))
+      .attr('font-size', job => Math.max(8, job.r * 0.34))
+      .attr('font-family', fontFamily)
+      .attr('font-weight', '600')
+      .attr('letter-spacing', '0.02em')
+      .attr('pointer-events', 'none')
+      .each(function (job) {
+        const text = d3.select(this)
+        const lines = getReportBubbleLines(job.title, job.r)
+        text.attr('y', getReportBubbleTitleOffset(job.r, lines.length))
+        if (lines.length <= 1) {
+          text.text(lines[0] ?? '')
+          return
+        }
+
+        text.text('')
+        text.append('tspan').attr('x', 0).attr('dy', '-0.45em').text(lines[0] ?? '')
+        text.append('tspan').attr('x', 0).attr('dy', '1.15em').text(lines[1] ?? '')
+      })
+
+    jobGroups.append('text')
+      .attr('class', 'job-score')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('y', job => getReportBubbleScoreOffset(job.r, getReportBubbleLines(job.title, job.r).length))
+      .attr('fill', job => getReportBubbleTextColor(job.domainColor))
+      .attr('fill-opacity', 0.92)
+      .attr('font-size', job => Math.max(8.5, job.r * 0.32))
+      .attr('font-family', '"Inter", "DIN Alternate", "PingFang SC", "Microsoft YaHei", sans-serif')
+      .attr('font-weight', '700')
+      .attr('letter-spacing', '0.01em')
+      .attr('paint-order', 'stroke')
+      .attr('stroke', 'rgba(245,245,243,0.18)')
+      .attr('stroke-width', 1)
+      .attr('pointer-events', 'none')
+      .style('font-variant-numeric', 'tabular-nums')
+      .text(job => `${Math.round(job.matchScore * 100)}%`)
+
+    jobGroups.append('title').text(job => `${job.title}\n匹配度 ${Math.round(job.matchScore * 100)}%\n${job.salaryRange}`)
+
+    const innerBound = Math.max(20, domainNode.r - (d3.max(jobNodes, job => job.r) ?? 0) - 6)
+    jobNodes.forEach(job => {
+      job._phaseX = Math.random() * Math.PI * 2
+      job._phaseY = Math.random() * Math.PI * 2
+    })
+
+    const innerSimulation = d3.forceSimulation(jobNodes)
+      .alphaDecay(0)
+      .alphaTarget(0.15)
+      .velocityDecay(0.18)
+      .force('elasticCollide', makeElasticCollideForce(jobNodes, 0.64))
+      .force('center', d3.forceCenter(0, 0).strength(0.02))
+      .force('wander', () => {
+        jobNodes.forEach(job => {
+          job._phaseX = (job._phaseX ?? 0) + 0.009 + Math.random() * 0.004
+          job._phaseY = (job._phaseY ?? 0) + 0.009 + Math.random() * 0.004
+          job.vx = (job.vx ?? 0) + Math.sin(job._phaseX) * 0.06
+          job.vy = (job.vy ?? 0) + Math.cos(job._phaseY) * 0.06
+        })
+      })
+      .on('tick', () => {
+        jobNodes.forEach(job => {
+          const distance = Math.sqrt((job.x ?? 0) ** 2 + (job.y ?? 0) ** 2)
+          if (distance > innerBound && distance > 0) {
+            const ratio = innerBound / distance
+            job.x = (job.x ?? 0) * ratio
+            job.y = (job.y ?? 0) * ratio
+            const nx = (job.x ?? 0) / innerBound
+            const ny = (job.y ?? 0) / innerBound
+            const radialVelocity = (job.vx ?? 0) * nx + (job.vy ?? 0) * ny
+            if (radialVelocity > 0) {
+              job.vx = (job.vx ?? 0) - 1.65 * radialVelocity * nx
+              job.vy = (job.vy ?? 0) - 1.65 * radialVelocity * ny
+            }
+          }
+        })
+        jobGroups.attr('transform', job => `translate(${job.x ?? 0},${job.y ?? 0})`)
+      })
+
+    bubbleInnerSims.push(innerSimulation)
+  })
+
+  domainNodes.forEach(domain => {
+    domain._phaseX = Math.random() * Math.PI * 2
+    domain._phaseY = Math.random() * Math.PI * 2
+  })
+
+  bubbleOuterSim = d3.forceSimulation(domainNodes)
+    .alphaDecay(0)
+    .alphaTarget(0.12)
+    .velocityDecay(0.18)
+    .force('elasticCollide', makeElasticCollideForce(domainNodes, 0.7))
+    .force('center', d3.forceCenter(width / 2, height / 2).strength(0.01))
+    .force('wander', () => {
+      domainNodes.forEach(domain => {
+        domain._phaseX = (domain._phaseX ?? 0) + 0.007 + Math.random() * 0.003
+        domain._phaseY = (domain._phaseY ?? 0) + 0.007 + Math.random() * 0.003
+        domain.vx = (domain.vx ?? 0) + Math.sin(domain._phaseX) * 0.085
+        domain.vy = (domain.vy ?? 0) + Math.cos(domain._phaseY) * 0.085
       })
     })
-    /* 防重叠：气泡间保持 2px 间隙 */
-    .force('collide', forceCollide<SimNode>(d => d.r + 2).strength(0.9).iterations(4))
-    .alphaTarget(0.35)     /* 持续高能，轨道力始终有效 */
-    .velocityDecay(0.18)   /* 低阻尼 = 惯性强 = 旋转流畅可见 */
-    .on('tick', () => {
-      simNodes.value = nodes.map(n => ({
-        id: n.id,
-        x: Math.max(n.r + 2, Math.min(BB_W - n.r - 2, n.x ?? cx)),
-        y: Math.max(n.r + 2, Math.min(BB_H - n.r - 2, n.y ?? cy)),
-        r: n.r,
-        job: n.job,
-      }))
+    .force('bound', () => {
+      const minVelocity = 0.45
+      domainNodes.forEach(domain => {
+        const pad = domain.r + 14
+        if ((domain.x ?? 0) < pad) {
+          domain.x = pad
+          domain.vx = Math.max(minVelocity, Math.abs(domain.vx ?? 0)) * 0.8
+        }
+        if ((domain.x ?? 0) > width - pad) {
+          domain.x = width - pad
+          domain.vx = -Math.max(minVelocity, Math.abs(domain.vx ?? 0)) * 0.8
+        }
+        if ((domain.y ?? 0) < pad) {
+          domain.y = pad
+          domain.vy = Math.max(minVelocity, Math.abs(domain.vy ?? 0)) * 0.8
+        }
+        if ((domain.y ?? 0) > height - pad) {
+          domain.y = height - pad
+          domain.vy = -Math.max(minVelocity, Math.abs(domain.vy ?? 0)) * 0.8
+        }
+      })
     })
+    .on('tick', () => {
+      domainGroups.attr('transform', domain => `translate(${domain.x ?? width / 2},${domain.y ?? height / 2})`)
+      const svgRect = svg.getBoundingClientRect()
+      domainLabels
+        .attr('x', 0)
+        .attr('y', domain => domain.labelY)
+        .each(function (domain) {
+          const label = d3.select(this)
+          const rect = (this as SVGTextElement).getBoundingClientRect()
+          let offsetX = 0
+          let offsetY = 0
+          const left = rect.left - svgRect.left
+          const right = rect.right - svgRect.left
+          const top = rect.top - svgRect.top
+          const bottom = rect.bottom - svgRect.top
+          if (left < labelPadding) offsetX += labelPadding - left
+          if (right > width - labelPadding) offsetX -= right - (width - labelPadding)
+          if (top < labelPadding) offsetY += labelPadding - top
+          if (bottom > height - labelPadding) offsetY -= bottom - (height - labelPadding)
+          if (offsetX !== 0 || offsetY !== 0) {
+            label
+              .attr('x', offsetX)
+              .attr('y', domain.labelY + offsetY)
+          }
+        })
+    })
+
+  updateBubbleSelection()
 }
 
-watch(bubbleLayout, items => startSim(items), { immediate: true })
-onBeforeUnmount(() => _sim?.stop())
+function updateBubbleSelection() {
+  const svg = bubbleSvgRef.value
+  if (!svg) return
+
+  const selectedDomainId = selectedJob.value ? getReportBubbleDomainMeta(selectedJob.value).domainId : ''
+
+  d3.select(svg).selectAll<SVGGElement, ReportBubbleJobNode>('g.job-node').each(function (job) {
+    const group = d3.select(this)
+    const isSelected = job.id === selectedJobId.value
+    group.select('.job-circle')
+      .classed('job-circle--selected', isSelected)
+      .attr('r', isSelected ? job.r + 3 : job.r)
+      .attr('filter', isSelected ? 'url(#cr-bubble-ink-selected)' : 'url(#cr-bubble-ink-bleed)')
+    group.select('.job-text')
+      .attr('font-weight', isSelected ? '700' : '600')
+      .attr('fill', getReportBubbleTextColor(job.domainColor, isSelected))
+    group.select('.job-score')
+      .attr('fill', getReportBubbleTextColor(job.domainColor, isSelected))
+      .attr('fill-opacity', isSelected ? 0.98 : 0.92)
+  })
+
+  d3.select(svg).selectAll<SVGCircleElement, ReportBubbleDomainNode>('.domain-bg').each(function (domain) {
+    const isActive = selectedDomainId === domain.id
+    d3.select(this)
+      .attr('stroke-opacity', isActive ? 0.5 : 0.28)
+      .attr('stroke-width', isActive ? 1.5 : 0.8)
+  })
+}
+
+watch(
+  bubbleGroups,
+  async () => {
+    if (!bubbleSvgRef.value) return
+    await nextTick()
+    initBubbleChart()
+  },
+  { deep: true },
+)
+
+watch(selectedJobId, () => updateBubbleSelection())
 
 /* ══ 攀岩墙布局 ══ */
 type ClimbNode = { id: string; title: string; level: JobLevel; lineId: string; salaryRange: string; x: number; y: number }
@@ -847,11 +1270,21 @@ function toggleStage(phase: string) {
   if (expandedStages.value.has(phase)) expandedStages.value.delete(phase)
   else expandedStages.value.add(phase)
 }
-onMounted(() => {
-  /* 不自动选中，引导用户主动点击气泡图 */
+onMounted(async () => {
+  await nextTick()
+  initBubbleChart()
+  if (bubbleSvgRef.value) {
+    bubbleResizeObserver = new ResizeObserver(() => initBubbleChart())
+    bubbleResizeObserver.observe(bubbleSvgRef.value)
+  }
 })
 
 onBeforeUnmount(() => {
+  stopBubbleChart()
+  if (bubbleResizeObserver) {
+    bubbleResizeObserver.disconnect()
+    bubbleResizeObserver = null
+  }
   climbTimeline?.kill()
   planTimers.forEach(t => clearTimeout(t))
 })
@@ -1094,43 +1527,9 @@ onBeforeUnmount(() => {
               <span v-if="selectedJob" class="cr-panel-sub">气泡越大匹配度越高</span>
               <span v-else class="cr-panel-sub cr-panel-sub--hint">← 点击气泡选择目标岗位</span>
             </div>
-            <svg :viewBox="`0 0 ${BB_W} ${BB_H}`" class="cr-bubble-svg">
-              <defs>
-                <radialGradient id="bb-warm" cx="50%" cy="50%" r="70%">
-                  <stop offset="0%" stop-color="rgba(196,150,80,0.06)"/>
-                  <stop offset="100%" stop-color="transparent"/>
-                </radialGradient>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#bb-warm)"/>
-              <g
-                v-for="(item, i) in simNodes" :key="item.job.id"
-                class="cr-bubble-g"
-                :class="{ 'cr-bubble-g--sel': selectedJobId === item.job.id }"
-                :style="{
-                  '--c': LINE_COLORS[item.job.lineId] ?? '#8B2500',
-                  '--bd': (3.2 + i * 0.35) + 's',
-                  '--bk': '-' + (i * 0.55) + 's',
-                }"
-                :transform="`translate(${item.x},${item.y})`"
-                @click="selectJob(item.job.id)"
-              >
-                <circle :r="item.r" class="cr-bubble-circle"/>
-                <text v-if="item.r >= 22 && splitBubbleTitle(item.job.title, item.r).length === 1" class="cr-bt" dy="-4">
-                  {{ splitBubbleTitle(item.job.title, item.r)[0] }}
-                </text>
-                <text v-else-if="item.r >= 22 && splitBubbleTitle(item.job.title, item.r).length >= 2" class="cr-bt">
-                  <tspan :x="0" dy="-8" text-anchor="middle">{{ splitBubbleTitle(item.job.title, item.r)[0] }}</tspan>
-                  <tspan :x="0" dy="11" text-anchor="middle">{{ splitBubbleTitle(item.job.title, item.r)[1] }}</tspan>
-                </text>
-                <text v-if="item.r >= 22" class="cr-bp" :dy="splitBubbleTitle(item.job.title, item.r).length >= 2 ? 16 : 10">
-                  {{ Math.round(item.job.matchScore * 100) }}%
-                </text>
-                <text v-else-if="item.r >= 14" class="cr-ba" dy="4">
-                  {{ splitBubbleTitle(item.job.title, item.r)[0] }}
-                </text>
-                <title>{{ item.job.title }} · {{ Math.round(item.job.matchScore * 100) }}%</title>
-              </g>
-            </svg>
+            <div class="cr-bubble-canvas">
+              <svg ref="bubbleSvgRef" class="cr-bubble-svg"></svg>
+            </div>
           </div>
 
           <!-- ② 雷达图 + 差距条 -->
@@ -1157,19 +1556,6 @@ onBeforeUnmount(() => {
             <template v-else>
               <div class="cr-plan-fadein cr-radar-chart-area">
                 <D3RadarChart :data="crRadarData" :show-legend="true" :height="280" />
-              </div>
-              <div v-if="!radarLoading" class="cr-gap-bars">
-                <div v-for="(item, gi) in dimGaps" :key="item.name" class="cr-gap-row cr-task-fadein"
-                  :style="{ animationDelay: gi * 0.08 + 's' }">
-                  <span class="cr-gap-dim">{{ item.name }}</span>
-                  <div class="cr-gap-track">
-                    <div class="cr-gap-bar--mine" :style="{ width: item.mine + '%' }"></div>
-                    <div v-if="item.gap > 0" class="cr-gap-bar--need" :style="{ width: item.gap + '%', left: item.mine + '%' }"></div>
-                  </div>
-                  <span class="cr-gap-num" :class="{ 'cr-gap-num--pos': item.gap <= 0 }">
-                    {{ item.gap > 0 ? '−'+item.gap : '+'+Math.abs(item.gap) }}
-                  </span>
-                </div>
               </div>
             </template>
           </div>
@@ -1572,12 +1958,17 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--bg-300); overflow: hidden;
 }
 .cr-bubble-panel, .cr-radar-panel { display: flex; flex-direction: column; overflow: hidden; }
-.cr-bubble-panel { border-right: 1px solid var(--bg-300); background: linear-gradient(180deg, var(--bg-100) 0%, color-mix(in srgb, var(--bg-200) 50%, var(--bg-100) 50%) 100%); position: relative; }
+.cr-bubble-panel {
+  border-right: 1px solid var(--bg-300);
+  background: linear-gradient(180deg, #F7F5F0 0%, #F0EDE6 100%);
+  position: relative;
+}
 .cr-bubble-panel::before {
   content: ''; position: absolute; inset: 0; z-index: 0;
-  pointer-events: none; opacity: 0.14;
-  background-image: v-bind(parchmentBg);
-  background-size: cover; background-position: center;
+  pointer-events: none;
+  opacity: 0.38;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' seed='3'/%3E%3CfeDiffuseLighting lighting-color='%23fff' surfaceScale='1.5'%3E%3CfeDistantLight azimuth='45' elevation='55'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  background-size: cover;
 }
 .cr-radar-panel { background: var(--bg-100); position: relative; }
 .cr-radar-panel::before {
@@ -1588,47 +1979,38 @@ onBeforeUnmount(() => {
 }
 
 /* ── 气泡图 SVG ── */
-.cr-bubble-svg { display: block; width: 100%; flex: 1; position: relative; z-index: 1; }
-.cr-bubble-g { cursor: pointer; }
-.cr-bubble-g:hover .cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 48%, var(--bg-100) 52%);
-  stroke-opacity: 0.75;
+.cr-bubble-canvas {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  padding: 0 10px 10px;
 }
-@keyframes cr-breathe {
-  0%, 100% { transform: scale(1);    opacity: 1; }
-  50%       { transform: scale(1.12); opacity: 0.9; }
+.cr-bubble-svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-.cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 28%, var(--bg-100) 72%);
-  stroke: var(--c);
-  stroke-width: 1.2;
-  stroke-opacity: 0.45;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: cr-breathe var(--bd, 3.5s) ease-in-out var(--bk, 0s) infinite;
-  transition: fill 180ms ease, stroke-opacity 180ms ease;
+@keyframes cr-ink-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.78; }
 }
-.cr-bubble-g--sel .cr-bubble-circle {
-  fill: color-mix(in srgb, var(--c) 72%, var(--bg-100) 28%);
-  stroke: color-mix(in srgb, var(--c) 88%, #000 12%);
-  stroke-width: 2;
-  stroke-opacity: 1;
+.cr-bubble-canvas :deep(.job-circle) {
+  transition: r 0.25s ease, opacity 0.25s ease;
 }
-.cr-bt {
-  font-size: 10px; font-weight: 600; fill: var(--text-100);
-  text-anchor: middle; pointer-events: none; font-family: var(--font-title);
+.cr-bubble-canvas :deep(.job-circle--selected) {
+  animation: cr-ink-pulse 2s ease-in-out infinite;
 }
-.cr-bp {
-  font-size: 8.5px; fill: var(--text-200, #666);
-  text-anchor: middle; pointer-events: none; font-family: var(--font-ui);
+.cr-bubble-canvas :deep(.domain-bg) {
+  transition: stroke-opacity 0.3s ease, stroke-width 0.3s ease;
 }
-.cr-ba {
-  font-size: 9px; font-weight: 600; fill: var(--text-100);
-  text-anchor: middle; dominant-baseline: central; pointer-events: none; font-family: var(--font-title);
+.cr-bubble-canvas :deep(.domain-label),
+.cr-bubble-canvas :deep(.job-text),
+.cr-bubble-canvas :deep(.job-score) {
+  user-select: none;
 }
-.cr-bubble-g--sel .cr-bt,
-.cr-bubble-g--sel .cr-bp,
-.cr-bubble-g--sel .cr-ba { fill: #fff; }
 
 /* ── ② 雷达图 + 差距条 ── */
 .cr-radar-chart-area { flex: 1; min-height: 0; overflow: hidden; transition: flex-basis 0.5s ease, height 0.5s ease; }
@@ -1652,20 +2034,6 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   width: 10px; height: 10px;
 }
-.cr-gap-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; padding: 4px 8px 6px; animation: cr-gap-enter 0.5s ease both; }
-@keyframes cr-gap-enter { from { opacity: 0; max-height: 0; padding: 0 8px; } to { opacity: 1; max-height: 200px; padding: 4px 8px 6px; } }
-.cr-gap-row  { display: flex; align-items: center; gap: 4px; }
-.cr-gap-dim  { font-size: 9.5px; color: var(--text-200); width: 44px; flex-shrink: 0; font-family: var(--font-ui); }
-.cr-gap-track { flex: 1; height: 7px; background: var(--bg-300); position: relative; overflow: hidden; border-radius: 4px; }
-.cr-gap-bar--mine { position: absolute; top: 0; left: 0; height: 100%; background: var(--primary-100); opacity: 0.65; transition: width 500ms ease; border-radius: 4px; }
-.cr-gap-bar--need {
-  position: absolute; top: 0; height: 100%;
-  background: repeating-linear-gradient(135deg, rgba(139,37,0,0.08), rgba(139,37,0,0.08) 2px, rgba(139,37,0,0.18) 2px, rgba(139,37,0,0.18) 4px);
-  border: 1px dashed rgba(139,37,0,0.3);
-  transition: width 500ms ease, left 500ms ease;
-}
-.cr-gap-num  { font-size: 10px; width: 30px; text-align: right; color: rgba(180,80,60,0.9); font-family: var(--font-ui); }
-.cr-gap-num--pos { color: rgba(60,140,80,0.85); }
 
 /* ── ⑤ 成长计划 ── */
 .cr-center-bottom { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 200px; background: linear-gradient(180deg, var(--bg-100) 0%, var(--bg-200) 100%); }

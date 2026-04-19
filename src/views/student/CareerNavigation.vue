@@ -8,6 +8,7 @@ import { useUserStore } from '@/stores'
 import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useResumeStore } from '@/stores/resume'
 import CareerAgentDashboard from '@/components/career/CareerAgentDashboard.vue'
+import CareerNavigationIdlePreview from '@/components/career/CareerNavigationIdlePreview.vue'
 import { usePortraitSession } from '@/composables/usePortraitSession'
 import type { AgentPortraitInput } from '@/composables/useAgentPortrait'
 import TalentPortrait from '@/views/student/TalentPortrait.vue'
@@ -29,6 +30,9 @@ const uploadedFileName = ref('')
 const parsePhase = ref<ParsePhase>('idle')
 const selectedDirection = ref<CareerRole | ''>('')
 const rightLayoutMode = ref<RightLayoutMode>('idle')
+const dashboardPaneRef = ref<HTMLElement | null>(null)
+const isImmersiveLayout = ref(false)
+const dashboardBaselineWidth = ref(0)
 
 const {
   status: portraitSessionStatus,
@@ -61,6 +65,7 @@ const ACCEPTED_MIME = [
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
 let rightLayoutDelayTimer: number | null = null
 let rightLayoutSettleTimer: number | null = null
+let dashboardPaneObserver: ResizeObserver | null = null
 
 function clearRightLayoutTimers() {
   if (rightLayoutDelayTimer != null) {
@@ -73,6 +78,24 @@ function clearRightLayoutTimers() {
   }
 }
 
+function updateDashboardBaselineWidth(width: number) {
+  if (rightLayoutMode.value === 'split' && width > 0) {
+    dashboardBaselineWidth.value = Math.round(width)
+  }
+}
+
+function setupDashboardPaneObserver() {
+  if (typeof ResizeObserver === 'undefined') return
+  dashboardPaneObserver = new ResizeObserver(entries => {
+    const entry = entries[0]
+    if (!entry) return
+    updateDashboardBaselineWidth(entry.contentRect.width)
+  })
+  if (dashboardPaneRef.value) {
+    dashboardPaneObserver.observe(dashboardPaneRef.value)
+  }
+}
+
 function openRightSplitLayout() {
   clearRightLayoutTimers()
   rightLayoutMode.value = 'split'
@@ -80,6 +103,7 @@ function openRightSplitLayout() {
 
 function collapseRightDashboard() {
   clearRightLayoutTimers()
+  updateDashboardBaselineWidth(dashboardPaneRef.value?.getBoundingClientRect().width ?? 0)
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     rightLayoutMode.value = 'full'
     return
@@ -136,6 +160,8 @@ async function startParse() {
   const input = pasteText.value.trim() || uploadedFileName.value
   if (!input) return
 
+  isImmersiveLayout.value = false
+  dashboardBaselineWidth.value = 0
   parsePhase.value = 'parsing'
   resumeStore.reset()
 
@@ -170,6 +196,8 @@ async function startParse() {
     collapseRightDashboard()
   } catch {
     parsePhase.value = 'idle'
+    isImmersiveLayout.value = false
+    dashboardBaselineWidth.value = 0
     resumeStore.reset()
     resetPortraitSession()
     clearRightLayoutTimers()
@@ -183,6 +211,8 @@ function goBack() {
 
 function resetPage() {
   parsePhase.value = 'idle'
+  isImmersiveLayout.value = false
+  dashboardBaselineWidth.value = 0
   pasteText.value = ''
   uploadedFileName.value = ''
   resumeStore.reset()
@@ -192,6 +222,11 @@ function resetPage() {
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
+function toggleImmersiveLayout() {
+  if (!showLayoutToggle.value) return
+  isImmersiveLayout.value = !isImmersiveLayout.value
+}
+
 /* ═══ 占位：roadmapMap 保留供 Step 3（career-path）使用 ═══
 type Stage = { id: string; level: number; name: string; alias: string; years: string; salary: string; salaryNum: [number,number]; icon: string; skills: string[]; milestones: string[]; status: 'completed'|'current'|'locked' }
 ═══════════════════════════════════════════════════════════ */
@@ -199,6 +234,7 @@ type Stage = { id: string; level: number; name: string; alias: string; years: st
 onMounted(async () => {
   await nextTick()
   setupEntrance()
+  setupDashboardPaneObserver()
   if (resumeStore.draftText) {
     pasteText.value = resumeStore.draftText
     resumeStore.clearDraftText()
@@ -207,6 +243,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   gsapCtx?.revert()
+  dashboardPaneObserver?.disconnect()
   clearRightLayoutTimers()
 })
 
@@ -215,6 +252,16 @@ onBeforeUnmount(() => {
 /* ═══ 星图交互数据 ═══ */
 const showDashboard = computed(() => parsePhase.value !== 'idle')
 const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resumeStore.isParsed)
+const showIdlePreview = computed(() => parsePhase.value === 'idle')
+const isRightPanelActive = computed(() => parsePhase.value !== 'idle')
+const showLayoutToggle = computed(() => showEmbeddedPortrait.value
+  && parsePhase.value === 'done'
+  && portraitSessionStatus.value === 'completed'
+  && rightLayoutMode.value === 'full')
+const layoutToggleLabel = computed(() => (isImmersiveLayout.value ? '恢复默认布局' : '展开沉浸布局'))
+const rightShellStyle = computed(() => ({
+  '--rp-immersive-dashboard-width': `${dashboardBaselineWidth.value > 0 ? Math.round(dashboardBaselineWidth.value) : 260}px`,
+}))
 </script>
 
 <template>
@@ -233,7 +280,7 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
     </header>
 
     <!-- WORKSPACE -->
-    <div class="rp-workspace">
+    <div class="rp-workspace" :class="{ 'rp-workspace--immersive': isImmersiveLayout }">
 
       <!-- LEFT: Editorial + Upload -->
       <div class="rp-left">
@@ -396,9 +443,30 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
       </div>
 
       <!-- RIGHT: Star Map -->
-      <div class="rp-right">
-        <div class="rp-right-shell" :class="'rp-right-shell--' + rightLayoutMode">
+      <div class="rp-right" :class="{ 'rp-right--active': isRightPanelActive }">
+        <CareerNavigationIdlePreview
+          class="rp-right-idle-preview"
+          :class="{ 'rp-right-idle-preview--visible': showIdlePreview }"
+          :aria-hidden="!showIdlePreview"
+        />
+        <div
+          class="rp-right-shell"
+          :class="['rp-right-shell--' + rightLayoutMode, { 'rp-right-shell--immersive': isImmersiveLayout }]"
+          :style="rightShellStyle"
+        >
           <div class="rp-right-portrait-pane">
+            <button
+              v-if="showLayoutToggle"
+              type="button"
+              class="rp-layout-toggle"
+              :class="{ 'rp-layout-toggle--active': isImmersiveLayout }"
+              :aria-label="layoutToggleLabel"
+              :aria-pressed="isImmersiveLayout"
+              @click="toggleImmersiveLayout"
+            >
+              <Icon :icon="isImmersiveLayout ? 'lucide:minimize-2' : 'lucide:maximize-2'" :width="14" />
+              <span>{{ layoutToggleLabel }}</span>
+            </button>
             <TalentPortrait
               v-if="showEmbeddedPortrait"
               embedded
@@ -408,7 +476,7 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
               :session-status="portraitSessionStatus"
             />
           </div>
-          <div class="rp-right-dashboard-pane">
+          <div class="rp-right-dashboard-pane" ref="dashboardPaneRef">
             <CareerAgentDashboard
               v-if="showDashboard"
               class="rp-right-dashboard"
@@ -513,10 +581,15 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 480px 1fr;
+  grid-template-columns: minmax(0, 480px) minmax(0, 1fr);
   position: relative;
   z-index: 1;
   overflow: hidden;
+  transition: grid-template-columns 0.48s cubic-bezier(0.4, 0, 0.2, 1), grid-template-rows 0.48s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rp-workspace--immersive {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 
@@ -532,6 +605,20 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   background: var(--rp-bg);
   position: relative;
   z-index: 1;
+  transition:
+    opacity 0.32s ease,
+    transform 0.48s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.48s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s ease;
+}
+
+.rp-workspace--immersive .rp-left {
+  opacity: 0;
+  transform: translateX(-24px);
+  pointer-events: none;
+  overflow: hidden;
+  padding: 0;
+  border-right-color: transparent;
 }
 
 /* Editorial Headline */
@@ -867,16 +954,41 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
 
 .rp-right {
   background-color: var(--parchment-100, #F5F5F3);
-  background-image:
-    radial-gradient(ellipse at 35% 35%, rgba(190,42,0,0.04) 0%, transparent 55%),
-    radial-gradient(ellipse at 70% 65%, rgba(27,78,139,0.03) 0%, transparent 50%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150'%3E%3Cpath d='M0 50 C40 20 80 80 120 50 S160 20 200 50' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 80 C40 50 80 110 120 80 S160 50 200 80' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 20 C40 -10 80 50 120 20 S160 -10 200 20' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 110 C40 80 80 140 120 110 S160 80 200 110' stroke='%23000' stroke-opacity='0.025' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 130 C40 100 80 160 120 130 S160 100 200 130' stroke='%23000' stroke-opacity='0.02' fill='none' stroke-width='0.9'/%3E%3C/svg%3E");
   background-size: auto, auto, 200px 150px;
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
   border-left: 1px solid var(--rp-border);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.rp-right--active {
+  background-image:
+    radial-gradient(ellipse at 35% 35%, rgba(190,42,0,0.04) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 65%, rgba(27,78,139,0.03) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150'%3E%3Cpath d='M0 50 C40 20 80 80 120 50 S160 20 200 50' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 80 C40 50 80 110 120 80 S160 50 200 80' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 20 C40 -10 80 50 120 20 S160 -10 200 20' stroke='%23000' stroke-opacity='0.035' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 110 C40 80 80 140 120 110 S160 80 200 110' stroke='%23000' stroke-opacity='0.025' fill='none' stroke-width='0.9'/%3E%3Cpath d='M0 130 C40 100 80 160 120 130 S160 100 200 130' stroke='%23000' stroke-opacity='0.02' fill='none' stroke-width='0.9'/%3E%3C/svg%3E");
+}
+
+.rp-right-idle-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.24s ease;
+}
+
+.rp-right-idle-preview :deep(.cnip-surface--radar) {
+  align-self: start;
+  height: auto;
+}
+
+.rp-right-idle-preview--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .rp-right-shell {
@@ -884,7 +996,10 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   min-height: 0;
   display: flex;
   position: relative;
+  z-index: 1;
   overflow: hidden;
+  --rp-immersive-dashboard-width: 260px;
+  --rp-immersive-dashboard-width-current: var(--rp-immersive-dashboard-width);
 }
 
 .rp-right-portrait-pane,
@@ -949,11 +1064,74 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   border-left-color: transparent;
 }
 
+.rp-right-shell--immersive .rp-right-portrait-pane {
+  width: calc(100% - var(--rp-immersive-dashboard-width-current));
+  opacity: 1;
+}
+
+.rp-right-shell--immersive .rp-right-dashboard-pane {
+  width: var(--rp-immersive-dashboard-width-current);
+  opacity: 1;
+  transform: translateX(0);
+  border-left-width: 1px;
+  border-left-color: var(--rp-border);
+}
+
 .rp-right-dashboard,
 .rp-right-portrait {
   width: 100%;
   height: 100%;
   min-height: 0;
+}
+
+.rp-layout-toggle {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--rp-border) 82%, #ffffff 18%);
+  background: color-mix(in srgb, #ffffff 76%, var(--rp-panel) 24%);
+  color: var(--rp-text);
+  font-size: 12px;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  box-shadow: 0 10px 24px rgba(72, 48, 24, 0.12);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+.rp-layout-toggle:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--rp-red) 26%, var(--rp-border) 74%);
+  background: color-mix(in srgb, var(--rp-red) 8%, #ffffff 92%);
+  color: var(--rp-red);
+  box-shadow: 0 14px 28px rgba(139, 26, 0, 0.14);
+}
+
+.rp-layout-toggle:active {
+  transform: translateY(0);
+}
+
+.rp-layout-toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--rp-red) 42%, #ffffff 58%);
+  outline-offset: 2px;
+}
+
+.rp-layout-toggle--active {
+  border-color: color-mix(in srgb, var(--rp-red) 28%, var(--rp-border) 72%);
+  background: color-mix(in srgb, var(--rp-red) 10%, #ffffff 90%);
+  color: var(--rp-red);
 }
 
 .rp-orbital-scene {
@@ -1154,6 +1332,12 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   .rp-star-link,
   .rp-star-label,
   .rp-ripple { animation: none !important; }
+  .rp-workspace,
+  .rp-left,
+  .rp-right-idle-preview,
+  .rp-right-portrait-pane,
+  .rp-right-dashboard-pane,
+  .rp-layout-toggle { transition: none; }
   .rp-domain-group { transition: opacity 0.1s; }
   .rp-pop-enter-active, .rp-pop-leave-active { transition: opacity 0.1s ease; }
 }
@@ -1166,15 +1350,17 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
   .rp-page { display: block !important; height: auto !important; overflow: visible !important; }
 }
 /* Responsive */
-@media (max-width: 1280px) { .rp-workspace { grid-template-columns: 420px 1fr; } }
+@media (max-width: 1280px) { .rp-workspace { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); } }
 @media (max-width: 1024px) {
-  .rp-workspace { grid-template-columns: 340px 1fr; }
+  .rp-workspace { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); }
   .rp-left { padding: 18px 22px 16px; gap: 10px; }
   .rp-dt-b { font-size: 28px; }
   .rp-dt-c { font-size: 20px; }
+  .rp-right-shell { --rp-immersive-dashboard-width-current: min(var(--rp-immersive-dashboard-width), 40%); }
 }
 @media (max-width: 768px) {
   .rp-workspace { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+  .rp-workspace--immersive { grid-template-rows: 0 minmax(0, 1fr); overflow: hidden; }
   .rp-right { min-height: 540px; }
   .rp-right-shell { flex-direction: column; }
   .rp-right-portrait-pane,
@@ -1206,6 +1392,24 @@ const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resum
     opacity: 0;
     transform: translateY(18px);
     border-top-width: 0;
+  }
+  .rp-right-shell--immersive .rp-right-portrait-pane {
+    height: calc(100% - clamp(192px, 30vh, 260px));
+    opacity: 1;
+  }
+  .rp-right-shell--immersive .rp-right-dashboard-pane {
+    height: clamp(192px, 30vh, 260px);
+    opacity: 1;
+    transform: translateY(0);
+    border-left-width: 0;
+    border-top: 1px solid var(--rp-border);
+  }
+  .rp-layout-toggle {
+    top: 12px;
+    right: 12px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
   }
   .rp-orbital-field { width: min(100%, 380px); }
   .rp-star-popup { width: 180px; }
