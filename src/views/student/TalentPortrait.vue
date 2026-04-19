@@ -1,6 +1,6 @@
 <!-- 页面：个人能力画像；路由：student/career-portrait；角色：STUDENT -->
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
@@ -9,8 +9,21 @@ import { useResumeStore } from '@/stores/resume'
 import { useReportStore } from '@/stores/report'
 import { callAgentPortraitStreaming, PHASE_META } from '@/composables/useAgentPortrait'
 import type { AgentPortraitResult, AgentPhase, PhaseData, PersonInfo, AbilityDimension, SummarySource } from '@/composables/useAgentPortrait'
+import type { PortraitReplaySnapshot, PortraitSessionStatus } from '@/composables/usePortraitSession'
 import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
+
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+  replaySnapshots?: PortraitReplaySnapshot[]
+  resultData?: AgentPortraitResult | null
+  sessionStatus?: PortraitSessionStatus
+}>(), {
+  embedded: false,
+  replaySnapshots: () => [],
+  resultData: null,
+  sessionStatus: 'idle',
+})
 
 const router = useRouter()
 const resumeStore = useResumeStore()
@@ -42,6 +55,15 @@ const displaySummary = ref('')
 const summaryDone = ref(false)
 let typingTimer: ReturnType<typeof setInterval> | null = null
 let fullSummaryText = ''
+
+const phaseOrder: Record<AgentPhase, number> = {
+  parsing: 0,
+  evaluating: 1,
+  analyzing: 2,
+  summarizing: 3,
+}
+
+const processedPhases = new Set<AgentPhase>()
 
 function startTyping(fullText: string) {
   displaySummary.value = ''
@@ -88,6 +110,25 @@ function stopTyping() {
   if (typingTimer) { clearInterval(typingTimer); typingTimer = null }
   displaySummary.value = fullSummaryText || portraitData.value?.agentSummary || ''
   summaryDone.value = true
+}
+
+function resetPortraitState() {
+  stopTyping()
+  processedPhases.clear()
+  portraitSaved.value = false
+  portraitData.value = null
+  portraitAgentLoading.value = false
+  currentPhase.value = 'idle'
+  phasePersonInfo.value = null
+  phaseCompleteness.value = 0
+  phaseDimensions.value = []
+  phaseCompetitiveness.value = 0
+  phaseSkillTags.value = []
+  phaseHonors.value = []
+  phaseProjects.value = []
+  displaySummary.value = ''
+  summaryDone.value = false
+  fullSummaryText = ''
 }
 
 function exportPortrait() {
@@ -188,7 +229,7 @@ function animatePhase4() {
 }
 
 /* ═══ 阶段回调处理 ═══ */
-function onPhaseReceived(data: PhaseData) {
+function applyPhaseData(data: PhaseData) {
   if (portraitAgentLoading.value) {
     portraitAgentLoading.value = false
   }
@@ -223,12 +264,78 @@ function onPhaseReceived(data: PhaseData) {
   }
 }
 
-onMounted(async () => {
-  if (!resumeStore.isParsed) {
-    router.replace({ name: 'student-career-navigation' })
+function syncEmbeddedSnapshots(snapshots: PortraitReplaySnapshot[]) {
+  const orderedSnapshots = [...snapshots].sort((a, b) => phaseOrder[a.phase] - phaseOrder[b.phase])
+  portraitData.value = props.resultData ?? null
+  if (!orderedSnapshots.length) {
+    portraitAgentLoading.value = props.sessionStatus === 'running'
+    if (props.sessionStatus === 'completed') {
+      currentPhase.value = 'done'
+    }
     return
   }
+  for (const snapshot of orderedSnapshots) {
+    if (processedPhases.has(snapshot.phase)) continue
+    applyPhaseData(snapshot.data)
+    processedPhases.add(snapshot.phase)
+  }
+  if (props.sessionStatus === 'completed') {
+    portraitAgentLoading.value = false
+    currentPhase.value = 'done'
+  }
+}
+
+watch(
+  () => props.sessionStatus,
+  status => {
+    if (!props.embedded) return
+    if (status === 'idle') {
+      resetPortraitState()
+      return
+    }
+    if (!props.replaySnapshots.length) {
+      portraitAgentLoading.value = status === 'running'
+    }
+    if (status === 'completed' && props.replaySnapshots.length) {
+      portraitAgentLoading.value = false
+      currentPhase.value = 'done'
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => props.resultData,
+  data => {
+    if (!props.embedded) return
+    portraitData.value = data ?? null
+  },
+  { immediate: true },
+)
+
+watch(
+  () => props.replaySnapshots,
+  snapshots => {
+    if (!props.embedded) return
+    syncEmbeddedSnapshots(snapshots)
+  },
+  { deep: true, immediate: true },
+)
+
+onMounted(async () => {
+  if (!resumeStore.isParsed) {
+    if (!props.embedded) {
+      router.replace({ name: 'student-career-navigation' })
+    }
+    return
+  }
+
+  if (props.embedded) {
+    return
+  }
+
   await nextTick()
+  resetPortraitState()
   portraitAgentLoading.value = true
   try {
     portraitData.value = await callAgentPortraitStreaming(
@@ -239,7 +346,7 @@ onMounted(async () => {
         confidence: resumeStore.insights?.confidence ?? 0.7,
         matchedCareers: resumeStore.matchedCareers,
       },
-      onPhaseReceived,
+      applyPhaseData,
     )
     currentPhase.value = 'done'
   } catch {
@@ -253,10 +360,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="tp-page" ref="pageRef">
+  <div :class="['tp-page', { 'tp-page--embedded': props.embedded }]" ref="pageRef">
 
     <!-- HEADER -->
-    <header class="tp-header">
+    <header v-if="!props.embedded" class="tp-header">
       <div class="tp-header__left">
         <button class="tp-back" @click="goBack"><Icon icon="lucide:arrow-left" :width="14"/><span>重新上传</span></button>
         <span class="tp-brand-name">职途导航</span>
@@ -537,6 +644,27 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.tp-page--embedded {
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tp-bg) 72%, #ffffff 28%),
+    color-mix(in srgb, var(--tp-panel) 34%, var(--tp-bg) 66%)
+  );
+  color: var(--tp-text);
+  --tp-embedded-surface: color-mix(in srgb, var(--tp-bg) 22%, #ffffff 78%);
+  --tp-embedded-surface-soft: color-mix(in srgb, var(--tp-panel) 52%, #ffffff 48%);
+  --tp-embedded-border: color-mix(in srgb, var(--tp-border) 82%, #ffffff 18%);
+  --tp-embedded-text: var(--tp-text);
+  --tp-embedded-sub: var(--tp-sub);
+  --tp-embedded-muted: var(--tp-hint);
+  --tp-embedded-blue: var(--color-secondary, #1B4E79);
+  --tp-embedded-green: #447755;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.42);
+}
+
 /* ═══ HEADER ═══ */
 .tp-header {
   position: relative;
@@ -610,6 +738,10 @@ onBeforeUnmount(() => {
 @keyframes tp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .tp-loading-msg { font-size: 13px; color: rgba(200,200,200,0.88); letter-spacing: 0.02em; margin: 0; }
 
+.tp-page--embedded .tp-loading-wrap {
+  padding: 24px 16px;
+}
+
 /* ── Phase Progress Bar ── */
 .tp-phase-bar {
   display: flex;
@@ -620,6 +752,10 @@ onBeforeUnmount(() => {
   background: rgba(10,10,10,0.85);
   border-bottom: 1px solid rgba(212,201,181,0.08);
   flex-shrink: 0;
+}
+
+.tp-page--embedded .tp-phase-bar {
+  padding: 10px 18px;
 }
 .tp-phase-step {
   display: flex;
@@ -682,6 +818,9 @@ onBeforeUnmount(() => {
   display: flex; flex-direction: column; gap: 14px;
   background: var(--tp-dark, #151515);
   color: rgba(220,205,185,0.9);
+}
+.tp-page--embedded .tp-portrait {
+  padding: 18px 18px 20px;
 }
 .tp-portrait::-webkit-scrollbar { width: 3px; }
 .tp-portrait::-webkit-scrollbar-track { background: transparent; }
@@ -971,6 +1110,324 @@ onBeforeUnmount(() => {
 }
 .tp-portrait__step-actions {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+.tp-page--embedded .tp-loading-wrap {
+  padding: 32px 20px;
+}
+.tp-page--embedded .tp-loading-seal {
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--tp-red) 24%, var(--tp-embedded-border) 76%);
+  background: linear-gradient(
+    180deg,
+    var(--tp-embedded-surface),
+    var(--tp-embedded-surface-soft)
+  );
+  box-shadow: var(--shadow-sm);
+}
+.tp-page--embedded .tp-loading-msg {
+  color: var(--tp-embedded-sub);
+}
+.tp-page--embedded .tp-phase-bar {
+  padding: 11px 18px;
+  background: color-mix(in srgb, var(--tp-panel) 72%, #ffffff 28%);
+  border-bottom: 1px solid var(--tp-embedded-border);
+}
+.tp-page--embedded .tp-phase-dot {
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 78%, var(--tp-gold) 22%);
+  background: rgba(255,255,255,0.9);
+  color: var(--tp-embedded-muted);
+}
+.tp-page--embedded .tp-phase-step--done .tp-phase-dot {
+  border-color: color-mix(in srgb, var(--tp-gold) 46%, var(--tp-embedded-border) 54%);
+  background: color-mix(in srgb, var(--tp-gold) 10%, #ffffff 90%);
+  color: var(--tp-gold);
+}
+.tp-page--embedded .tp-phase-step--active .tp-phase-dot {
+  border-color: color-mix(in srgb, var(--tp-red) 60%, var(--tp-embedded-border) 40%);
+  background: color-mix(in srgb, var(--tp-red) 8%, #ffffff 92%);
+  color: var(--tp-red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tp-red) 12%, transparent 88%);
+}
+.tp-page--embedded .tp-phase-label {
+  color: var(--tp-embedded-muted);
+}
+.tp-page--embedded .tp-phase-step--done .tp-phase-label {
+  color: color-mix(in srgb, var(--tp-gold) 76%, var(--tp-embedded-sub) 24%);
+}
+.tp-page--embedded .tp-phase-step--active .tp-phase-label {
+  color: var(--tp-red);
+}
+.tp-page--embedded .tp-phase-line {
+  background: color-mix(in srgb, var(--tp-embedded-border) 72%, transparent 28%);
+}
+.tp-page--embedded .tp-phase-line--done {
+  background: color-mix(in srgb, var(--tp-gold) 42%, var(--tp-embedded-border) 58%);
+}
+.tp-page--embedded .tp-portrait {
+  padding: 20px 20px 22px;
+  gap: 16px;
+  background: transparent;
+  color: var(--tp-embedded-text);
+}
+.tp-page--embedded .tp-portrait::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--tp-red) 28%, var(--tp-embedded-border) 72%);
+}
+.tp-page--embedded .tp-portrait__section-lbl,
+.tp-page--embedded .tp-portrait__tags-inline-lbl {
+  color: var(--tp-embedded-muted);
+}
+.tp-page--embedded .tp-portrait__header,
+.tp-page--embedded .tp-portrait__radar-wrap,
+.tp-page--embedded .tp-portrait__dims,
+.tp-page--embedded .tp-portrait__highlights,
+.tp-page--embedded .tp-portrait__summary,
+.tp-page--embedded .tp-portrait__step-guide {
+  border-radius: var(--radius-lg, 14px);
+  border: 1px solid var(--tp-embedded-border);
+  background: linear-gradient(
+    180deg,
+    var(--tp-embedded-surface),
+    var(--tp-embedded-surface-soft)
+  );
+  box-shadow: var(--shadow-sm);
+}
+.tp-page--embedded .tp-portrait__header {
+  gap: 12px;
+}
+.tp-page--embedded .tp-portrait__avatar {
+  box-shadow: 0 10px 22px rgba(192,52,24,0.18);
+}
+.tp-page--embedded .tp-portrait__name,
+.tp-page--embedded .tp-portrait__dim-label,
+.tp-page--embedded .tp-portrait__dim-score,
+.tp-page--embedded .tp-portrait__project-name,
+.tp-page--embedded .tp-portrait__step-guide-title {
+  color: var(--tp-embedded-text);
+}
+.tp-page--embedded .tp-portrait__grade {
+  background: color-mix(in srgb, var(--tp-gold) 14%, #ffffff 86%);
+  border-color: color-mix(in srgb, var(--tp-gold) 32%, var(--tp-embedded-border) 68%);
+  color: var(--tp-gold);
+}
+.tp-page--embedded .tp-portrait__target {
+  color: var(--tp-red);
+}
+.tp-page--embedded .tp-portrait__school-row span,
+.tp-page--embedded .tp-portrait__honor-item,
+.tp-page--embedded .tp-portrait__dim-desc,
+.tp-page--embedded .tp-portrait__summary-text,
+.tp-page--embedded .tp-portrait__suggestion-text,
+.tp-page--embedded .tp-portrait__self-summary,
+.tp-page--embedded .tp-portrait__step-guide-desc,
+.tp-page--embedded .tp-portrait__project-desc,
+.tp-page--embedded .tp-portrait__honor-lbl {
+  color: var(--tp-embedded-sub);
+}
+.tp-page--embedded .tp-portrait__meta-icon,
+.tp-page--embedded .tp-portrait__sep {
+  color: var(--tp-embedded-muted) !important;
+}
+.tp-page--embedded .tp-portrait__score-banner {
+  gap: 10px;
+}
+.tp-page--embedded .tp-portrait__score-card {
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+.tp-page--embedded .tp-portrait__score-card--pending {
+  opacity: 0.72;
+}
+.tp-page--embedded .tp-portrait__score-card--completeness {
+  background: color-mix(in srgb, var(--tp-embedded-green) 10%, #ffffff 90%);
+  border-color: color-mix(in srgb, var(--tp-embedded-green) 30%, var(--tp-embedded-border) 70%);
+}
+.tp-page--embedded .tp-portrait__score-card--competitiveness {
+  background: color-mix(in srgb, var(--tp-red) 10%, #ffffff 90%);
+  border-color: color-mix(in srgb, var(--tp-red) 30%, var(--tp-embedded-border) 70%);
+}
+.tp-page--embedded .tp-portrait__score-card--honors {
+  background: color-mix(in srgb, var(--tp-gold) 10%, #ffffff 90%);
+  border-color: color-mix(in srgb, var(--tp-gold) 26%, var(--tp-embedded-border) 74%);
+}
+.tp-page--embedded .tp-portrait__score-card--completeness .tp-portrait__score-val {
+  color: var(--tp-embedded-green);
+}
+.tp-page--embedded .tp-portrait__score-card--competitiveness .tp-portrait__score-val {
+  color: var(--tp-red);
+}
+.tp-page--embedded .tp-portrait__score-val--pending {
+  color: color-mix(in srgb, var(--tp-red) 42%, var(--tp-embedded-muted) 58%) !important;
+}
+.tp-page--embedded .tp-portrait__score-lbl {
+  color: var(--tp-embedded-muted);
+}
+.tp-page--embedded .tp-portrait__honor-item strong {
+  color: var(--tp-gold);
+}
+.tp-page--embedded .tp-portrait__viz-row {
+  align-items: stretch;
+  gap: 14px;
+}
+.tp-page--embedded .tp-portrait__radar-wrap {
+  min-height: 220px;
+}
+.tp-page--embedded .tp-portrait__dims {
+  padding: 14px 16px;
+  gap: 10px;
+}
+.tp-page--embedded .tp-portrait__dim-item + .tp-portrait__dim-item {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--tp-embedded-border) 74%, transparent 26%);
+}
+.tp-page--embedded .tp-portrait__dim-src {
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 72%, var(--tp-gold) 28%);
+  color: color-mix(in srgb, var(--tp-gold) 74%, var(--tp-embedded-sub) 26%);
+  background: rgba(255,255,255,0.8);
+}
+.tp-page--embedded .tp-portrait__dim-src--agent {
+  border-color: color-mix(in srgb, #8a63d2 42%, var(--tp-embedded-border) 58%);
+  color: #7c58c2;
+}
+.tp-page--embedded .tp-portrait__dim-track {
+  background: color-mix(in srgb, var(--tp-embedded-border) 78%, #ffffff 22%);
+}
+.tp-page--embedded .tp-portrait__tags-inline {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top-color: color-mix(in srgb, var(--tp-embedded-border) 76%, transparent 24%);
+}
+.tp-page--embedded .tp-portrait__tag--fe {
+  color: var(--tp-red);
+  background: color-mix(in srgb, var(--tp-red) 7%, #ffffff 93%);
+  border-color: color-mix(in srgb, var(--tp-red) 20%, var(--tp-embedded-border) 80%);
+}
+.tp-page--embedded .tp-portrait__tag--be {
+  color: var(--tp-gold);
+  background: color-mix(in srgb, var(--tp-gold) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-gold) 20%, var(--tp-embedded-border) 80%);
+}
+.tp-page--embedded .tp-portrait__tag--qa {
+  color: var(--tp-embedded-blue);
+  background: color-mix(in srgb, var(--tp-embedded-blue) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-embedded-blue) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__tag--data {
+  color: var(--tp-embedded-green);
+  background: color-mix(in srgb, var(--tp-embedded-green) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-embedded-green) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__tag--gen {
+  color: var(--tp-embedded-sub);
+  background: color-mix(in srgb, var(--tp-panel) 76%, #ffffff 24%);
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 76%, transparent 24%);
+}
+.tp-page--embedded .tp-portrait__honor-card--cert {
+  background: color-mix(in srgb, var(--tp-gold) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-gold) 20%, var(--tp-embedded-border) 80%);
+}
+.tp-page--embedded .tp-portrait__honor-card--intern {
+  background: color-mix(in srgb, var(--tp-embedded-blue) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-embedded-blue) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__honor-card--award {
+  background: color-mix(in srgb, var(--tp-red) 8%, #ffffff 92%);
+  border-color: color-mix(in srgb, var(--tp-red) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__project-card {
+  background: rgba(255,255,255,0.92);
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 76%, transparent 24%);
+}
+.tp-page--embedded .tp-portrait__project-card:hover {
+  border-color: color-mix(in srgb, var(--tp-red) 38%, var(--tp-embedded-border) 62%);
+}
+.tp-page--embedded .tp-portrait__project-role {
+  background: color-mix(in srgb, var(--tp-gold) 12%, #ffffff 88%);
+  border-color: color-mix(in srgb, var(--tp-gold) 20%, var(--tp-embedded-border) 80%);
+  color: var(--tp-gold);
+}
+.tp-page--embedded .tp-portrait__summary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tp-red) 6%, #ffffff 94%),
+    color-mix(in srgb, var(--tp-gold) 4%, #ffffff 96%)
+  );
+  border-color: color-mix(in srgb, var(--tp-red) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-typing-cursor {
+  background: color-mix(in srgb, var(--tp-red) 72%, var(--tp-gold) 28%);
+}
+.tp-page--embedded .tp-portrait__summary-divider {
+  background: color-mix(in srgb, var(--tp-red) 12%, var(--tp-embedded-border) 88%);
+}
+.tp-page--embedded .tp-portrait__suggestion--strength {
+  background: color-mix(in srgb, var(--tp-embedded-green) 7%, #ffffff 93%);
+  border-color: color-mix(in srgb, var(--tp-embedded-green) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__suggestion--improve {
+  background: color-mix(in srgb, var(--tp-gold) 7%, #ffffff 93%);
+  border-color: color-mix(in srgb, var(--tp-gold) 18%, var(--tp-embedded-border) 82%);
+}
+.tp-page--embedded .tp-portrait__suggestion--strength .tp-portrait__suggestion-lbl {
+  background: color-mix(in srgb, var(--tp-embedded-green) 14%, #ffffff 86%);
+  color: var(--tp-embedded-green);
+}
+.tp-page--embedded .tp-portrait__suggestion--improve .tp-portrait__suggestion-lbl {
+  background: color-mix(in srgb, var(--tp-gold) 14%, #ffffff 86%);
+  color: var(--tp-gold);
+}
+.tp-page--embedded .tp-portrait__step-guide {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tp-red) 5%, #ffffff 95%),
+    color-mix(in srgb, var(--tp-gold) 7%, #ffffff 93%)
+  );
+  border-color: color-mix(in srgb, var(--tp-red) 16%, var(--tp-embedded-border) 84%);
+}
+.tp-page--embedded .tp-portrait__step-guide-btn {
+  border-color: color-mix(in srgb, var(--tp-red) 22%, transparent 78%);
+  color: var(--tp-bg);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tp-red) 86%, #ffffff 14%),
+    var(--tp-red)
+  );
+  box-shadow: 0 10px 20px rgba(139,37,0,0.14);
+}
+.tp-page--embedded .tp-portrait__step-guide-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tp-red) 78%, #ffffff 22%),
+    color-mix(in srgb, var(--tp-red) 92%, #5c0e00 8%)
+  );
+  border-color: color-mix(in srgb, var(--tp-red) 40%, transparent 60%);
+}
+.tp-page--embedded .tp-portrait__step-guide-btn:disabled {
+  background: color-mix(in srgb, var(--tp-panel) 78%, #ffffff 22%);
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 80%, transparent 20%);
+  color: var(--tp-embedded-muted);
+}
+.tp-page--embedded .tp-portrait__step-guide-btn--secondary {
+  background: color-mix(in srgb, var(--tp-gold) 14%, #ffffff 86%);
+  border-color: color-mix(in srgb, var(--tp-gold) 22%, var(--tp-embedded-border) 78%);
+  color: var(--tp-gold);
+  box-shadow: none;
+}
+.tp-page--embedded .tp-portrait__step-guide-btn--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tp-gold) 22%, #ffffff 78%);
+  border-color: color-mix(in srgb, var(--tp-gold) 30%, var(--tp-embedded-border) 70%);
+}
+.tp-page--embedded .tp-portrait__step-guide-btn--ghost {
+  background: rgba(255,255,255,0.72);
+  border-color: color-mix(in srgb, var(--tp-embedded-border) 78%, transparent 22%);
+  color: var(--tp-embedded-sub);
+  box-shadow: none;
+}
+.tp-page--embedded .tp-portrait__step-guide-btn--ghost:hover:not(:disabled) {
+  background: rgba(255,255,255,0.92);
+  border-color: color-mix(in srgb, var(--tp-red) 18%, var(--tp-embedded-border) 82%);
 }
 
 /* ══════════════════════════════════════════

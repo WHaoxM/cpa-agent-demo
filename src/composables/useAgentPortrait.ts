@@ -78,11 +78,42 @@ export type PhaseData =
 
 export type PhaseCallback = (data: PhaseData) => void
 
+export type AgentTraceStatus = 'pending' | 'running' | 'done' | 'error'
+
+export interface AgentTraceEvent {
+  id: string
+  phase: AgentPhase
+  label: string
+  detail: string
+  status: AgentTraceStatus
+  progress: number
+  timestamp: number
+  meta?: Record<string, unknown>
+}
+
+export type TraceCallback = (event: AgentTraceEvent) => void
+
 export const PHASE_META: { key: AgentPhase; label: string }[] = [
   { key: 'parsing',      label: '简历解析' },
   { key: 'evaluating',   label: '能力评估' },
   { key: 'analyzing',    label: '经历分析' },
   { key: 'summarizing',  label: '生成综合评语' },
+]
+
+export const PORTRAIT_TRACE_STEPS: Array<{
+  id: string
+  phase: AgentPhase
+  label: string
+  detail: string
+  progress: number
+  durationMs: number
+}> = [
+  { id: 'doc-structure', phase: 'parsing', label: '文档预处理', detail: '正在读取简历结构与基础字段', progress: 12, durationMs: 360 },
+  { id: 'skill-extract', phase: 'parsing', label: '技能抽取', detail: '正在提取技能关键词与权重信息', progress: 28, durationMs: 420 },
+  { id: 'role-match', phase: 'parsing', label: '岗位推断', detail: '正在匹配目标岗位与候选方向', progress: 44, durationMs: 380 },
+  { id: 'dimension-score', phase: 'evaluating', label: '能力评估', detail: '正在计算七维能力与竞争力得分', progress: 66, durationMs: 520 },
+  { id: 'experience-map', phase: 'analyzing', label: '经历分析', detail: '正在整理项目、荣誉与实习亮点', progress: 82, durationMs: 420 },
+  { id: 'summary-generate', phase: 'summarizing', label: '综合结论', detail: '正在生成综合评语与提升建议', progress: 100, durationMs: 600 },
 ]
 
 // 后端事件类型 → 前端 Phase 的映射（对接时按后端实际事件名补充）
@@ -98,25 +129,57 @@ export const PHASE_MAP: Record<string, AgentPhase> = {
    联调时：实现 apiAdapter，将 activeAdapter 指向它
 ══════════════════════════════════════════════ */
 export interface PortraitAdapter {
-  run(input: AgentPortraitInput, onPhase: PhaseCallback): Promise<AgentPortraitResult>
+  run(input: AgentPortraitInput, onPhase: PhaseCallback, onTrace?: TraceCallback): Promise<AgentPortraitResult>
+}
+
+function emitTrace(
+  onTrace: TraceCallback | undefined,
+  step: typeof PORTRAIT_TRACE_STEPS[number],
+  status: AgentTraceStatus,
+  progress = step.progress,
+  meta?: Record<string, unknown>,
+) {
+  onTrace?.({
+    id: step.id,
+    phase: step.phase,
+    label: step.label,
+    detail: step.detail,
+    status,
+    progress,
+    timestamp: Date.now(),
+    meta,
+  })
 }
 
 async function mockStreamingImpl(
   input: AgentPortraitInput,
   onPhase: PhaseCallback,
+  onTrace?: TraceCallback,
 ): Promise<AgentPortraitResult> {
   const result = mockPortrait(input)
 
-  // Phase ① 简历解析 ~600ms
-  await delay(600)
+  const [docStep, skillStep, roleStep, scoreStep, experienceStep, summaryStep] = PORTRAIT_TRACE_STEPS
+
+  emitTrace(onTrace, docStep!, 'running', 6)
+  await delay(docStep!.durationMs)
+  emitTrace(onTrace, docStep!, 'done')
+
+  emitTrace(onTrace, skillStep!, 'running', 20)
+  await delay(skillStep!.durationMs)
+  emitTrace(onTrace, skillStep!, 'done')
   onPhase({
     phase: 'parsing',
     personInfo: result.personInfo,
     completenessScore: result.completenessScore,
   })
 
-  // Phase ② 能力评估 ~800ms
-  await delay(800)
+  emitTrace(onTrace, roleStep!, 'running', 36)
+  await delay(roleStep!.durationMs)
+  emitTrace(onTrace, roleStep!, 'done')
+
+  emitTrace(onTrace, scoreStep!, 'running', 54)
+  await delay(scoreStep!.durationMs)
+  emitTrace(onTrace, scoreStep!, 'done')
   onPhase({
     phase: 'evaluating',
     dimensions: result.dimensions,
@@ -124,20 +187,22 @@ async function mockStreamingImpl(
     skillTags: result.skillTags,
   })
 
-  // Phase ③ 经历分析 ~500ms
-  await delay(500)
+  emitTrace(onTrace, experienceStep!, 'running', 74)
+  await delay(experienceStep!.durationMs)
+  emitTrace(onTrace, experienceStep!, 'done')
   onPhase({
     phase: 'analyzing',
     honors: result.personInfo.honors,
     projects: result.personInfo.projects,
   })
 
-  // Phase ④ AI 综评 ~700ms
-  await delay(700)
+  emitTrace(onTrace, summaryStep!, 'running', 90)
+  await delay(summaryStep!.durationMs)
   onPhase({
     phase: 'summarizing',
     agentSummary: result.agentSummary,
   })
+  emitTrace(onTrace, summaryStep!, 'done')
 
   return result
 }
@@ -154,8 +219,9 @@ const activeAdapter: PortraitAdapter = mockAdapter
 export async function callAgentPortraitStreaming(
   input: AgentPortraitInput,
   onPhase: PhaseCallback,
+  onTrace?: TraceCallback,
 ): Promise<AgentPortraitResult> {
-  return activeAdapter.run(input, onPhase)
+  return activeAdapter.run(input, onPhase, onTrace)
 }
 
 /* ══════════════════════════════════════════════

@@ -7,16 +7,19 @@ import { gsap } from '@/plugins/gsap'
 import { useUserStore } from '@/stores'
 import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useResumeStore } from '@/stores/resume'
-import { useLearningStore } from '@/stores/learning'
-import { getCareerInsightsMock, roleOptions, CAREER_DOMAINS } from '@/composables/useCareerInsights'
-import type { CareerRole, BubbleDomain } from '@/composables/useCareerInsights'
+import CareerAgentDashboard from '@/components/career/CareerAgentDashboard.vue'
+import { usePortraitSession } from '@/composables/usePortraitSession'
+import type { AgentPortraitInput } from '@/composables/useAgentPortrait'
+import TalentPortrait from '@/views/student/TalentPortrait.vue'
+import { getCareerInsightsMock, CAREER_DOMAINS } from '@/composables/useCareerInsights'
+import type { CareerRole } from '@/composables/useCareerInsights'
 
 const router = useRouter()
 const userStore = useUserStore()
 const resumeStore = useResumeStore()
-const learningStore = useLearningStore()
 
 type ParsePhase = 'idle' | 'parsing' | 'done'
+type RightLayoutMode = 'idle' | 'split' | 'collapsing' | 'full'
 
 const pageRef = ref<HTMLElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -24,9 +27,27 @@ const isDragOver = ref(false)
 const pasteText = ref('')
 const uploadedFileName = ref('')
 const parsePhase = ref<ParsePhase>('idle')
-const parseProgress = ref(0)
-const parseMsg = ref('')
 const selectedDirection = ref<CareerRole | ''>('')
+const rightLayoutMode = ref<RightLayoutMode>('idle')
+
+const {
+  status: portraitSessionStatus,
+  currentPhase: portraitCurrentPhase,
+  traceEvents,
+  replaySnapshots,
+  result: portraitSessionResult,
+  progress: sessionProgress,
+  currentLabel: sessionCurrentLabel,
+  leftPanelMessage,
+  leftPanelProgress,
+  currentStep,
+  totalSteps,
+  run: runPortraitSession,
+  reset: resetPortraitSession,
+} = usePortraitSession()
+
+const parseProgress = computed(() => leftPanelProgress.value)
+const parseMsg = computed(() => leftPanelMessage.value)
 
 const ACCEPTED_MIME = [
   'application/msword',
@@ -38,6 +59,38 @@ const ACCEPTED_MIME = [
 ].join(',')
 
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
+let rightLayoutDelayTimer: number | null = null
+let rightLayoutSettleTimer: number | null = null
+
+function clearRightLayoutTimers() {
+  if (rightLayoutDelayTimer != null) {
+    window.clearTimeout(rightLayoutDelayTimer)
+    rightLayoutDelayTimer = null
+  }
+  if (rightLayoutSettleTimer != null) {
+    window.clearTimeout(rightLayoutSettleTimer)
+    rightLayoutSettleTimer = null
+  }
+}
+
+function openRightSplitLayout() {
+  clearRightLayoutTimers()
+  rightLayoutMode.value = 'split'
+}
+
+function collapseRightDashboard() {
+  clearRightLayoutTimers()
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    rightLayoutMode.value = 'full'
+    return
+  }
+  rightLayoutDelayTimer = window.setTimeout(() => {
+    rightLayoutMode.value = 'collapsing'
+    rightLayoutSettleTimer = window.setTimeout(() => {
+      rightLayoutMode.value = 'full'
+    }, 460)
+  }, 180)
+}
 
 function setupEntrance() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -79,58 +132,49 @@ function detectRoleFromText(text: string): CareerRole {
   return '前端开发'
 }
 
-const PARSE_MSGS = [
-  '正在读取文档结构…',
-  '提取技能关键词…',
-  '分析工作经历…',
-  '匹配职业方向…',
-  '生成能力画像数据…',
-  '解析完成',
-]
-
 async function startParse() {
   const input = pasteText.value.trim() || uploadedFileName.value
   if (!input) return
 
   parsePhase.value = 'parsing'
-  parseProgress.value = 0
   resumeStore.reset()
-
-  const step = 100 / PARSE_MSGS.length
-  for (let i = 0; i < PARSE_MSGS.length; i++) {
-    parseMsg.value = PARSE_MSGS[i]!
-    await new Promise<void>(r => {
-      gsap.to(parseProgress, {
-        value: (i + 1) * step,
-        duration: 0.35 + Math.random() * 0.3,
-        ease: 'power1.inOut',
-        onComplete: r,
-      })
-    })
-    await new Promise(r => setTimeout(r, 280 + Math.random() * 220))
-  }
 
   const text = pasteText.value || uploadedFileName.value
   const role = detectRoleFromText(text)
   const insights = getCareerInsightsMock(role)
+  const parsedSkills = insights.skillGraph.nodes.slice(0, 12).map(n => ({
+    name: n.name,
+    weight: n.heat / 100,
+    category: n.category,
+  }))
 
   resumeStore.setResult({
     rawText: pasteText.value,
     fileName: uploadedFileName.value,
     insights,
-    skills: insights.skillGraph.nodes.slice(0, 12).map(n => ({
-      name: n.name,
-      weight: n.heat / 100,
-      category: n.category,
-    })),
+    skills: parsedSkills,
   })
+  openRightSplitLayout()
 
-  await nextTick()
-  parsePhase.value = 'done'
+  const portraitInput: AgentPortraitInput = {
+    resumeText: text,
+    parsedSkills,
+    predictedRole: insights.predictedRole,
+    confidence: insights.confidence,
+    matchedCareers: insights.candidates,
+  }
 
-  // 短暂停留后跳转画像页
-  await new Promise(r => setTimeout(r, 600))
-  router.push({ name: 'student-career-portrait' })
+  try {
+    await runPortraitSession(portraitInput)
+    parsePhase.value = 'done'
+    collapseRightDashboard()
+  } catch {
+    parsePhase.value = 'idle'
+    resumeStore.reset()
+    resetPortraitSession()
+    clearRightLayoutTimers()
+    rightLayoutMode.value = 'idle'
+  }
 }
 
 function goBack() {
@@ -141,7 +185,10 @@ function resetPage() {
   parsePhase.value = 'idle'
   pasteText.value = ''
   uploadedFileName.value = ''
-  parseProgress.value = 0
+  resumeStore.reset()
+  resetPortraitSession()
+  clearRightLayoutTimers()
+  rightLayoutMode.value = 'idle'
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
@@ -160,168 +207,14 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   gsapCtx?.revert()
+  clearRightLayoutTimers()
 })
 
 /* ═══ 注释保留（Step 3 用）: roadmapMap 原有数据已移除，如需恢复请查看 Git 历史 ═══ */
 
 /* ═══ 星图交互数据 ═══ */
-const JOB_DESCRIPTIONS: Record<string, string> = {
-  'Vue 前端工程师':   '使用 Vue 生态构建交互丰富的 Web 应用，关注组件化与工程化实践。',
-  'React 前端工程师': '基于 React 技术栈开发大型单页应用，掌握状态管理与性能优化。',
-  '可视化工程师':     '运用 D3/ECharts/WebGL 将复杂数据转化为直观可交互的图表与大屏。',
-  'Java 后端工程师':  '使用 Spring 生态构建高并发分布式服务，精通数据库与中间件。',
-  'Go 后端工程师':    '以 Go 语言开发高性能微服务，擅长并发编程与云原生架构。',
-  'Python 后端工程师':'使用 Django/FastAPI 快速构建 Web 服务与数据处理管道。',
-  '自动化测试工程师': '设计与维护自动化测试框架，保障持续集成流水线的质量门禁。',
-  '质量平台工程师':   '搭建测试平台与效能工具，提升团队研发质量与交付效率。',
-  '性能测试工程师':   '通过压测与调优定位系统瓶颈，确保服务在高负载下稳定运行。',
-  '商业数据分析师':   '结合业务场景进行数据建模与洞察，驱动产品与运营决策。',
-  '数据开发工程师':   '构建数据仓库与 ETL 管道，为分析和算法提供高质量数据基座。',
-  '增长分析师':       '通过 A/B 测试与漏斗分析挖掘用户增长机会，优化转化路径。',
-  '算法工程师':       '研发推荐、搜索、风控等核心算法，将模型落地为线上服务。',
-  '深度学习工程师':   '训练与部署 CV/NLP/多模态模型，优化推理性能与模型精度。',
-  'AI 应用工程师':    '基于大模型 API 构建智能应用，设计 Prompt 工程与 Agent 流程。',
-}
-
-const JOB_SHORT: Record<string, string> = {
-  'Vue 前端工程师': 'Vue', 'React 前端工程师': 'React', '可视化工程师': '可视化',
-  'Java 后端工程师': 'Java', 'Go 后端工程师': 'Go', 'Python 后端工程师': 'Python',
-  '自动化测试工程师': '自动化', '质量平台工程师': '质量', '性能测试工程师': '性能',
-  '商业数据分析师': '商业', '数据开发工程师': '数仓', '增长分析师': '增长',
-  '算法工程师': '算法', '深度学习工程师': '深度学习', 'AI 应用工程师': 'AI应用',
-}
-
-interface StarNode {
-  key: string; jobName: string; shortName: string; description: string
-  domainId: string; domainName: string; domainColor: string
-  domainIdx: number; jobIdx: number
-  cx: number; cy: number; lx: number; ly: number
-  textAnchor: string; labelBaseline: string
-}
-
-interface StarLink {
-  key: string; x1: number; y1: number; x2: number; y2: number
-  color: string; domainId: string
-}
-
-const RING_RADII = [70, 110, 148, 186, 222]
-const BASE_ANGLES_DEG = [0, 40, 80, 120, 160]
-
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `rgba(${r},${g},${b},${alpha})`
-}
-
-const starNodes = computed<StarNode[]>(() => {
-  const CX = 260, CY = 260
-  return CAREER_DOMAINS.flatMap((domain, di) =>
-    domain.jobs.map((jobName, ji) => {
-      const r = RING_RADII[di]!
-      const angleDeg = BASE_ANGLES_DEG[di]! + ji * 120
-      const rad = (angleDeg * Math.PI) / 180
-      const cx = CX + r * Math.cos(rad)
-      const cy = CY + r * Math.sin(rad)
-      const labelR = r + 22
-      const lx = CX + labelR * Math.cos(rad)
-      const ly = CY + labelR * Math.sin(rad)
-      const cosA = Math.cos(rad)
-      const sinA = Math.sin(rad)
-      return {
-        key: `${domain.id}-${ji}`,
-        jobName,
-        shortName: JOB_SHORT[jobName] ?? jobName.slice(0, 3),
-        description: JOB_DESCRIPTIONS[jobName] ?? '',
-        domainId: domain.id,
-        domainName: domain.name,
-        domainColor: domain.color,
-        domainIdx: di,
-        jobIdx: ji,
-        cx, cy, lx, ly,
-        textAnchor: cosA > 0.3 ? 'start' : cosA < -0.3 ? 'end' : 'middle',
-        labelBaseline: sinA > 0.3 ? 'hanging' : sinA < -0.3 ? 'auto' : 'middle',
-      }
-    })
-  )
-})
-
-const starLinks = computed<StarLink[]>(() => {
-  const links: StarLink[] = []
-  CAREER_DOMAINS.forEach((domain) => {
-    const nodes = starNodes.value.filter(n => n.domainId === domain.id)
-    if (nodes.length === 3) {
-      ;([[0, 1], [1, 2], [0, 2]] as [number, number][]).forEach(([a, b], idx) => {
-        links.push({
-          key: `${domain.id}-lk-${idx}`,
-          x1: nodes[a]!.cx, y1: nodes[a]!.cy,
-          x2: nodes[b]!.cx, y2: nodes[b]!.cy,
-          color: domain.color,
-          domainId: domain.id,
-        })
-      })
-    }
-  })
-  return links
-})
-
-interface DomainGroup {
-  domain: BubbleDomain
-  domainIdx: number
-  nodes: StarNode[]
-  links: StarLink[]
-}
-
-const domainGroups = computed<DomainGroup[]>(() =>
-  CAREER_DOMAINS.map((domain, di) => ({
-    domain,
-    domainIdx: di,
-    nodes: starNodes.value.filter(n => n.domainId === domain.id),
-    links: starLinks.value.filter(l => l.domainId === domain.id),
-  }))
-)
-
-const hoveredNodeKey = ref<string | null>(null)
-const clickedNodeKey = ref<string | null>(null)
-
-const hoveredDomainId = computed(() =>
-  starNodes.value.find(n => n.key === hoveredNodeKey.value)?.domainId ?? null
-)
-
-const clickedStarNode = computed(() =>
-  starNodes.value.find(n => n.key === clickedNodeKey.value) ?? null
-)
-
-function handleStarClick(key: string) {
-  clickedNodeKey.value = clickedNodeKey.value === key ? null : key
-}
-function closeStarPopup() {
-  clickedNodeKey.value = null
-}
-
-const popupPosition = computed(() => {
-  const node = clickedStarNode.value
-  if (!node) return {}
-  const xPct = (node.cx / 520) * 100
-  const yPct = (node.cy / 520) * 100
-  const onRight = xPct > 50
-  const onBottom = yPct > 60
-  const style: Record<string, string> = {}
-  style[onRight ? 'right' : 'left'] = onRight ? `${(100 - xPct + 3).toFixed(1)}%` : `${(xPct + 3).toFixed(1)}%`
-  style[onBottom ? 'bottom' : 'top'] = onBottom ? `${(100 - yPct + 2).toFixed(1)}%` : `${(yPct + 2).toFixed(1)}%`
-  return style
-})
-
-
-const centerStatusText = computed(() => {
-  if (parsePhase.value === 'parsing') return '解析中…'
-  if (parsePhase.value === 'done') {
-    const top1 = resumeStore.matchedCareers[0]?.role ?? '前端开发'
-    return `已匹配 ${top1} 等 ${resumeStore.matchedCareers.length} 个方向`
-  }
-  return '探索 5 大领域 · 15 个职业方向'
-})
-
+const showDashboard = computed(() => parsePhase.value !== 'idle')
+const showEmbeddedPortrait = computed(() => parsePhase.value !== 'idle' && resumeStore.isParsed)
 </script>
 
 <template>
@@ -480,7 +373,7 @@ const centerStatusText = computed(() => {
               </div>
               <div class="rp-progress-meta">
                 <span class="rp-progress-pct">{{ Math.round(parseProgress) }}%</span>
-                <span class="rp-progress-steps">{{ Math.min(Math.ceil(parseProgress / (100 / 6)), 6) }} / 6 步</span>
+                <span class="rp-progress-steps">{{ currentStep }} / {{ totalSteps }} 步</span>
               </div>
             </div>
         </div>
@@ -504,173 +397,31 @@ const centerStatusText = computed(() => {
 
       <!-- RIGHT: Star Map -->
       <div class="rp-right">
-
-        <!-- ══ 星图 ══ -->
-        <div class="rp-orbital-scene">
-          <div class="rp-orbital-field" @click="closeStarPopup">
-
-            <!-- SVG: rings + constellation links + nodes + labels -->
-            <svg class="rp-orbital-svg" viewBox="0 0 520 520" fill="none" aria-hidden="true">
-              <defs>
-                <radialGradient id="rpCG2" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#BE2A00" stop-opacity="0.07"/>
-                  <stop offset="60%" stop-color="#BE2A00" stop-opacity="0.02"/>
-                  <stop offset="100%" stop-color="#BE2A00" stop-opacity="0"/>
-                </radialGradient>
-                <pattern id="rpGrid" x="0" y="0" width="26" height="26" patternUnits="userSpaceOnUse">
-                  <circle cx="13" cy="13" r="0.7" fill="rgba(0,0,0,0.07)"/>
-                </pattern>
-                <filter id="rpNoise" x="0" y="0" width="100%" height="100%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" stitchTiles="stitch" result="n"/>
-                  <feColorMatrix type="saturate" values="0" in="n" result="g"/>
-                  <feComponentTransfer in="g"><feFuncA type="linear" slope="0.025"/></feComponentTransfer>
-                </filter>
-              </defs>
-
-              <!-- Background textures -->
-              <rect width="520" height="520" fill="url(#rpGrid)" opacity="0.85"/>
-              <rect width="520" height="520" filter="url(#rpNoise)"/>
-
-              <!-- Background micro-dots -->
-              <g class="rp-dots">
-                <circle cx="42"  cy="88"  r="1.2"/><circle cx="480" cy="62"  r="1.5"/><circle cx="310" cy="30"  r="1.0"/>
-                <circle cx="58"  cy="310" r="1.3"/><circle cx="490" cy="340" r="1.2"/><circle cx="130" cy="480" r="1.0"/>
-                <circle cx="390" cy="490" r="1.4"/><circle cx="70"  cy="440" r="1.1"/><circle cx="460" cy="180" r="1.2"/>
-                <circle cx="26"  cy="200" r="1.0"/><circle cx="500" cy="460" r="1.3"/><circle cx="200" cy="18"  r="1.1"/>
-                <circle cx="448" cy="405" r="1.2"/><circle cx="88"  cy="150" r="1.0"/><circle cx="336" cy="500" r="1.3"/>
-                <circle cx="170" cy="62"  r="1.1"/><circle cx="495" cy="260" r="1.0"/><circle cx="24"  cy="380" r="1.2"/>
-                <circle cx="350" cy="48"  r="1.1"/><circle cx="408" cy="122" r="1.0"/><circle cx="112" cy="398" r="1.2"/>
-                <circle cx="478" cy="510" r="1.0"/><circle cx="158" cy="496" r="1.1"/><circle cx="38"  cy="510" r="1.0"/>
-                <circle cx="240" cy="50"  r="0.8"/><circle cx="415" cy="75"  r="0.9"/><circle cx="80"  cy="260" r="1.0"/>
-                <circle cx="145" cy="120" r="0.7"/><circle cx="375" cy="165" r="0.8"/><circle cx="510" cy="140" r="0.9"/>
-                <circle cx="30"  cy="470" r="0.8"/><circle cx="260" cy="505" r="0.9"/><circle cx="435" cy="460" r="0.7"/>
-                <circle cx="185" cy="340" r="0.8"/><circle cx="340" cy="370" r="0.7"/><circle cx="470" cy="400" r="0.8"/>
-              </g>
-              <!-- Decorative cross marks -->
-              <g stroke="rgba(0,0,0,0.05)" stroke-width="0.8">
-                <line x1="46" y1="38" x2="52" y2="38"/><line x1="49" y1="35" x2="49" y2="41"/>
-                <line x1="475" y1="478" x2="481" y2="478"/><line x1="478" y1="475" x2="478" y2="481"/>
-                <line x1="472" y1="28" x2="478" y2="28"/><line x1="475" y1="25" x2="475" y2="31"/>
-                <line x1="38" y1="485" x2="44" y2="485"/><line x1="41" y1="482" x2="41" y2="488"/>
-              </g>
-
-              <!-- Center glow -->
-              <circle cx="260" cy="260" r="200" fill="url(#rpCG2)"/>
-
-              <!-- 5 orbital rings (one per domain) -->
-              <circle
-                v-for="(domain, di) in CAREER_DOMAINS"
-                :key="'ring-' + domain.id"
-                cx="260" cy="260"
-                :r="RING_RADII[di]"
-                :stroke="domain.color"
-                stroke-opacity="0.45"
-                stroke-width="1.2"
-                stroke-dasharray="5 12"
-                :class="['rp-ring', `rp-ring--${di + 1}`]"
-                fill="none"
-              />
-
-              <!-- Center ripples (3 staggered, using negative delay for immediate stagger) -->
-              <circle class="rp-ripple rp-ripple--1" cx="260" cy="260"/>
-              <circle class="rp-ripple rp-ripple--2" cx="260" cy="260"/>
-              <circle class="rp-ripple rp-ripple--3" cx="260" cy="260"/>
-
-              <!-- 5 domain groups: each orbits as a rigid triangle (Kepler: inner=fast, outer=slow) -->
-              <g
-                v-for="(group, gi) in domainGroups"
-                :key="'dg-' + group.domain.id"
-                :class="['rp-domain-group', `rp-domain-group--${gi}`, {
-                  'rp-domain-group--dimmed': hoveredDomainId && hoveredDomainId !== group.domain.id,
-                  'rp-domain-group--lit': hoveredDomainId === group.domain.id,
-                }]"
-              >
-                <!-- Constellation links (triangle edges) -->
-                <line
-                  v-for="lk in group.links"
-                  :key="lk.key"
-                  :x1="lk.x1" :y1="lk.y1"
-                  :x2="lk.x2" :y2="lk.y2"
-                  :stroke="lk.color"
-                  stroke-opacity="0.40"
-                  stroke-width="1.5"
-                  class="rp-star-link"
-                />
-                <!-- Node circles -->
-                <circle
-                  v-for="node in group.nodes"
-                  :key="'nc-' + node.key"
-                  :cx="node.cx" :cy="node.cy"
-                  r="14"
-                  :fill="hexToRgba(node.domainColor, clickedNodeKey === node.key ? 0.22 : 0.09)"
-                  :stroke="node.domainColor"
-                  :stroke-opacity="clickedNodeKey === node.key ? 0.95 : 0.5"
-                  :stroke-width="clickedNodeKey === node.key ? 2.2 : 1.5"
-                  class="rp-star-node"
-                  :class="{ 'rp-star-node--active': clickedNodeKey === node.key }"
-                  style="cursor: pointer;"
-                  @mouseenter="hoveredNodeKey = node.key"
-                  @mouseleave="hoveredNodeKey = null"
-                  @click.stop="handleStarClick(node.key)"
-                />
-                <!-- Labels (counter-rotate to stay horizontal while group orbits) -->
-                <text
-                  v-for="node in group.nodes"
-                  :key="'nt-' + node.key"
-                  :x="node.lx" :y="node.ly"
-                  :text-anchor="node.textAnchor"
-                  :dominant-baseline="node.labelBaseline"
-                  :class="['rp-star-label', `rp-star-label--${gi}`]"
-                  :style="{ fill: clickedNodeKey === node.key ? node.domainColor : 'var(--ink-700, #3D3D3D)' }"
-                >{{ node.shortName }}</text>
-              </g>
-            </svg>
-
-            <!-- Center: user avatar + status -->
-            <div class="rp-orbital-center">
-              <div class="rp-orbital-avatar">{{ userStore.currentUser?.name?.charAt(0) || '你' }}</div>
-              <span class="rp-oc-name">{{ userStore.currentUser?.name || '你' }}</span>
-              <span class="rp-oc-status">{{ centerStatusText }}</span>
-            </div>
-
-            <!-- Click popup (white card) -->
-            <Transition name="rp-pop">
-              <div
-                v-if="clickedStarNode"
-                class="rp-star-popup"
-                :style="popupPosition"
-                @click.stop
-              >
-                <div class="rp-star-popup__head">
-                  <span class="rp-star-popup__domain" :style="{ color: clickedStarNode.domainColor }">
-                    {{ clickedStarNode.domainName }}
-                  </span>
-                  <button class="rp-star-popup__close" @click="closeStarPopup">
-                    <Icon icon="lucide:x" :width="12"/>
-                  </button>
-                </div>
-                <h4 class="rp-star-popup__title">{{ clickedStarNode.jobName }}</h4>
-                <p class="rp-star-popup__desc">{{ clickedStarNode.description }}</p>
-              </div>
-            </Transition>
-
-          </div><!-- /.rp-orbital-field -->
-        </div><!-- /.rp-orbital-scene -->
-
-        <!-- Footer data strip -->
-        <div class="rp-right-footer">
-          <div class="rp-rf-item"><span class="rp-rf-val">15</span><span class="rp-rf-lbl">职业方向</span></div>
-          <span class="rp-rf-sep">|</span>
-          <div class="rp-rf-item"><span class="rp-rf-val">5</span><span class="rp-rf-lbl">大领域</span></div>
-          <span class="rp-rf-sep">|</span>
-          <div class="rp-rf-item"><span class="rp-rf-val">全栈</span><span class="rp-rf-lbl">覆盖</span></div>
-          <span class="rp-rf-sep">|</span>
-          <div class="rp-rf-item">
-            <span class="rp-rf-val">{{ new Date().toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) }}</span>
-            <span class="rp-rf-lbl">更新</span>
+        <div class="rp-right-shell" :class="'rp-right-shell--' + rightLayoutMode">
+          <div class="rp-right-portrait-pane">
+            <TalentPortrait
+              v-if="showEmbeddedPortrait"
+              embedded
+              class="rp-right-portrait"
+              :replay-snapshots="replaySnapshots"
+              :result-data="portraitSessionResult"
+              :session-status="portraitSessionStatus"
+            />
+          </div>
+          <div class="rp-right-dashboard-pane">
+            <CareerAgentDashboard
+              v-if="showDashboard"
+              class="rp-right-dashboard"
+              :status="portraitSessionStatus"
+              :current-phase="portraitCurrentPhase"
+              :trace-events="traceEvents"
+              :progress="sessionProgress"
+              :current-label="sessionCurrentLabel"
+              :current-step="currentStep"
+              :total-steps="totalSteps"
+            />
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -1128,6 +879,83 @@ const centerStatusText = computed(() => {
   border-left: 1px solid var(--rp-border);
 }
 
+.rp-right-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.rp-right-portrait-pane,
+.rp-right-dashboard-pane {
+  position: relative;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  transition:
+    width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.35s ease 0.1s,
+    transform 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s ease;
+}
+
+.rp-right-portrait-pane {
+  width: 0;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--rp-bg) 84%, #ffffff 16%),
+    color-mix(in srgb, var(--rp-panel) 42%, var(--rp-bg) 58%)
+  );
+}
+
+.rp-right-dashboard-pane {
+  width: 0;
+  opacity: 0;
+  transform: translateX(18px);
+  background: #111111;
+  border-left: 0 solid transparent;
+}
+
+.rp-right-shell--split .rp-right-portrait-pane {
+  width: 75%;
+  opacity: 1;
+}
+
+.rp-right-shell--split .rp-right-dashboard-pane {
+  width: 25%;
+  opacity: 1;
+  transform: translateX(0);
+  border-left-width: 1px;
+  border-left-color: var(--rp-border);
+}
+
+.rp-right-shell--collapsing .rp-right-portrait-pane,
+.rp-right-shell--full .rp-right-portrait-pane {
+  width: 100%;
+  opacity: 1;
+}
+
+.rp-right-shell--collapsing .rp-right-dashboard-pane,
+.rp-right-shell--full .rp-right-dashboard-pane {
+  width: 0;
+  opacity: 0;
+  transform: translateX(22px);
+  border-left-width: 0;
+  border-left-color: transparent;
+}
+
+.rp-right-dashboard,
+.rp-right-portrait {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
 .rp-orbital-scene {
   flex: 1;
   min-height: 0;
@@ -1347,7 +1175,38 @@ const centerStatusText = computed(() => {
 }
 @media (max-width: 768px) {
   .rp-workspace { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
-  .rp-right { min-height: 420px; }
+  .rp-right { min-height: 540px; }
+  .rp-right-shell { flex-direction: column; }
+  .rp-right-portrait-pane,
+  .rp-right-dashboard-pane { width: 100% !important; }
+  .rp-right-shell--idle .rp-right-portrait-pane,
+  .rp-right-shell--idle .rp-right-dashboard-pane {
+    height: 0;
+    opacity: 0;
+  }
+  .rp-right-shell--split .rp-right-portrait-pane {
+    height: 64%;
+    opacity: 1;
+  }
+  .rp-right-shell--split .rp-right-dashboard-pane {
+    height: 36%;
+    opacity: 1;
+    transform: translateY(0);
+    border-left-width: 0;
+    border-top: 1px solid var(--rp-border);
+  }
+  .rp-right-shell--collapsing .rp-right-portrait-pane,
+  .rp-right-shell--full .rp-right-portrait-pane {
+    height: 100%;
+    opacity: 1;
+  }
+  .rp-right-shell--collapsing .rp-right-dashboard-pane,
+  .rp-right-shell--full .rp-right-dashboard-pane {
+    height: 0;
+    opacity: 0;
+    transform: translateY(18px);
+    border-top-width: 0;
+  }
   .rp-orbital-field { width: min(100%, 380px); }
   .rp-star-popup { width: 180px; }
 }
