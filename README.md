@@ -161,7 +161,6 @@ npm run preview
 | 学生 | student001 | 123456 |
 | 学生 | student002 | 123456 |
 | 学生 | student003 | 123456 |
-| 教师 | teacher001 | 123456 |
 | 管理员 | admin001 | 123456 |
 
 ## 角色权限说明

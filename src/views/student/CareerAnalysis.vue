@@ -480,9 +480,7 @@ const compareOption = computed(() => {
           + `${names[idx]} <span style="font-size:10px;font-weight:400;opacity:.7">${roles[idx]}</span></div>`
           + `<table style="border-collapse:collapse;line-height:1.7">`
           + `<tr><td style="color:${C.textMuted};padding-right:12px">最高薪资</td><td style="font-variant-numeric:tabular-nums;font-weight:600">${boxArr[4]}K</td></tr>`
-          + `<tr><td style="color:${C.textMuted}">Q3 (75%)</td><td style="font-variant-numeric:tabular-nums">${boxArr[3]}K</td></tr>`
           + `<tr><td style="color:${ac};font-weight:700">中位薪资</td><td style="font-variant-numeric:tabular-nums;font-weight:700;color:${ac}">${boxArr[2]}K</td></tr>`
-          + `<tr><td style="color:${C.textMuted}">Q1 (25%)</td><td style="font-variant-numeric:tabular-nums">${boxArr[1]}K</td></tr>`
           + `<tr><td style="color:${C.textMuted}">最低薪资</td><td style="font-variant-numeric:tabular-nums;font-weight:600">${boxArr[0]}K</td></tr>`
           + `</table>`
       },
@@ -508,7 +506,7 @@ const compareOption = computed(() => {
       icon: 'roundRect', itemWidth: 8, itemHeight: 5,
     },
 
-    grid: { top: 28, left: '10%', right: '10%', bottom: 32 },
+    grid: { top: 28, left: '8%', right: '8%', bottom: 32 },
 
     xAxis: {
       type: 'category',
@@ -1725,20 +1723,6 @@ onBeforeUnmount(() => {
         <!-- #8 KPI 卡片 (带 tooltip 增强可信度) -->
         <div class="da-section">
           <div class="da-section__title"><Icon icon="lucide:activity" :width="14" />方向概览 · {{ currentAnalysisLabel }}</div>
-          <div class="kpi-card" @mouseenter="showSalaryTip = true" @mouseleave="showSalaryTip = false">
-            <div class="kpi-label">平均中位薪资 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
-            <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.avgSalary }}</span><span class="kpi-unit">K</span></div>
-            <div class="kpi-tag kpi-tag--up">{{ nationalKpi.growthRate }}</div>
-            <div class="kpi-tooltip kpi-tooltip--right" v-show="showSalaryTip">
-              <div class="tooltip-header">演示样本说明</div>
-              <div class="tooltip-body">
-                <p>• 当前结果基于演示岗位样本的趋势估算，用于展示职业分析路径。</p>
-                <p>• 数值会随岗位方向与后续省份选择联动变化。</p>
-                <p>• 适合用来比较方向差异，不代表真实招聘数据库结论。</p>
-              </div>
-              <div class="tooltip-footer">演示模式 · 用于展示分析流程</div>
-            </div>
-          </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
             <div class="kpi-label">岗位需求总量 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
             <div class="kpi-val"><span class="kpi-num">14,518</span></div>
@@ -1749,6 +1733,19 @@ onBeforeUnmount(() => {
                 <p>• 主要用于展示不同岗位和不同省份的相对差异。</p>
               </div>
               <div class="tooltip-footer">演示模式 · 非真实招聘平台统计</div>
+            </div>
+          </div>
+          <div class="kpi-card" @mouseenter="showSalaryTip = true" @mouseleave="showSalaryTip = false">
+            <div class="kpi-label">平均中位薪资 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
+            <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.avgSalary }}</span><span class="kpi-unit">K</span></div>
+            <div class="kpi-tooltip kpi-tooltip--right" v-show="showSalaryTip">
+              <div class="tooltip-header">演示样本说明</div>
+              <div class="tooltip-body">
+                <p>• 当前结果基于演示岗位样本的趋势估算，用于展示职业分析路径。</p>
+                <p>• 数值会随岗位方向与后续省份选择联动变化。</p>
+                <p>• 适合用来比较方向差异，不代表真实招聘数据库结论。</p>
+              </div>
+              <div class="tooltip-footer">演示模式 · 用于展示分析流程</div>
             </div>
           </div>
         </div>
@@ -1883,19 +1880,16 @@ onBeforeUnmount(() => {
                 </button>
               </div>
               <div class="ai-card" v-if="currentAiComment">
-                <div class="ai-card__header">
-                  <span class="ai-card__tag"><Icon icon="lucide:bot" :width="12" />{{ currentAiComment.title }}</span>
-                  <span class="ai-card__page">{{ aiCommentPage + 1 }}/{{ aiComments.length }}</span>
+                <div class="ai-card__tabs">
+                  <button
+                    v-for="(comment, idx) in aiComments"
+                    :key="idx"
+                    class="ai-card__tab"
+                    :class="{ 'ai-card__tab--active': aiCommentPage === idx }"
+                    @click="aiCommentPage = idx"
+                  >{{ comment.title }}</button>
                 </div>
                 <p class="ai-card__content">{{ currentAiComment.content }}</p>
-                <div class="ai-card__nav">
-                  <button :disabled="aiCommentPage <= 0" @click="prevAiPage">
-                    <Icon icon="lucide:chevron-left" :width="14" />
-                  </button>
-                  <button :disabled="aiCommentPage >= aiComments.length - 1" @click="nextAiPage">
-                    <Icon icon="lucide:chevron-right" :width="14" />
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -2319,7 +2313,7 @@ onBeforeUnmount(() => {
 
 /* ═══ 中央区域（气泡图 + 地图 + 薪资图） ═══ */
 .da-map {
-  flex: 1; min-width: 0; position: relative;
+  flex: 3; min-width: 0; position: relative;
   display: flex; flex-direction: column;
   background: var(--bg-300);
   z-index: 1; overflow: hidden;
@@ -2572,11 +2566,11 @@ onBeforeUnmount(() => {
 
 /* ═══ 右面板 ═══ */
 .da-right {
-  width: 320px; flex-shrink: 0;
+  flex: 1; min-width: 300px;
   display: flex; flex-direction: column; gap: 8px;
   background: var(--bg-200);
   border-left: 1px solid var(--bg-300);
-  overflow-y: auto; padding: 16px 14px;
+  overflow-y: auto; overflow-x: hidden; padding: 16px 14px;
   position: relative;
 }
 .da-right::before {
@@ -2637,7 +2631,7 @@ onBeforeUnmount(() => {
 
 /* #3 趋势图 — 固定高度，留空间给 AI 模块 */
 .da-section--chart { flex: 0 0 auto; display: flex; flex-direction: column; }
-.da-trend-chart { width: 100%; height: 200px; }
+.da-trend-chart { width: 100%; height: 240px; }
 
 /* 趋势图标题内嵌省份样式 */
 .da-trend-province { font-weight: 600; color: var(--primary-100); }
@@ -2653,30 +2647,26 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-sm);
   padding: 12px 14px; display: flex; flex-direction: column;
 }
-.ai-card__header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+.ai-card__tabs {
+  display: flex; gap: 0; margin-bottom: 10px;
+  border-bottom: 1px solid var(--bg-300);
 }
-.ai-card__tag {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: var(--accent-100, #2B4C6F);
-  background: rgba(43,76,111,0.08); padding: 4px 10px; border-radius: var(--radius-sm);
+.ai-card__tab {
+  flex: 1; padding: 6px 4px; text-align: center;
+  font-size: 12px; font-weight: 500; color: var(--text-300);
+  background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: all 0.2s; font-family: inherit;
+  white-space: nowrap;
 }
-.ai-card__page { font-size: 12px; color: var(--text-300); }
+.ai-card__tab:hover { color: var(--text-100); }
+.ai-card__tab--active {
+  color: var(--primary-100); font-weight: 600;
+  border-bottom-color: var(--primary-100);
+}
 .ai-card__content {
   margin: 0; font-size: 14px; line-height: 1.6; color: var(--text-200);
   max-height: 80px; overflow-y: auto;
 }
-.ai-card__nav {
-  display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;
-}
-.ai-card__nav button {
-  width: 32px; height: 32px; display: grid; place-items: center;
-  background: var(--bg-200); border: 1px solid var(--bg-300);
-  border-radius: var(--radius-sm); color: var(--text-200);
-  cursor: pointer; transition: all 0.15s;
-}
-.ai-card__nav button:hover:not(:disabled) { border-color: var(--primary-100); color: var(--primary-100); }
-.ai-card__nav button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* #7 查看图谱按钮 + 引导 */
 .da-link-btn {
@@ -2761,13 +2751,13 @@ onBeforeUnmount(() => {
 /* ═══ 响应式 ═══ */
 @media (max-width: 1199px) {
   .da-left { width: 208px; padding: 10px; }
-  .da-right { width: 280px; padding: 10px; }
+  .da-right { min-width: 260px; padding: 10px; }
   .da-brand__title { font-size: 12px; }
 }
 
 @media (max-width: 1023px) {
   .da-left { display: none; }
-  .da-right { width: 296px; }
+  .da-right { min-width: 240px; }
 }
 
 @media (max-width: 767px) {
@@ -2807,7 +2797,7 @@ onBeforeUnmount(() => {
     flex-shrink: 0;
   }
   .da-right-empty { padding: 20px 12px; margin: auto 0; }
-  .da-trend-chart { height: 180px; }
+  .da-trend-chart { height: 200px; }
 }
 
 /* ═══ AI 洞察标题行 ═══ */

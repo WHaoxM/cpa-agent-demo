@@ -1,6 +1,6 @@
 <!-- 组件：3D 书架场景；使用 GSAP 驱动书本动画与交互 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { gsap } from '@/plugins/gsap'
 import type { ReportRecord } from '@/types'
 
@@ -56,13 +56,44 @@ function createBookView(record: ReportRecord): BookViewItem {
   }
 }
 
+const stageRef = ref<HTMLElement | null>(null)
+const measuredRowWidth = ref(0)
+let resizeObs: ResizeObserver | null = null
+
+const MAX_BOOK_SLOT = 46 // max book width (42) + gap (4)
+const SHELF_ROW_COUNT = 3
+
+const booksPerRow = computed(() => {
+  if (measuredRowWidth.value <= 0) return 8
+  return Math.max(4, Math.floor(measuredRowWidth.value / MAX_BOOK_SLOT))
+})
+
 const shelfRows = computed(() => {
-  const list = props.books.slice(0, 24).map(createBookView)
-  return [
-    list.slice(0, 8),
-    list.slice(8, 16),
-    list.slice(16, 24),
-  ]
+  const perRow = booksPerRow.value
+  const maxBooks = perRow * SHELF_ROW_COUNT
+  const list = props.books.slice(0, maxBooks).map(createBookView)
+  const rows: BookViewItem[][] = []
+  for (let i = 0; i < SHELF_ROW_COUNT; i++) {
+    rows.push(list.slice(i * perRow, (i + 1) * perRow))
+  }
+  return rows
+})
+
+onMounted(() => {
+  const stage = stageRef.value
+  if (!stage) return
+  const firstRow = stage.querySelector('.shelf-row') as HTMLElement | null
+  if (!firstRow) return
+  resizeObs = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (entry) measuredRowWidth.value = entry.contentRect.width
+  })
+  resizeObs.observe(firstRow)
+})
+
+onBeforeUnmount(() => {
+  resizeObs?.disconnect()
+  resizeObs = null
 })
 
 function setBookRef(id: string, el: unknown) {
@@ -123,7 +154,7 @@ function handleBookClick(item: BookViewItem, evt: MouseEvent) {
 </script>
 
 <template>
-  <div class="bookshelf-stage">
+  <div class="bookshelf-stage" ref="stageRef">
     <div class="shelf-cabinet">
       <div class="cabinet-frame">
         <div class="cabinet-top-deco"></div>

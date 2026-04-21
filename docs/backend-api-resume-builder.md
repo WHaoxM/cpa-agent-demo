@@ -125,3 +125,92 @@ interface ResumeForm {
 | 下载 PDF 按钮 | `ResumeBuilder.vue` | `rb-btn-ghost` |
 | 头像上传 | `ResumeBuilder.vue` | `avatarBase64` |
 | draftText 回传 | `stores/resume.ts` | `setDraftText` |
+
+---
+
+## API-5：简历文本解析（ResumeBuilder 表单生成）
+
+**场景**：用户在 `ResumeBuilder.vue` 填写表单后生成纯文本简历，后端结构化解析为 L0 数据。
+
+> ✅ **已实现**：`POST /api/pipeline/ext/parse/text`
+
+**前端调用链路**
+
+```
+ResumeBuilder.vue
+  ├── 用户填写表单
+  ├── computed resumeText（纯文本格式）
+  ├── 点击「下一步」/「解析」
+  └── POST /api/pipeline/ext/parse/text
+          ├── Body: { text: resumeText, student_id?, source: "resume_builder" }
+          └── Response: { student_id, name, education[], skills[], raw_text }
+```
+
+**请求体**
+
+```json
+{
+  "text": "张三\nXX大学 | 计算机科学 | 本科\n电话：13800138000 | 邮箱：zhangsan@example.com\n\n【专业技能】\nVue.js · React · TypeScript\n\n【项目经历】\n电商小程序 | 担任：前端负责人\n...",
+  "student_id": "可选",
+  "source": "resume_builder"
+}
+```
+
+**响应示例**
+
+```json
+{
+  "success": true,
+  "data": {
+    "student_id": "rb_a1b2c3d4",
+    "name": "张三",
+    "contact": {
+      "phone": "13800138000",
+      "email": "zhangsan@example.com"
+    },
+    "education": [
+      {
+        "school": "XX大学",
+        "major": "计算机科学",
+        "degree": "本科",
+        "period": ""
+      }
+    ],
+    "skills": ["Vue.js", "React", "TypeScript"],
+    "raw_text": "...",
+    "text_length": 256
+  },
+  "next_steps": [
+    "调用 /api/pipeline/ext/nsle/resume 进行实体抽取",
+    "调用 /api/pipeline/ext/portrait/student 生成画像"
+  ]
+}
+```
+
+**前端接入方式**
+
+```typescript
+// ResumeBuilder.vue
+import { post } from '@/api/http'
+
+async function parseResumeText() {
+  const text = resumeText.value  // computed 属性
+  const res = await post('/pipeline/ext/parse/text', {
+    text,
+    source: 'resume_builder'
+  })
+  if (res.success) {
+    resumeStore.setResult(res.data)  // 存入 Pinia store
+    // 继续下一步：L1 抽取、画像生成
+  }
+}
+```
+
+**与 PDF 上传解析的区别**
+
+| 方式 | 接口 | 前置步骤 | 适用场景 |
+|------|------|---------|---------|
+| 表单生成文本 | `POST /pipeline/ext/parse/text` | 用户填写表单 | 无 PDF 简历的用户 |
+| PDF 上传 | `POST /pipeline/ext/parse/upload/resume` | 选择文件 → MinerU OCR | 已有 PDF 简历的用户 |
+
+**数据表**：`student_profile` (student_id, name, profile_json, source_type='text')

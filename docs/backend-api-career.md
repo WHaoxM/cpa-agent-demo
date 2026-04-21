@@ -1460,3 +1460,176 @@ interface SkillCourseEdge {
 | `core` | 核心 |
 | `recommended` | 推荐 |
 | `optional` | 选修 |
+
+---
+
+## 四、新增接口（2026-04-21 实现）
+
+> 以下接口为本次联调新增实现，用于填补前端「断点」功能。
+
+---
+
+### 4.1 晋升路径查询
+
+**接口**：`GET /api/career/paths`
+
+**说明**：查询职业晋升链（初级 → 中级 → 高级 → 专家）。数据来自 Neo4j 图谱的 `PROMOTION` 边。
+
+**Query 参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `role` | `string` | 可选 | 起始岗位名称，如 `前端工程师` |
+| `category` | `string` | 可选 | 岗位大类，如 `前端`、`后端`、`算法` |
+| `depth` | `number` | 可选 | 路径深度，默认 `3` |
+| `student_id` | `string` | 可选 | 学生ID，用于个性化 |
+
+**响应 `data`**
+
+```typescript
+interface CareerPathItem {
+  chain: string[]        // 晋升链，如 ["初级前端工程师", "中级前端工程师", "高级前端工程师"]
+  requirements: string[] // 每级晋升要求
+  depth: number         // 链深度
+}
+```
+
+**响应示例**
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "paths": [
+      {
+        "chain": ["初级前端工程师", "中级前端工程师", "高级前端工程师"],
+        "requirements": ["1年经验", "3年经验"],
+        "depth": 2
+      },
+      {
+        "chain": ["初级后端工程师", "中级后端工程师", "高级后端工程师", "架构师"],
+        "requirements": ["1年经验", "3年经验", "5年经验"],
+        "depth": 3
+      }
+    ],
+    "total": 2,
+    "query": { "role": "", "category": "", "depth": 3 }
+  }
+}
+```
+
+**前端调用点**：职途导航地铁图、职业晋升链展示
+
+---
+
+### 4.2 换岗/转岗路径查询
+
+**接口**：`GET /api/career/transfer`
+
+**说明**：查询从当前岗位到目标岗位的换岗选项，包含技能重叠度和需补充技能。数据来自 Neo4j 图谱的 `TRANSFER` 边。
+
+**Query 参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `from_role` | `string` | ✅ | 当前岗位，如 `后端开发` |
+| `to_role` | `string` | 可选 | 目标岗位，不填则返回所有可能选项 |
+| `student_id` | `string` | 可选 | 学生ID |
+
+**响应 `data`**
+
+```typescript
+interface TransferOption {
+  from: string         // 当前岗位
+  to: string           // 目标岗位
+  skill_overlap: number // 技能重叠度 0-100%
+  gap_skills: string[] // 需要补充的技能
+  difficulty: string   // "容易" | "中等" | "困难"
+}
+```
+
+**响应示例**
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "from_role": "后端开发",
+    "transfer_options": [
+      {
+        "from": "后端开发",
+        "to": "架构师",
+        "skill_overlap": 60,
+        "gap_skills": ["系统设计", "云原生"],
+        "difficulty": "困难"
+      },
+      {
+        "from": "后端开发",
+        "to": "全栈工程师",
+        "skill_overlap": 70,
+        "gap_skills": ["React", "Vue"],
+        "difficulty": "中等"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
+**前端调用点**：职途导航换岗建议、技能差距分析
+
+---
+
+### 4.3 课程推荐
+
+**接口**：`GET /api/learning/recommend`
+
+**说明**：基于弱技能或目标岗位推荐课程。支持三级推荐策略：弱技能匹配 → 岗位匹配 → 历史画像 → 热门兜底。
+
+**Query 参数**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `weak_skills` | `string` | 可选 | 弱技能列表，逗号分隔，如 `React,Vue` |
+| `target_role` | `string` | 可选 | 目标岗位，如 `前端开发` |
+| `student_id` | `string` | 可选 | 学生ID，查询历史画像 |
+| `limit` | `number` | 可选 | 返回数量，默认 `10` |
+
+**响应 `data`**
+
+```typescript
+interface RecommendedCourse {
+  id: number
+  title: string
+  category: string
+  difficulty: string
+  match_reason: string   // 推荐原因："补强弱技能" / "目标岗位'前端开发'推荐" / "热门课程"
+  // ... 其他 course 字段
+}
+```
+
+**响应示例**
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "courses": [
+      {
+        "id": 1,
+        "title": "Vue 3 实战开发",
+        "category": "前端框架",
+        "difficulty": "intermediate",
+        "match_reason": "补强弱技能"
+      }
+    ],
+    "total": 1,
+    "query": { "weak_skills": ["Vue"], "target_role": "", "student_id": "" }
+  }
+}
+```
+
+**前端调用点**：技能提升中心、弱技能补强推荐

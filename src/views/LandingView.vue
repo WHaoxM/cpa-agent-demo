@@ -6,44 +6,244 @@ import { Icon } from '@iconify/vue'
 import { gsap } from '@/plugins/gsap'
 import CareerStarMap from '@/components/career/CareerStarMap.vue'
 
-const router = useRouter()
-const pageRef = ref<HTMLElement | null>(null)
-let ctx: ReturnType<typeof gsap.context> | null = null
+const router    = useRouter()
+const pageRef   = ref<HTMLElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const glowRef   = ref<HTMLElement | null>(null)
+const mapRef    = ref<HTMLElement | null>(null)
+const bgRef     = ref<HTMLElement | null>(null)
+const titleRef  = ref<HTMLElement | null>(null)
+const ctaRef    = ref<HTMLButtonElement | null>(null)
 
-function goToLogin() {
-  router.push('/login')
+let ctx:           ReturnType<typeof gsap.context> | null = null
+let rafId:         number | null = null
+let removeResize:  (() => void) | null = null
+
+// ── Particle types ────────────────────────────────────────────────────────
+interface Particle { x: number; y: number; r: number; vx: number; vy: number; a: number; ad: number; asp: number; color: number; brightness: number }
+interface Meteor   { x: number; y: number; vx: number; vy: number; life: number; maxLife: number }
+
+// ── Canvas: star dust + shooting stars ───────────────────────────────────
+function initCanvas() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const c = canvas.getContext('2d')
+  if (!c) return
+
+  let mouseX = window.innerWidth / 2
+  let mouseY = window.innerHeight / 2
+  let mouseActive = false
+  let mouseTimer: ReturnType<typeof setTimeout> | null = null
+
+  const onMouseMove = (e: MouseEvent) => {
+    mouseX = e.clientX
+    mouseY = e.clientY
+    mouseActive = true
+    if (mouseTimer) clearTimeout(mouseTimer)
+    mouseTimer = setTimeout(() => { mouseActive = false }, 150)
+  }
+  window.addEventListener('mousemove', onMouseMove)
+
+  const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
+  resize()
+  window.addEventListener('resize', resize)
+  removeResize = () => {
+    window.removeEventListener('resize', resize)
+    window.removeEventListener('mousemove', onMouseMove)
+    if (mouseTimer) clearTimeout(mouseTimer)
+  }
+
+  // Typed non-null aliases so closures (spawnMeteor, tick) don't lose narrowing
+  const cv: HTMLCanvasElement = canvas
+  const c2d: CanvasRenderingContext2D = c
+
+  const BRAND_COLORS = [
+    [255, 255, 255],   // white
+    [190, 42, 0],      // vermilion
+    [201, 162, 39],    // imperial gold
+    [27, 78, 139],     // indigo
+    [232, 112, 85],    // vermilion-300
+  ]
+  const ps: Particle[] = Array.from({ length: 280 }, () => {
+    const isBrand = Math.random() < 0.3
+    const cIdx = isBrand ? 1 + Math.floor(Math.random() * (BRAND_COLORS.length - 1)) : 0
+    return {
+      x:   Math.random() * canvas.width,
+      y:   Math.random() * canvas.height,
+      r:   isBrand ? (0.3 + Math.random() * 1.0) : (0.4 + Math.random() * 1.4),
+      vx:  (Math.random() - 0.5) * 0.1,
+      vy:  (Math.random() - 0.5) * 0.1,
+      a:   Math.random(),
+      ad:  Math.random() < 0.5 ? 1 : -1,
+      asp: 0.002 + Math.random() * 0.005,
+      color: cIdx,
+      brightness: 0.5 + Math.random() * 0.5,
+    }
+  })
+  const ms: Meteor[] = []
+  let mTimer = 0
+
+  function spawnMeteor() {
+    const dir = Math.random() < 0.5 ? 1 : -1
+    const ang = (22 + Math.random() * 36) * (Math.PI / 180)
+    const spd = 4 + Math.random() * 4
+    ms.push({ x: Math.random() * cv.width, y: -20,
+      vx: dir * Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+      life: 0, maxLife: 45 + Math.random() * 35 })
+  }
+
+  function tick() {
+    rafId = requestAnimationFrame(tick)
+    const W = cv.width, H = cv.height
+    c2d.clearRect(0, 0, W, H)
+
+    for (const p of ps) {
+      // Mouse influence: particles pushed away from cursor (DeepSeek style)
+      const dx = p.x - mouseX
+      const dy = p.y - mouseY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const mouseRange = 180
+
+      if (dist < mouseRange && dist > 0) {
+        // Particles push away from mouse with exponential force
+        const force = (1 - dist / mouseRange) * 2.5
+        const angle = Math.atan2(dy, dx)
+        p.vx += Math.cos(angle) * force * 0.15
+        p.vy += Math.sin(angle) * force * 0.15
+        // Brightness increases when near mouse
+        p.brightness = Math.min(1, p.brightness + force * 0.15)
+      } else {
+        // Slowly return to normal brightness
+        p.brightness = Math.max(0.5, p.brightness - 0.015)
+      }
+
+      // Apply friction/damping
+      p.vx *= 0.96
+      p.vy *= 0.96
+
+      // Update position
+      p.x = (p.x + p.vx + W) % W
+      p.y = (p.y + p.vy + H) % H
+      p.a += p.ad * p.asp
+      if (p.a > 1 || p.a < 0.05) p.ad *= -1
+
+      c2d.beginPath()
+      c2d.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+      const c = BRAND_COLORS[p.color] ?? BRAND_COLORS[0]!
+      const baseA = p.color === 0 ? 0.5 : 0.65
+      const finalAlpha = (p.a * baseA * p.brightness).toFixed(3)
+      c2d.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${finalAlpha})`
+      c2d.fill()
+    }
+
+    mTimer++
+    if (mTimer > 280 + Math.random() * 180) { spawnMeteor(); mTimer = 0 }
+    for (let i = ms.length - 1; i >= 0; i--) {
+      const m = ms[i]!
+      const prog = m.life / m.maxLife
+      const al   = (1 - prog) * 0.85
+      const tx   = -m.vx * 35, ty = -m.vy * 35
+      const g    = c2d.createLinearGradient(m.x, m.y, m.x + tx, m.y + ty)
+      g.addColorStop(0,   `rgba(255,255,255,${al.toFixed(2)})`)
+      g.addColorStop(0.3, `rgba(201,162,39,${(al * 0.35).toFixed(2)})`)
+      g.addColorStop(0.6, `rgba(190,42,0,${(al * 0.4).toFixed(2)})`)
+      g.addColorStop(1,   'rgba(0,0,0,0)')
+      c2d.strokeStyle = g
+      c2d.lineWidth   = Math.max(0.5, 2 - prog)
+      c2d.beginPath(); c2d.moveTo(m.x, m.y); c2d.lineTo(m.x + tx, m.y + ty); c2d.stroke()
+      m.x += m.vx; m.y += m.vy; m.life++
+      if (m.life >= m.maxLife || m.y > H) ms.splice(i, 1)
+    }
+  }
+  tick()
 }
 
-onMounted(() => {
-  if (!pageRef.value) return
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+// ── Mouse parallax + glow ─────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type QFn = (...args: any[]) => any
+let glowX: QFn | null = null
+let glowY: QFn | null = null
+let mapX:  QFn | null = null
+let mapY:  QFn | null = null
+let bgX:   QFn | null = null
+let bgY:   QFn | null = null
 
-  ctx = gsap.context(() => {
-    const tl = gsap.timeline({ delay: 0.15 })
+function onMouse(e: MouseEvent) {
+  const nx = e.clientX / window.innerWidth  - 0.5
+  const ny = e.clientY / window.innerHeight - 0.5
+  glowX?.(e.clientX - 300); glowY?.(e.clientY - 300)
+  mapX?.(nx * -28);          mapY?.(ny * -28)
+  bgX?.(nx * -14);           bgY?.(ny * -14)
+  // 更新 CSS 变量驱动鼠标散开层
+  pageRef.value?.style.setProperty('--mouse-x', `${e.clientX}px`)
+  pageRef.value?.style.setProperty('--mouse-y', `${e.clientY}px`)
+}
 
-    tl.from('.ld-map-wrap', {
-      opacity: 0,
-      duration: 1.2, ease: 'power2.out',
+function initParallax() {
+  if (!glowRef.value || !mapRef.value || !bgRef.value) return
+  gsap.set(glowRef.value, { x: -300, y: -300 })
+  glowX = gsap.quickTo(glowRef.value, 'x', { duration: 0.5,  ease: 'power3.out' })
+  glowY = gsap.quickTo(glowRef.value, 'y', { duration: 0.5,  ease: 'power3.out' })
+  mapX  = gsap.quickTo(mapRef.value,  'x', { duration: 0.9,  ease: 'power2.out' })
+  mapY  = gsap.quickTo(mapRef.value,  'y', { duration: 0.9,  ease: 'power2.out' })
+  bgX   = gsap.quickTo(bgRef.value,   'x', { duration: 1.5,  ease: 'power1.out' })
+  bgY   = gsap.quickTo(bgRef.value,   'y', { duration: 1.5,  ease: 'power1.out' })
+  window.addEventListener('mousemove', onMouse)
+}
+
+// ── CTA magnetic button ───────────────────────────────────────────────────
+function initCta() {
+  const btn = ctaRef.value
+  if (!btn) return
+  const move = (e: MouseEvent) => {
+    const r = btn.getBoundingClientRect()
+    gsap.to(btn, {
+      x: (e.clientX - r.left - r.width  / 2) * 0.28,
+      y: (e.clientY - r.top  - r.height / 2) * 0.28,
+      duration: 0.3, ease: 'power2.out', overwrite: 'auto',
     })
+  }
+  const leave = () => gsap.to(btn, { x: 0, y: 0, duration: 0.55, ease: 'elastic.out(1,0.4)', overwrite: 'auto' })
+  btn.addEventListener('mousemove', move)
+  btn.addEventListener('mouseleave', leave)
+}
 
-    tl.from('.ld-corner', {
-      opacity: 0,
-      stagger: 0.1, duration: 0.6, ease: 'power2.out',
-    }, '-=0.6')
+// ── Entry timeline ────────────────────────────────────────────────────────
+function initEntry() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (titleRef.value) titleRef.value.textContent = '职导星图'
+    return
+  }
+  ctx = gsap.context(() => {
+    const tl = gsap.timeline({ delay: 0.08 })
+    tl.from('.ld-nebula',   { opacity: 0, duration: 1.8, ease: 'power2.out'  }, 0)
+      .from(canvasRef.value, { autoAlpha: 0, duration: 1.4, ease: 'power2.out' }, 0)
+      .from(mapRef.value, {
+        autoAlpha: 0, scale: 0.86, filter: 'blur(12px)',
+        duration: 1.6, ease: 'power3.out', clearProps: 'filter',
+      }, 0.2)
+      .from('.ld-pulse-ring', { autoAlpha: 0, scale: 0.2, duration: 1.4, ease: 'power3.out' }, 0.5)
+      .from('.ld-corner',     { autoAlpha: 0, stagger: 0.12, duration: 0.6, ease: 'power2.out' }, 1.4)
+      .from('.ld-sep', { scaleX: 0, duration: 0.75, ease: 'power2.inOut', transformOrigin: 'left center' }, 1.65)
+      .to(titleRef.value,    { duration: 0.9, text: { value: '职导星图', delimiter: '' }, ease: 'none' }, 1.85)
+      .from('.ld-sub',       { autoAlpha: 0, y: 8, duration: 0.5, ease: 'power2.out' }, 2.5)
+      .from(ctaRef.value,    { autoAlpha: 0, y: 10, duration: 0.5, ease: 'power3.out' }, 2.65)
+  }, pageRef.value ?? undefined)
+}
 
-    tl.from('.ld-sep', {
-      scaleX: 0,
-      duration: 0.7, ease: 'power2.inOut', transformOrigin: 'left center',
-    }, '-=0.3')
+function goToLogin() { router.push('/login') }
 
-    tl.from('.ld-footer', {
-      opacity: 0, y: 10,
-      duration: 0.6, ease: 'power2.out',
-    }, '-=0.4')
-  }, pageRef.value)
+onMounted(() => {
+  initCanvas()
+  initParallax()
+  initCta()
+  initEntry()
 })
 
 onBeforeUnmount(() => {
+  if (rafId !== null) cancelAnimationFrame(rafId)
+  removeResize?.()
+  window.removeEventListener('mousemove', onMouse)
   ctx?.revert()
 })
 </script>
@@ -51,12 +251,32 @@ onBeforeUnmount(() => {
 <template>
   <div ref="pageRef" class="ld-page">
 
-    <!-- 角落标注（海报风格） -->
+    <!-- 鼠标散开层（DeepSeek风格） -->
+    <div class="ld-mouse-zone" aria-hidden="true" />
+
+    <!-- 粒子画布 -->
+    <canvas ref="canvasRef" class="ld-canvas" aria-hidden="true" />
+
+    <!-- 视差背景层（星云渐变） -->
+    <div ref="bgRef" class="ld-bg-layer">
+      <div class="ld-nebula ld-nebula--a" />
+      <div class="ld-nebula ld-nebula--b" />
+      <div class="ld-nebula ld-nebula--c" />
+    </div>
+
+    <!-- 暗角遮罩 -->
+    <div class="ld-vignette" aria-hidden="true" />
+
+    <!-- 鼠标光晕 -->
+    <div ref="glowRef" class="ld-glow" aria-hidden="true" />
+
+    <!-- 角落标注 -->
     <span class="ld-corner ld-corner--tl">职业导航平台</span>
     <span class="ld-corner ld-corner--tr">2025</span>
 
-    <!-- 星图主体 -->
-    <div class="ld-map-wrap">
+    <!-- 星图主体（视差层） -->
+    <div ref="mapRef" class="ld-map-wrap">
+      <div class="ld-pulse-ring" aria-hidden="true" />
       <CareerStarMap theme="dark" class="ld-starmap" />
     </div>
 
@@ -66,11 +286,11 @@ onBeforeUnmount(() => {
     <!-- 底部说明栏 -->
     <footer class="ld-footer">
       <div class="ld-footer-left">
-        <h1 class="ld-title">职导星图</h1>
+        <h1 ref="titleRef" class="ld-title"></h1>
         <p class="ld-sub">找到你在职业星空中的坐标</p>
       </div>
       <div class="ld-footer-right">
-        <button class="ld-cta" @click="goToLogin">
+        <button ref="ctaRef" class="ld-cta" @click="goToLogin">
           <span>进入</span>
           <Icon icon="lucide:arrow-right" class="ld-cta__arrow" />
         </button>
@@ -81,18 +301,115 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* ── 页面：全屏竖向排布 ── */
+/* ── 页面 ────────────────────────────────────────────────────────────────── */
 .ld-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100vh;
-  background: #06060F;
+  background: #1A1A24;
   overflow: hidden;
-  position: relative;
 }
 
-/* ── 角落标注（海报版画风格） ── */
+/* ── 粒子画布 ──────────────────────────────────────────────────────────────── */
+.ld-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* ── 视差背景层 ────────────────────────────────────────────────────────────── */
+.ld-bg-layer {
+  position: absolute;
+  inset: -60px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── 星云渐变 ──────────────────────────────────────────────────────────────── */
+.ld-nebula {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ld-nebula--a {
+  background:
+    radial-gradient(ellipse 55% 42% at 28% 38%, rgba(190,42,0,0.28) 0%, rgba(190,42,0,0.08) 40%, transparent 65%),
+    radial-gradient(ellipse 30% 25% at 22% 30%, rgba(201,162,39,0.10) 0%, transparent 50%);
+  animation: ld-nebula-drift 18s ease-in-out infinite alternate;
+}
+
+.ld-nebula--b {
+  background:
+    radial-gradient(ellipse 45% 52% at 72% 62%, rgba(27,78,139,0.22) 0%, rgba(27,78,139,0.06) 40%, transparent 65%),
+    radial-gradient(ellipse 28% 22% at 78% 55%, rgba(74,127,168,0.10) 0%, transparent 45%);
+  animation: ld-nebula-drift 24s ease-in-out infinite alternate-reverse;
+}
+
+.ld-nebula--c {
+  background:
+    radial-gradient(ellipse 38% 30% at 56% 20%, rgba(201,162,39,0.14) 0%, rgba(100,60,20,0.06) 40%, transparent 60%),
+    radial-gradient(ellipse 25% 20% at 50% 15%, rgba(232,112,85,0.08) 0%, transparent 45%);
+  animation: ld-nebula-drift 30s ease-in-out infinite alternate;
+}
+
+@keyframes ld-nebula-drift {
+  0%   { opacity: 0.6; transform: scale(1) translate(0, 0); }
+  50%  { opacity: 0.95; }
+  100% { opacity: 0.7; transform: scale(1.07) translate(2%, 1.5%); }
+}
+
+/* ── 暗角遮罩 ──────────────────────────────────────────────────────────────── */
+.ld-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(ellipse 88% 88% at 50% 48%, transparent 40%, rgba(0,0,0,0.35) 100%);
+  pointer-events: none;
+}
+
+/* ── 鼠标光晕（增强版 - DeepSeek风格） ─────────────────────────────────── */
+.ld-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(190, 42, 0, 0.12) 0%,
+    rgba(201, 162, 39, 0.08) 25%,
+    rgba(255, 120, 60, 0.03) 45%,
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 3;
+  mix-blend-mode: screen;
+  will-change: transform;
+  opacity: 0.8;
+}
+
+/* ── 鼠标散开层（覆盖整个页面的粒子交互区） ────────────────────────────── */
+.ld-mouse-zone {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(190, 42, 0, 0.04) 0%,
+    rgba(201, 162, 39, 0.02) 30%,
+    transparent 60%
+  );
+  transition: background 0.3s ease;
+}
+
+/* ── 角落标注 ──────────────────────────────────────────────────────────────── */
 .ld-corner {
   position: absolute;
   z-index: 10;
@@ -100,46 +417,73 @@ onBeforeUnmount(() => {
   font-size: 9px;
   font-weight: 400;
   letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.55);
   pointer-events: none;
   user-select: none;
 }
 
-.ld-corner--tl {
-  top: 20px;
-  left: 28px;
-}
+.ld-corner--tl { top: 20px; left: 28px; }
+.ld-corner--tr { top: 20px; right: 28px; }
 
-.ld-corner--tr {
-  top: 20px;
-  right: 28px;
-}
-
-/* ── 星图主体区域 ── */
+/* ── 星图主体 ──────────────────────────────────────────────────────────────── */
 .ld-map-wrap {
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: stretch;
+  position: relative;
+  z-index: 5;
+  will-change: transform;
+}
+
+/* ── 激活脉冲环 ────────────────────────────────────────────────────────────── */
+.ld-pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 240px;
+  height: 240px;
+  margin: -120px 0 0 -120px;
+  border-radius: 50%;
+  border: 1px solid rgba(190,42,0,0.25);
+  box-shadow: 0 0 40px rgba(190,42,0,0.14), 0 0 80px rgba(201,162,39,0.06), inset 0 0 25px rgba(190,42,0,0.06);
+  pointer-events: none;
+  z-index: 4;
+  animation: ld-pulse 3.5s ease-in-out infinite;
+}
+
+@keyframes ld-pulse {
+  0%, 100% { box-shadow: 0 0 40px rgba(190,42,0,0.14), 0 0 80px rgba(201,162,39,0.06), inset 0 0 25px rgba(190,42,0,0.06); }
+  50%       { box-shadow: 0 0 65px rgba(190,42,0,0.24), 0 0 100px rgba(201,162,39,0.10), inset 0 0 40px rgba(190,42,0,0.12); }
 }
 
 .ld-starmap {
   flex: 1;
   min-height: 0;
+  position: relative;
+  z-index: 5;
 }
 
-/* ── 分割线 ── */
+/* ── 分割线 ────────────────────────────────────────────────────────────────── */
 .ld-sep {
   flex-shrink: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.06);
   margin: 0;
+  z-index: 6;
+  animation: ld-breathe 4s ease-in-out infinite;
 }
 
-/* ── 底部说明栏 ── */
+@keyframes ld-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
+}
+
+/* ── 底部说明栏 ────────────────────────────────────────────────────────────── */
 .ld-footer {
   flex-shrink: 0;
   height: 88px;
+  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,7 +501,7 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
 }
 
-/* ── 主标题：ultra-thin，无特效 ── */
+/* ── 主标题 ────────────────────────────────────────────────────────────────── */
 .ld-title {
   margin: 0;
   font-family: var(--font-title);
@@ -165,40 +509,83 @@ onBeforeUnmount(() => {
   font-weight: 100;
   letter-spacing: 0.45em;
   line-height: 1;
-  color: rgba(240, 237, 232, 0.92);
+  color: rgba(255, 255, 255, 0.92);
+  min-height: 1.2em;
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.92) 0%,
+    rgba(201,162,39,0.95) 45%,
+    rgba(255,255,255,0.92) 55%,
+    rgba(255,255,255,0.92) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ld-title-shimmer 6s ease-in-out infinite;
 }
 
-/* ── 副标题 ── */
+@keyframes ld-title-shimmer {
+  0%, 100% { background-position: 100% 0; }
+  50% { background-position: 0% 0; }
+}
+
+/* ── 副标题 ────────────────────────────────────────────────────────────────── */
 .ld-sub {
   margin: 0;
   font-family: var(--font-ui);
   font-size: 10px;
   font-weight: 400;
   letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.28);
+  color: rgba(255, 255, 255, 0.65);
+  background: linear-gradient(90deg, rgba(255,255,255,0.65), rgba(201,162,39,0.7), rgba(255,255,255,0.65));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ld-title-shimmer 8s ease-in-out infinite;
 }
 
-/* ── CTA：细线边框，克制 ── */
+/* ── CTA 按钮 ──────────────────────────────────────────────────────────────── */
 .ld-cta {
   display: inline-flex;
   align-items: center;
   gap: 9px;
   padding: 10px 22px;
-  background: transparent;
-  color: rgba(240, 237, 232, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(190, 42, 0, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(201, 162, 39, 0.4);
   border-radius: 2px;
   font-family: var(--font-title);
   font-size: 13px;
   font-weight: 300;
   letter-spacing: 0.2em;
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  will-change: transform;
+  box-shadow: 0 0 20px rgba(190, 42, 0, 0.15), 0 0 40px rgba(201, 162, 39, 0.08);
+}
+
+.ld-cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(190,42,0,0.0) 0%, rgba(201,162,39,0.2) 50%, rgba(190,42,0,0.0) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.ld-cta:hover::before {
+  opacity: 1;
 }
 
 .ld-cta:hover {
-  color: rgba(240, 237, 232, 0.95);
-  border-color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.98);
+  border-color: rgba(201,162,39,0.7);
+  background: rgba(190, 42, 0, 0.2);
+  box-shadow: 0 0 30px rgba(190, 42, 0, 0.3), 0 0 60px rgba(201,162,39, 0.15);
 }
 
 .ld-cta__arrow {
@@ -207,19 +594,14 @@ onBeforeUnmount(() => {
 }
 
 .ld-cta:hover .ld-cta__arrow {
-  transform: translateX(3px);
+  transform: translateX(4px);
+  color: rgba(201,162,39,0.9);
 }
 
-/* ── 响应式 ── */
+/* ── 响应式 ────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .ld-footer {
-    height: 80px;
-    padding: 0 20px;
-  }
-
-  .ld-title {
-    letter-spacing: 0.3em;
-  }
+  .ld-footer { height: 80px; padding: 0 20px; }
+  .ld-title  { letter-spacing: 0.3em; }
 }
 
 @media (max-width: 480px) {
@@ -230,25 +612,16 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     gap: 14px;
   }
-
-  .ld-title {
-    font-size: clamp(18px, 5vw, 24px);
-    letter-spacing: 0.25em;
-  }
-
-  .ld-cta {
-    width: 100%;
-    justify-content: center;
-  }
+  .ld-title { font-size: clamp(18px, 5vw, 24px); letter-spacing: 0.25em; }
+  .ld-cta   { width: 100%; justify-content: center; }
 }
 
-/* ── prefers-reduced-motion ── */
+/* ── prefers-reduced-motion ────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .ld-cta {
-    transition: none;
-  }
-  .ld-cta__arrow {
-    transition: none;
-  }
+  .ld-nebula,
+  .ld-sep,
+  .ld-pulse-ring { animation: none !important; }
+  .ld-cta,
+  .ld-cta__arrow { transition: none; }
 }
 </style>

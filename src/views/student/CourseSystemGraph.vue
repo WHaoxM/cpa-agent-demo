@@ -39,14 +39,6 @@ const roleName = computed(() => {
 const pageTitle = computed(() => (
   isOverviewMode.value ? '技能图谱 · 15个职业总览' : `课程体系图谱 · ${roleName.value}`
 ))
-const pageSubtitle = computed(() => (
-  isOverviewMode.value
-    ? '从功能导航进入，展示本地 mock 中已存在的 15 个职业节点与跨层技能关系。'
-    : `当前按职业流程聚焦展示 ${roleName.value} 的分层技能与课程体系。`
-))
-const pageModeLabel = computed(() => (
-  isOverviewMode.value ? '功能导航入口' : '流程聚焦入口'
-))
 
 function resolveJobNode(role: string): { domainId: string; jobIndex: number } | null {
   for (const d of CAREER_DOMAINS) {
@@ -912,11 +904,7 @@ const importanceLabels: Record<string, string> = {
           <span>返回</span>
         </button>
         <div class="cs-brand">
-          <div class="cs-brand__meta">
-            <span class="cs-brand__title">{{ pageTitle }}</span>
-            <span class="cs-brand__mode">{{ pageModeLabel }}</span>
-          </div>
-          <span class="cs-brand__subtitle">{{ pageSubtitle }}</span>
+          <span class="cs-brand__title">{{ pageTitle }}</span>
         </div>
       </div>
       <div v-if="!isOverviewMode" class="cs-header__right">
@@ -1123,37 +1111,12 @@ const importanceLabels: Record<string, string> = {
 
 .cs-brand {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-.cs-brand__meta {
-  display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
 }
 .cs-brand__title {
-  font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+  font-size: 15px; font-weight: 600; letter-spacing: 0.02em;
   color: #222; white-space: nowrap;
-}
-.cs-brand__mode {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(192,74,43,0.08);
-  border: 1px solid rgba(192,74,43,0.18);
-  color: #9F3B23;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-.cs-brand__subtitle {
-  font-size: 12px;
-  line-height: 1.4;
-  color: #7A736B;
 }
 
 
@@ -1638,14 +1601,12 @@ const importanceLabels: Record<string, string> = {
   .cs-primary-action .cs-tools__btn span { display: none; }
   .cs-hint { display: none; }
   .cs-brand__title { font-size: 13px; }
-  .cs-brand__subtitle { display: none; }
   .cs-panel { width: 220px; top: 10px; right: 10px; bottom: 10px; }
 }
 @media (max-width: 640px) {
   .cs-header { padding: 8px 12px; }
   .cs-back span { display: none; }
   .cs-brand__title { font-size: 12px; }
-  .cs-brand__mode { display: none; }
   .uib__text { display: none; }
   .cs-legend { display: none; }
   .cs-panel {
