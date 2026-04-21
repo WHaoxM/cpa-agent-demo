@@ -1,5 +1,5 @@
 import 'element-plus/dist/index.css'
-import './assets/main.css'
+import './assets/styles/main.css'
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'

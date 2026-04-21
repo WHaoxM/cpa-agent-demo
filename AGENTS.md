@@ -27,18 +27,21 @@
 - `src/router/routes.ts`：全部路由定义。
 - `src/router/index.ts`：路由守卫、标题设置、登录态与角色校验。
 - `src/stores/`：Pinia store，项目使用 setup store 风格。统一由 `stores/index.ts` 导出。
-- `src/mock/data.ts`：演示数据与查询辅助函数。
-- `src/types/index.ts`：领域类型定义。新增实体时先改这里，再改 mock/store/view。
-- `src/components/charts/`：D3.js / ECharts 图表组件（10 个），优先复用，不要在页面里重复造轮子。
-- `src/components/book/`：古籍风格 UI 组件（BookPage、BrushText、CloudTabNav、SealStamp）。
+- `src/mock/`：演示数据（5 个文件），包含核心数据（data.ts）、职业课程/线路/画像/报告数据。
+- `src/types/`：领域类型定义，按领域拆分为 `user.ts`、`course.ts`、`career.ts`、`chart.ts`、`knowledge.ts`、`report.ts`、`ai.ts`，统一由 `index.ts` barrel re-export。新增实体时先在对应领域文件中定义，再改 mock/store/view。
+- `src/components/charts/`：D3.js 图表组件（3 个：D3RadarChart、D3ChordDiagram、D3Treemap），优先复用，不要在页面里重复造轮子。
+- `src/components/book/`：古籍风格 UI 组件（BookPage、CloudTabNav）。
+- `src/components/career/`：职业模块子组件（CareerAgentDashboard、CareerNavigationIdlePreview、CareerStarMap）。
 - `src/components/bookshelf/`：书架 3D 场景与展开浮层。
-- `src/composables/`：Vue Composition API 可复用逻辑（10 个），包含图谱数据、Agent 流程、动画、主题等。
+- `src/composables/`：Vue Composition API 可复用逻辑（9 个），包含图谱数据、Agent 流程、动画、会话管理等。
 - `src/api/`：API 接口签名（当前为 mock 实现），预留后端替换。
 - `src/plugins/gsap.ts`：GSAP 插件注册（ScrollTrigger / TextPlugin / MotionPath）。
 - `src/constants/icons.ts`：Iconify 图标常量集合。
-- `src/utils/index.ts`：工具函数（防抖等）。
-- `src/assets/theme.css`：主题变量、Element Plus token 映射、全局动效与背景。
-- `src/assets/main.css`：页面容器、卡片、常用布局样式。
+- `src/utils/index.ts`：工具函数（防抖、节流、格式化等）。
+- `src/assets/styles/theme.css`：主题变量、Element Plus token 映射、全局动效与背景。
+- `src/assets/styles/main.css`：页面容器、卡片、常用布局样式。
+- `src/assets/images/`：图片资源。
+- `src/assets/data/`：大型数据文件（地理 JSON 等）。
 - `design-system/course-management/MASTER.md`：设计参考文档，不是运行时真相；如果和现有实现冲突，以项目现有代码和主题系统为准。
 
 ## 代码约定
@@ -67,7 +70,7 @@
 
 ## UI 与交互
 
-- 优先复用 `theme.css` 和 `main.css` 中已有 token、卡片样式、页面容器和过渡效果。
+- 优先复用 `assets/styles/theme.css` 和 `assets/styles/main.css` 中已有 token、卡片样式、页面容器和过渡效果。
 - 当前项目已经有多主题系统，运行时主题来源是 `src/stores/theme.ts`。不要把设计稿里的单一配色硬编码成全局唯一标准。
 - `design-system/course-management/MASTER.md` 可以作为视觉方向参考；如果它和当前页面实现冲突，优先保持被修改区域的一致性，不要顺手全站“纠偏”。
 - 新页面和大改版要保证桌面端与移动端都可用，至少关注 `1024px`、`768px`、`640px` 附近断点。

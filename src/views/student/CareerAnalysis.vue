@@ -13,9 +13,9 @@ import { use, registerMap, graphic } from 'echarts/core'
 import { BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import { TooltipComponent, GridComponent, GeoComponent, VisualMapComponent, DataZoomComponent, MarkPointComponent, GraphicComponent } from 'echarts/components'
-import chinaJson from '@/assets/china.json'
-import worldJson from '@/assets/world.json'
-import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
+import chinaJson from '@/assets/data/china.json'
+import worldJson from '@/assets/data/world.json'
+import parchmentBaseUrl from '@/assets/images/parchment-base.jpg'
 const parchmentBgUrl = `url("${parchmentBaseUrl}")`
 
 use([BarChart, LineChart, MapChart, BoxplotChart, GraphChart, CustomChart, CanvasRenderer,

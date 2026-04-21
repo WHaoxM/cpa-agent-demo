@@ -4,22 +4,19 @@ import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { EditPen } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
-import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores'
-import jiImg from '@/assets/ji.png'
+import jiImg from '@/assets/images/ji.png'
 
-const auth = useAuthStore()
 const userStore = useUserStore()
 
 const profile = computed(() => {
-  return (
-    auth.user ?? {
-      id: 'demo-001',
-      nickname: '演示用户',
-      account: 'demo@example.com',
-      avatar: jiImg,
-    }
-  )
+  const u = userStore.currentUser
+  return {
+    id: u?.id ?? 'demo-001',
+    nickname: u?.name ?? '演示用户',
+    account: u?.username ?? 'demo@example.com',
+    avatar: u?.avatar ?? jiImg,
+  }
 })
 
 /* ══ 头像上传 ══ */
@@ -60,7 +57,7 @@ const roleName = computed(() => {
 })
 
 const form = reactive({
-  nickname: userStore.currentUser?.name || profile.value.nickname,
+  nickname: profile.value.nickname,
   phone: userStore.currentUser?.phone || '13800000000',
   signature: userStore.currentUser?.signature || '保持专注，持续迭代。',
   email: userStore.currentUser?.email || profile.value.account,
@@ -78,12 +75,6 @@ async function onSave() {
       phone: form.phone,
       signature: form.signature,
     })
-
-    // 同步 authStore，保持两侧一致
-    if (auth.user) {
-      auth.user.nickname = form.nickname
-      auth.user.account = form.email
-    }
 
     // TODO: 接入后端 API —— 替换下方注释为真实请求
     // await api.updateProfile({

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 防抖函数
  * @param func 要防抖的函数
@@ -9,7 +8,7 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
+  let timeout: ReturnType<typeof setTimeout> | null = null
   
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
@@ -55,7 +54,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * @returns 格式化后的字符串
  */
 export function formatNumber(num: number, digits: number = 1): string {
-  return Math.round(num * Math.pow(10, digits)) / Math.pow(10, digits).toString()
+  return (Math.round(num * Math.pow(10, digits)) / Math.pow(10, digits)).toFixed(digits)
 }
 
 /**
@@ -154,7 +153,7 @@ export function deepClone<T>(obj: T): T {
  * @returns 颜色值
  */
 export function getColor(type: string): string {
-  const colors = {
+  const colors: Record<string, string> = {
     primary: '#409EFF',
     success: '#67C23A',
     warning: '#E6A23C',

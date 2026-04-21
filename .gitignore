@@ -37,3 +37,20 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Environment variables (local overrides)
+.env.local
+.env.*.local
+
+# AI editor config directories
+.agents/
+.claude/
+.codebuddy/
+.codex/
+.continue/
+.kiro/
+.qoder/
+.roo/
+.trae/
+.windsurf/
+skills-lock.json

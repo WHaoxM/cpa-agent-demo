@@ -10,8 +10,8 @@
 - **Element Plus** - Vue 3 组件库
 - **Vue Router** (v5) - 官方路由管理器
 - **Pinia** (v3) + pinia-plugin-persistedstate - 状态管理与持久化
-- **D3.js** (v7) - 数据可视化（雷达图、弦图、热力日历、Treemap 等）
-- **ECharts** (v5) + echarts-gl - 3D 图表与地图
+- **D3.js** (v7) - 数据可视化（雷达图、弦图、Treemap）
+- **ECharts** (v5) + vue-echarts - 图表与地图
 - **GSAP** (v3) - 高性能动画引擎（ScrollTrigger / TextPlugin / MotionPath）
 - **Three.js** - 3D 场景渲染
 - **Tiptap** - 富文本编辑器（简历描述字段）
@@ -49,20 +49,13 @@
 | 岗位数据集 | `admin/job-dataset` | 岗位数据的增删改查管理 |
 | 知识库维护 | `admin/knowledge-base` | 本地知识库内容管理 |
 
-### 数据可视化组件（D3.js / ECharts）
+### 数据可视化组件（D3.js）
 
 | 组件 | 说明 |
 |------|------|
 | `D3RadarChart` | 多边形雷达图，双系列对比（个人能力 vs 岗位要求） |
 | `D3ChordDiagram` | 技能亲和力弦图，渐变 Ribbon + 外弧刻度 |
-| `D3HeatCalendar` | GitHub 风格学习热力日历（52×7） |
 | `D3Treemap` | 课程结构 Treemap 图 |
-| `D3WeeklyTrend` | 周学习量趋势图（面积 + 折线） |
-| `D3ArcGauge` | 半圆弧量规，展示能力值与目标值差距 |
-| `D3CourseProgress` | 课程进度分布 |
-| `D3ErrorMatrix` | 错题矩阵热力图（知识点 × 难度） |
-| `D3FlowField` | 首页背景粒子流场 |
-| `D3CareerTree` | 职业成长树 |
 
 ## 项目结构
 
@@ -70,55 +63,67 @@
 src/
 ├── api/                  # API 接口层（当前为 mock 实现，预留后端替换）
 │   └── report.ts
-├── assets/               # 静态资源、主题变量
-│   ├── theme.css         # 主题 CSS 变量、Element Plus token 映射
-│   └── main.css          # 页面容器、卡片、布局样式
+├── assets/               # 静态资源
+│   ├── styles/           # CSS 样式文件
+│   │   ├── base.css      # 基础重置与字体
+│   │   ├── theme.css     # 主题 CSS 变量、Element Plus token 映射
+│   │   └── main.css      # 页面容器、卡片、布局样式
+│   ├── images/           # 图片资源
+│   └── data/             # 大型数据文件（地理 JSON 等）
 ├── components/
-│   ├── charts/           # D3.js / ECharts 图表组件（10 个）
-│   ├── book/             # 古籍风格 UI 组件（BookPage、BrushText、CloudTabNav、SealStamp）
-│   ├── bookshelf/        # 书架 3D 场景与展开浮层
+│   ├── charts/           # D3.js 图表组件（3 个：RadarChart、ChordDiagram、Treemap）
+│   ├── book/             # 古籍风格 UI 组件（BookPage、CloudTabNav）
+│   ├── bookshelf/        # 书架 3D 场景与展开浮层（BookshelfScene、BookOpenOverlay）
+│   ├── career/           # 职业模块子组件（CareerAgentDashboard、CareerNavigationIdlePreview、CareerStarMap）
 │   ├── UserInfoBar.vue   # 右上角用户信息栏
-│   ├── TiptapEditor.vue  # Tiptap 富文本编辑器封装
-│   └── ...
-├── composables/          # Vue Composition API 可复用逻辑（10 个）
+│   └── TiptapEditor.vue  # Tiptap 富文本编辑器封装
+├── composables/          # Vue Composition API 可复用逻辑（9 个）
 │   ├── useAbilityGraph.ts      # 职业能力图谱数据 & 同心圆布局
 │   ├── useAgentPortrait.ts     # 简历解析后的技能结构与 Agent 画像流程
 │   ├── useCareerInsights.ts    # 5 大职业方向洞察数据
 │   ├── useCourseSystem.ts      # 课程体系分层网络关系图数据
 │   ├── useGraphGeneration.ts   # 模拟 SSE 图谱生成流程
-│   ├── useNetworkGraph.ts      # 知识图谱网络 D3 force 布局
 │   ├── useOnboardingState.ts   # 新手引导状态判断
 │   ├── usePageEntrance.ts      # 页面入场动画 composable
-│   ├── useResizeObserver.ts    # 通用 ResizeObserver
-│   └── useThemePalette.ts      # 主题调色板读取
+│   ├── usePortraitSession.ts   # 画像会话管理（Agent Dashboard 共享时钟）
+│   └── useResizeObserver.ts    # 通用 ResizeObserver
 ├── constants/
 │   └── icons.ts          # 图标常量集合
 ├── layouts/
 │   └── AppLayout.vue     # 应用主框架（侧边栏 + 顶栏 + router-view）
-├── mock/
-│   └── data.ts           # 演示数据与查询辅助函数
+├── mock/                 # 演示数据（5 个文件）
+│   ├── data.ts           # 核心演示数据与查询辅助函数
+│   ├── careerCourses.ts  # 职业方向课程体系数据
+│   ├── careerLines.ts    # 职业发展地铁线路与路径图谱
+│   ├── careerPortraits.ts# 岗位画像数据
+│   └── careerReportData.ts # 职业报告数据（汇聚导出）
 ├── plugins/
 │   └── gsap.ts           # GSAP 插件注册（ScrollTrigger / TextPlugin / MotionPath）
 ├── router/
 │   ├── index.ts          # 路由守卫、标题设置、登录态与角色校验
 │   └── routes.ts         # 全部路由定义
-├── stores/               # Pinia setup store
+├── stores/               # Pinia setup store（6 个业务 store）
 │   ├── index.ts          # 统一导出
-│   ├── user.ts           # 用户状态
-│   ├── auth.ts           # 认证与登录
+│   ├── user.ts           # 用户状态与认证
 │   ├── course.ts         # 课程状态
 │   ├── learning.ts       # 学习记录与进度
 │   ├── theme.ts          # 多主题系统
 │   ├── report.ts         # 报告管理
 │   ├── resume.ts         # 简历与技能解析
-│   ├── knowledgeGraph.ts # 知识图谱状态
 │   └── pinia.ts          # Pinia 实例 + 持久化插件
-├── types/
-│   └── index.ts          # 领域类型定义
+├── types/                # 领域类型定义（按领域拆分）
+│   ├── index.ts          # barrel re-export（统一导出口）
+│   ├── user.ts           # 用户、角色、班级、统计
+│   ├── course.ts         # 课程、章节、题目、测验、笔记
+│   ├── career.ts         # 职业发展、岗位画像、七维评估
+│   ├── chart.ts          # D3 图表数据类型
+│   ├── knowledge.ts      # 知识图谱、Agent 步骤
+│   ├── report.ts         # 报告记录
+│   └── ai.ts             # AI 消息
 ├── utils/
 │   └── index.ts          # 工具函数（防抖等）
 ├── views/
-│   ├── student/          # 学生端页面（12 个 .vue）
+│   ├── student/          # 学生端页面（14 个 .vue）
 │   ├── admin/            # 管理员端页面（2 个 .vue）
 │   ├── course/           # 公共课程页（ExamsView、MessagesView）
 │   ├── HomeCenter.vue    # 首页

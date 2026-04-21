@@ -19,7 +19,7 @@ import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 import { gsap } from '@/plugins/gsap'
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
-import parchmentBaseUrl from '@/assets/textures/parchment-base.jpg'
+import parchmentBaseUrl from '@/assets/images/parchment-base.jpg'
 const parchmentBg = `url("${parchmentBaseUrl}")`
 
 const router = useRouter()
