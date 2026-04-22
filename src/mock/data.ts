@@ -22,7 +22,7 @@ export const CURRENT_USER_ID = 'student_001'
 export const mockUsers: User[] = [
   {
     id: 'student_001',
-    username: 'student001',
+    username: '123456',
     name: '张同学',
     email: 'student001@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -34,7 +34,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student_002',
-    username: 'student002',
+    username: '123456',
     name: '李同学',
     email: 'student002@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -45,7 +45,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student_003',
-    username: 'student003',
+    username: '123456',
     name: '王同学',
     email: 'student003@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -56,7 +56,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'admin_001',
-    username: 'admin001',
+    username: '123456',
     name: '管理员',
     email: 'admin001@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',

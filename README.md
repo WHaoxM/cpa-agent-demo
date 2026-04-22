@@ -158,10 +158,8 @@ npm run preview
 
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
-| 学生 | student001 | 123456 |
-| 学生 | student002 | 123456 |
-| 学生 | student003 | 123456 |
-| 管理员 | admin001 | 123456 |
+| 学生 | 123456 | 123456 |
+| 管理员 | 123456 | 123456 |
 
 ## 角色权限说明
 
@@ -206,6 +204,12 @@ npm run preview
 - 浏览器扩展：
   - Chrome: [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
   - Firefox: [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+
+## 在线演示
+
+🌐 **GitHub Pages Demo**: https://YOUR_USERNAME.github.io/cpa-agent-demo/
+
+> 将 `YOUR_USERNAME` 替换为您的 GitHub 用户名
 
 ## 许可证
 

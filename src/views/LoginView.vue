@@ -1,4 +1,4 @@
-﻿<!-- 页面：登录；路由：/login（login） -->
+<!-- 页面：登录；路由：/login（login） -->
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
@@ -24,7 +24,7 @@ const roleTabs = [
 ]
 
 const quickLogins = [
-  { role: UserRole.STUDENT, account: 'student001', name: '学生体验' },
+  { role: UserRole.STUDENT, account: '123456', name: '学生体验' },
 ]
 
 const features = [

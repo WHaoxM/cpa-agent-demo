@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CPA-Agent Demo</title>
+  <script>
+    // GitHub Pages SPA redirect - redirects all paths to index.html
+    const path = window.location.pathname.replace(/^\/cpa-agent-demo/, '');
+    const hash = window.location.hash;
+    const search = window.location.search;
+    window.location.href = '/cpa-agent-demo/' + search + hash;
+  </script>
+</head>
+<body>
+  <h1>Redirecting to CPA-Agent Demo...</h1>
+</body>
+</html>
