@@ -1,4 +1,4 @@
-﻿<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
+<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { useLearningStore } from '@/stores'
 import { useResumeStore } from '@/stores/resume'
 import { mockTargetRoleMarkets } from '@/mock/data'
+import { fetchTargetRoles, removeTargetRole as apiRemoveTargetRole } from '@/api/backend'
 import type { TargetRoleMarket } from '@/types'
 
 // ── 角色专属色（当代杂志调：暖而有质地） ──
@@ -133,9 +134,14 @@ const followedCount = computed(() => {
   return uniqueRoles.size
 })
 
-function removeJob(role: string) {
+async function removeJob(role: string) {
   const matched = learningStore.targetRoles.find(item => normalizeRole(item.role) === role)
   if (!matched) return
+  try {
+    await apiRemoveTargetRole(matched.role, 'stu_001')
+  } catch {
+    // 后端删除失败时仍更新前端，保证 UX
+  }
   learningStore.toggleTargetRole(matched.role)
   ElMessage.success('已取消关注该方向')
 }
@@ -212,6 +218,26 @@ function demandClass(level: string) {
 let cardObserver: IntersectionObserver | null = null
 
 onMounted(async () => {
+  /* 从后端同步 target roles（失败时保留本地 store 数据） */
+  try {
+    const resp = await fetchTargetRoles('stu_001')
+    if (resp.success && resp.data && resp.data.length > 0) {
+      const backendRoles = resp.data.map(item => ({
+        role: item.role_name,
+        savedAt: (item.created_at || new Date().toISOString()).slice(0, 10),
+      }))
+      /* 合并：后端数据优先，本地未同步的保留 */
+      const existingRoles = new Set(learningStore.targetRoles.map(r => r.role))
+      backendRoles.forEach(r => {
+        if (!existingRoles.has(r.role)) {
+          learningStore.targetRoles.push(r)
+        }
+      })
+    }
+  } catch {
+    // 后端不可用时降级到本地 store
+  }
+
   /* 初始化显示值为 0 */
   filteredDirections.value.forEach(job => {
     displayScores.value[job.role] = 0

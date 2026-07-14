@@ -2,7 +2,7 @@
 
 ## 项目定位
 
-- 这是一个纯前端课程管理系统演示项目，技术栈是 Vue 3 + TypeScript + Vite + Element Plus + Pinia。
+- 这是一个纯前端多智能体职业规划决策平台演示项目，技术栈是 Vue 3 + TypeScript + Vite + Element Plus + Pinia。
 - 当前数据全部来自本地 mock，不接真实后端。不要凭空引入 API 调用、接口层或服务端依赖，除非用户明确要求。
 - 产品语言以中文为主。新增页面、提示文案、空状态、按钮文案优先使用自然中文。
 - 系统核心是三角色体验：`student`、`teacher`、`admin`。任何新功能都要先考虑角色访问范围。

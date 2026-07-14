@@ -7,6 +7,7 @@ import { useResumeStore } from '@/stores/resume'
 import { usePageEntrance } from '@/composables/usePageEntrance'
 import { useRouter } from 'vue-router'
 import type { AIMessage } from '@/types'
+import { chatWithAgent } from '@/api/backend'
 
 const { pageRef } = usePageEntrance()
 const learningStore = useLearningStore()
@@ -220,6 +221,27 @@ function toggleThinking(msgId: string) {
   }
 }
 
+async function resolveBackendReply(
+  message: string,
+  fallback: { content: string; thinking: string[] },
+): Promise<{ content: string; thinking: string[] }> {
+  try {
+    const response = await chatWithAgent(message)
+    const reply = response.data?.reply
+    if (!response.success || !reply) throw new Error(response.error || 'empty agent reply')
+    return {
+      content: reply,
+      thinking: [
+        '请求后端 /api/agent/chat',
+        `Agent 引擎：${response.data?.engine ?? 'unknown'}`,
+        `数据来源：${response.data?.source ?? 'runtime'}`,
+      ],
+    }
+  } catch {
+    return fallback
+  }
+}
+
 async function sendMessage() {
   if (!inputMessage.value.trim() || loading.value) return
 
@@ -237,7 +259,8 @@ async function sendMessage() {
   scrollToBottom()
 
   const contextMsg = buildContextPrefix() + userMsg
-  const { content, thinking } = learningStore.getAIResponse(contextMsg)
+  const fallback = learningStore.getAIResponse(contextMsg)
+  const { content, thinking } = await resolveBackendReply(contextMsg, fallback)
 
   // 1. 思考阶段
   const duration = await simulateThinking(thinking)
@@ -278,20 +301,25 @@ async function useQuickPrompt(prompt: QuickPrompt) {
   loading.value = true
   scrollToBottom()
 
+  const { content, thinking } = await resolveBackendReply(prompt.text, {
+    content: prompt.reply,
+    thinking: prompt.thinkingSteps,
+  })
+
   // 1. 思考
-  const duration = await simulateThinking(prompt.thinkingSteps)
+  const duration = await simulateThinking(thinking)
 
   // 2. 流式输出
   const aiMsg = learningStore.addAIMessage({
     role: 'assistant',
-    content: prompt.reply,
+    content,
     timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
-    thinking: prompt.thinkingSteps.join(' → '),
+    thinking: thinking.join(' → '),
     thinkingDuration: duration,
     status: 'streaming',
   })
 
-  await simulateStreaming(aiMsg.id, prompt.reply)
+  await simulateStreaming(aiMsg.id, content)
 
   const promptIdx = learningStore.aiMessages.findIndex(m => m.id === aiMsg.id)
   if (promptIdx !== -1) {

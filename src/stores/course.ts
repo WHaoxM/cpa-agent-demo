@@ -10,6 +10,7 @@ import {
   CURRENT_USER_ID,
 } from '@/mock/data'
 import { careerCourses, careerCategories } from '@/mock/careerCourses'
+import { fetchCourses, fetchLearningProgress } from '@/api/backend'
 
 export const useCourseStore = defineStore(
   'course',
@@ -143,6 +144,66 @@ export const useCourseStore = defineStore(
       return mockUsers.filter(u => studentIds.includes(u.id) && u.role === 'student')
     }
 
+    /* 从后端同步课程列表（合并到现有 mock，去重 by title）。失败时保留 mock。 */
+    async function syncFromBackend(): Promise<void> {
+      try {
+        const resp = await fetchCourses(undefined, 50)
+        if (resp.success && resp.data?.courses?.length) {
+          const existingTitles = new Set(courses.value.map(c => c.title))
+          const backendCourses: Course[] = resp.data.courses
+            .filter(item => item.title && !existingTitles.has(item.title))
+            .map(item => ({
+              id: item.course_id || `backend_${item.id}`,
+              title: item.title,
+              description: item.description || '',
+              cover: item.thumbnail_url || '',
+              categoryId: item.category || 'foundation',
+              teacherId: '',
+              teacherName: item.instructor || '未知讲师',
+              chapters: [],
+              status: 'published' as const,
+              createdAt: (item.created_at || '').slice(0, 10),
+              updatedAt: (item.updated_at || '').slice(0, 10),
+              totalDuration: Math.round((item.duration_hours || 0) * 60),
+              studentCount: 0,
+              rating: 0,
+              skillTags: [],
+            }))
+          if (backendCourses.length > 0) {
+            courses.value.push(...backendCourses)
+          }
+        }
+      } catch {
+        // 后端不可用时保留 mock 数据
+      }
+    }
+
+    /* 从后端同步学习进度（合并到现有 mock，去重 By chapterId）。失败时保留本地。 */
+    async function syncProgressFromBackend(userId: string): Promise<void> {
+      try {
+        const resp = await fetchLearningProgress(userId)
+        if (resp.success && resp.data && resp.data.length > 0) {
+          const existing = new Set(progress.value.map(p => p.chapterId))
+          const backendProgress: LearningProgress[] = resp.data
+            .filter(item => item.chapter_id && !existing.has(item.chapter_id))
+            .map(item => ({
+              userId: item.user_id,
+              courseId: item.course_id,
+              chapterId: item.chapter_id,
+              progress: item.progress || 0,
+              lastPosition: item.last_position || 0,
+              completed: Boolean(item.completed),
+              updatedAt: item.updated_at || '',
+            }))
+          if (backendProgress.length > 0) {
+            progress.value.push(...backendProgress)
+          }
+        }
+      } catch {
+        // 后端不可用时保留本地进度
+      }
+    }
+
     return {
       courses,
       categories,
@@ -162,6 +223,8 @@ export const useCourseStore = defineStore(
       toggleFavorite,
       updateProgress,
       getStudentsByCourse,
+      syncFromBackend,
+      syncProgressFromBackend,
     }
   },
   {

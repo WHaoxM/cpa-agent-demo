@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { ReportRecord } from '@/types'
 import { createReport, deleteReport, getReportDetail, getReportList } from '@/api/report'
 
@@ -25,22 +25,25 @@ export const useReportStore = defineStore(
     const latestCareer = computed(() => careerRecords.value[0] ?? null)
 
     async function fetchReportList(userId?: string): Promise<void> {
-      // [API] 后端接入点：优先使用服务端报告列表，失败时保留本地持久化数据。
-      const list = await getReportList(userId)
-      if (list.length > 0) {
-        records.value = list
+      try {
+        const list = await getReportList(userId)
+        if (list.length > 0) {
+          records.value = list
+        }
+      } catch {
       }
     }
 
     async function fetchReportDetailById(id: string): Promise<ReportRecord | null> {
-      // [API] 后端接入点：点击书籍后按 id 拉取报告详情。
-      const detail = await getReportDetail(id)
-      if (detail) return detail
+      try {
+        const detail = await getReportDetail(id)
+        if (detail) return detail
+      } catch {
+      }
       return records.value.find(item => item.id === id) ?? null
     }
 
     function addRecord(r: Omit<ReportRecord, 'id' | 'createdAt'>): ReportRecord {
-      // [API] 后端接入点：同步调用 createReport(r)，以服务端返回的 id/createdAt 为准。
       const record: ReportRecord = {
         ...r,
         id: `report_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -58,7 +61,6 @@ export const useReportStore = defineStore(
     }
 
     function removeRecord(id: string): void {
-      // [API] 后端接入点：调用 deleteReport(id) 同步删除，失败时回滚本地状态。
       const idx = records.value.findIndex(r => r.id === id)
       if (idx === -1) return
 

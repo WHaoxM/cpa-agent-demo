@@ -7,6 +7,7 @@ import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useLearningStore } from '@/stores/learning'
 import { gsap } from '@/plugins/gsap'
 import { useCareerInsights, roleOptions, CAREER_DOMAINS, type CareerRole } from '@/composables/useCareerInsights'
+import { fetchCareerLandscape, type CareerLandscapeItem } from '@/api/backend'
 import * as d3 from 'd3'
 import VChart from 'vue-echarts'
 import { use, registerMap, graphic } from 'echarts/core'
@@ -232,6 +233,27 @@ const showDemandTip = ref(false)
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
 const { targetRole } = useCareerInsights()
+const liveLandscape = ref<CareerLandscapeItem[]>([])
+const liveLandscapeLoading = ref(false)
+const liveLandscapeError = ref('')
+const liveLandscapeTop = computed(() => liveLandscape.value.slice(0, 4))
+
+async function loadCareerLandscape() {
+  liveLandscapeLoading.value = true
+  liveLandscapeError.value = ''
+  try {
+    const response = await fetchCareerLandscape()
+    if (!response.success || !Array.isArray(response.data)) {
+      throw new Error(response.error || 'career landscape unavailable')
+    }
+    liveLandscape.value = response.data
+  } catch (error) {
+    liveLandscape.value = []
+    liveLandscapeError.value = error instanceof Error ? error.message : '后端职业库暂不可用'
+  } finally {
+    liveLandscapeLoading.value = false
+  }
+}
 
 function normalizeRouteRole(roleParam: unknown): string {
   if (typeof roleParam !== 'string') return ''
@@ -1660,6 +1682,7 @@ const salaryChartOption = computed(() => {
 
 onMounted(async () => {
   applyRouteRole(route.query.role)
+  loadCareerLandscape()
   await nextTick()
   setupEntranceAnimation()
   // D3 气泡图初始化
@@ -1723,6 +1746,22 @@ onBeforeUnmount(() => {
         <!-- #8 KPI 卡片 (带 tooltip 增强可信度) -->
         <div class="da-section">
           <div class="da-section__title"><Icon icon="lucide:activity" :width="14" />方向概览 · {{ currentAnalysisLabel }}</div>
+          <div class="live-source">
+            <div class="live-source__head">
+              <span>后端职业库</span>
+              <b v-if="liveLandscape.length">{{ liveLandscape.length }} 类</b>
+              <b v-else-if="liveLandscapeLoading">连接中</b>
+              <b v-else>离线</b>
+            </div>
+            <div v-if="liveLandscapeTop.length" class="live-source__tags">
+              <span v-for="item in liveLandscapeTop" :key="item.category">
+                {{ item.category }} · {{ item.role_count }}
+              </span>
+            </div>
+            <div v-else class="live-source__hint">
+              {{ liveLandscapeError || '正在读取 /api/career/landscape' }}
+            </div>
+          </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
             <div class="kpi-label">岗位需求总量 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
             <div class="kpi-val"><span class="kpi-num">14,518</span></div>
@@ -2241,6 +2280,44 @@ onBeforeUnmount(() => {
   padding: 12px 16px; margin-bottom: 8px;
   border-radius: var(--radius-sm);
   z-index: 40;
+}
+.live-source {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(58,110,174,0.18);
+  border-radius: 6px;
+  background: rgba(58,110,174,0.06);
+}
+.live-source__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-200);
+}
+.live-source__head b {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.live-source__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.live-source__tags span {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.58);
+  color: var(--text-100);
+  font-size: 11px;
+  line-height: 1.3;
+}
+.live-source__hint {
+  margin-top: 8px;
+  color: var(--text-300);
+  font-size: 11px;
+  line-height: 1.4;
 }
 .kpi-label { font-size: 13px; color: var(--text-200); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .kpi-info-icon { color: var(--text-300); cursor: help; width: 14px; height: 14px; }

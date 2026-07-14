@@ -146,12 +146,29 @@ function savePortraitReport() {
       predictedRole,
       competitivenessScore: portraitData.value.competitivenessScore,
       completenessScore: portraitData.value.completenessScore,
-      sevenDim: portraitData.value.dimensions,
+      sevenDim: extractSevenDim(portraitData.value),
       skillTags: portraitData.value.skillTags,
       personInfo: portraitData.value.personInfo,
     },
   })
   portraitSaved.value = true
+}
+
+/* 优先使用 agent 返回的 sub_dimensions（七维），fallback 到 dimensions */
+function extractSevenDim(data: AgentPortraitResult): unknown {
+  const sub = (data as AgentPortraitResult & { sub_dimensions?: Record<string, { name: string; score: number }> }).sub_dimensions
+  if (sub) {
+    return {
+      专业技能: sub.skill?.score ?? 0,
+      证书资质: sub.cert?.score ?? 0,
+      创新能力: sub.innovation?.score ?? 0,
+      学习能力: sub.learning?.score ?? 0,
+      抗压能力: sub.stress?.score ?? 0,
+      沟通能力: sub.communication?.score ?? 0,
+      实习经验: sub.internship?.score ?? 0,
+    }
+  }
+  return data.dimensions
 }
 
 function goToCareerReport() {

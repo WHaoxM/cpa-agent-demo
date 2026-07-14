@@ -1,4 +1,4 @@
-﻿<!-- 布局：应用主框架（左侧导航栏/顶部栏/面包屑标题/主内容区 router-view） -->
+<!-- 布局：应用主框架（左侧导航栏/顶部栏/面包屑标题/主内容区 router-view） -->
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -134,7 +134,7 @@ const cloudTabs = computed(() => {
 
 /* ===== 书页章节名 ===== */
 const currentChapter = computed(() => {
-  return String(route.meta.title ?? '课程管理')
+  return String(route.meta.title ?? '职导星图')
 })
 
 /* ===== 页面入场动效 ===== */

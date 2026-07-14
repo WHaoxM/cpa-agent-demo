@@ -52,7 +52,7 @@ npm run preview
 
 ## ⚠️ 注意事项
 
-- 所有数据都是 mock 数据，没有后端连接
+- GitHub Pages 静态演示主要使用 mock 数据；本地开发可通过 `VITE_API_BASE_URL` 连接后端
 - 登录账号密码均为：123456
 - 如果页面刷新后出现 404，这是正常的（SPA 路由），直接访问首页即可
-- GitHub Pages 是静态托管，API 调用会失败（当前都是 mock 数据）
+- GitHub Pages 是静态托管；未配置公网后端时，本地后端 API 调用不可用，页面会保留 mock/降级展示

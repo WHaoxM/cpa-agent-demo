@@ -1,4 +1,4 @@
-﻿<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
+<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as d3 from 'd3'
@@ -12,8 +12,9 @@ import { useReportStore } from '@/stores/report'
 import {
   JOB_PORTRAITS, CAREER_PATH_EDGES,
   deriveStudentSevenDim, getGrowthPlan,
-  type JobPortrait, type JobLevel,
+  type JobPortrait, type JobLevel, type SevenDim,
 } from '@/mock/careerReportData'
+import { fetchStudentPortrait } from '@/api/backend'
 import { CAREER_DOMAINS } from '@/composables/useCareerInsights'
 import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
@@ -171,8 +172,10 @@ const effectiveMatchScore = computed(() => {
   return getDisplayMatchScore(selectedJob.value)
 })
 
-/* ══ 学生七维 ══ */
-const studentDim = computed(() => {
+/* ══ 学生七维（后端优先，fallback 到 mock）══ */
+const backendStudentDim = ref<SevenDim | null>(null)
+const studentDim = computed<SevenDim>(() => {
+  if (backendStudentDim.value) return backendStudentDim.value
   const skills = resumeStore.parsedSkills
   const confidence = resumeStore.insights?.confidence ?? 0.5
   return deriveStudentSevenDim(skills, confidence)
@@ -1277,6 +1280,24 @@ onMounted(async () => {
     bubbleResizeObserver = new ResizeObserver(() => initBubbleChart())
     bubbleResizeObserver.observe(bubbleSvgRef.value)
   }
+  // 后端七维同步（失败时保留 mock）
+  const studentId = userStore.currentUser?.id || 'stu_001'
+  fetchStudentPortrait(studentId)
+    .then(resp => {
+      if (resp.success && resp.data?.sub_dimensions) {
+        const sub = resp.data.sub_dimensions
+        backendStudentDim.value = {
+          专业技能: sub.skill?.score ?? 0,
+          证书资质: sub.cert?.score ?? 0,
+          创新能力: sub.innovation?.score ?? 0,
+          学习能力: sub.learning?.score ?? 0,
+          抗压能力: sub.stress?.score ?? 0,
+          沟通能力: sub.communication?.score ?? 0,
+          实习经验: sub.internship?.score ?? 0,
+        }
+      }
+    })
+    .catch(() => { /* 后端不可用时保留 mock */ })
 })
 
 onBeforeUnmount(() => {

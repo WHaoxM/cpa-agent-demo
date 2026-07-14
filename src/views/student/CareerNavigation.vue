@@ -14,6 +14,7 @@ import type { AgentPortraitInput } from '@/composables/useAgentPortrait'
 import TalentPortrait from '@/views/student/TalentPortrait.vue'
 import { getCareerInsightsMock, CAREER_DOMAINS } from '@/composables/useCareerInsights'
 import type { CareerRole } from '@/composables/useCareerInsights'
+import { fetchPipelineStatus, parseResumeText, triggerPipeline, type PipelineStatusData } from '@/api/backend'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -33,6 +34,10 @@ const rightLayoutMode = ref<RightLayoutMode>('idle')
 const dashboardPaneRef = ref<HTMLElement | null>(null)
 const isImmersiveLayout = ref(false)
 const dashboardBaselineWidth = ref(0)
+const backendTask = ref<PipelineStatusData | null>(null)
+const backendParseSummary = ref('')
+const backendIntegrationError = ref('')
+const backendIntegrationLoading = ref(false)
 
 const {
   status: portraitSessionStatus,
@@ -146,6 +151,13 @@ function handleFile(file: File) {
   pasteText.value = ''
 }
 
+function resetBackendIntegration() {
+  backendTask.value = null
+  backendParseSummary.value = ''
+  backendIntegrationError.value = ''
+  backendIntegrationLoading.value = false
+}
+
 function detectRoleFromText(text: string): CareerRole {
   const t = text.toLowerCase()
   if (/机器学习|深度学习|pytorch|tensorflow|ml|ai|算法/.test(t)) return '机器学习工程师'
@@ -162,6 +174,7 @@ async function startParse() {
 
   isImmersiveLayout.value = false
   dashboardBaselineWidth.value = 0
+  resetBackendIntegration()
   parsePhase.value = 'parsing'
   resumeStore.reset()
 
@@ -181,6 +194,7 @@ async function startParse() {
     skills: parsedSkills,
   })
   openRightSplitLayout()
+  await syncBackendPipeline(text, role)
 
   const portraitInput: AgentPortraitInput = {
     resumeText: text,
@@ -205,6 +219,51 @@ async function startParse() {
   }
 }
 
+async function syncBackendPipeline(text: string, role: CareerRole) {
+  backendIntegrationLoading.value = true
+  backendIntegrationError.value = ''
+
+  try {
+    const studentId = userStore.currentUser?.id || 'student_demo_001'
+    const trimmedText = pasteText.value.trim()
+
+    if (trimmedText) {
+      const parseResponse = await parseResumeText(trimmedText, studentId)
+      if (parseResponse.success && parseResponse.data) {
+        const blocks = parseResponse.data.blocks || []
+        const blockTypes = blocks.map(block => block.block_type).slice(0, 3).join(' / ')
+        backendParseSummary.value = `文本解析 ${parseResponse.data.block_count} 个区块${blockTypes ? `：${blockTypes}` : ''}`
+      }
+    }
+
+    const triggerResponse = await triggerPipeline({
+      pipeline: 'L0_parse_resume',
+      student_id: studentId,
+      resume_text: trimmedText || undefined,
+      file_path: trimmedText ? undefined : text,
+      target_role: role,
+      source: 'frontend_career_navigation',
+    })
+
+    const taskId = triggerResponse.data?.task_id
+    if (!triggerResponse.success || !taskId) {
+      throw new Error(triggerResponse.error || '后端管线任务未返回 task_id')
+    }
+
+    const statusResponse = await fetchPipelineStatus(taskId)
+    backendTask.value = statusResponse.data || {
+      task_id: taskId,
+      pipeline: 'L0_parse_resume',
+      status: triggerResponse.data?.status || 'pending',
+      progress: 0,
+    }
+  } catch (error) {
+    backendIntegrationError.value = error instanceof Error ? error.message : '后端管线联调失败，已使用前端演示结果'
+  } finally {
+    backendIntegrationLoading.value = false
+  }
+}
+
 function goBack() {
   router.push({ name: 'student-career' })
 }
@@ -213,6 +272,7 @@ function resetPage() {
   parsePhase.value = 'idle'
   isImmersiveLayout.value = false
   dashboardBaselineWidth.value = 0
+  resetBackendIntegration()
   pasteText.value = ''
   uploadedFileName.value = ''
   resumeStore.reset()
@@ -418,10 +478,17 @@ const rightShellStyle = computed(() => ({
               <div class="rp-progress-track">
                 <div class="rp-progress-fill" :style="{ width: parseProgress + '%' }"></div>
               </div>
-              <div class="rp-progress-meta">
-                <span class="rp-progress-pct">{{ Math.round(parseProgress) }}%</span>
-                <span class="rp-progress-steps">{{ currentStep }} / {{ totalSteps }} 步</span>
-              </div>
+            <div class="rp-progress-meta">
+              <span class="rp-progress-pct">{{ Math.round(parseProgress) }}%</span>
+              <span class="rp-progress-steps">{{ currentStep }} / {{ totalSteps }} 步</span>
+            </div>
+            <div class="rp-backend-status">
+              <span class="rp-backend-status__label">后端联调</span>
+              <span v-if="backendIntegrationLoading">连接 Pipeline...</span>
+              <span v-else-if="backendTask">任务 {{ backendTask.task_id }} · {{ backendTask.status }}</span>
+              <span v-else-if="backendIntegrationError">{{ backendIntegrationError }}</span>
+              <span v-else>等待任务返回</span>
+            </div>
             </div>
         </div>
 
@@ -434,9 +501,15 @@ const rightShellStyle = computed(() => ({
               <Icon icon="lucide:rotate-ccw" :width="12" />重新上传
             </button>
           </div>
+          <div v-if="backendTask || backendParseSummary || backendIntegrationError" class="rp-backend-card">
+            <div class="rp-backend-card__title">后端 Pipeline 联调</div>
+            <p v-if="backendParseSummary">{{ backendParseSummary }}</p>
+            <p v-if="backendTask">任务 {{ backendTask.task_id }} 已写入 MySQL，当前状态：{{ backendTask.status }}</p>
+            <p v-if="backendIntegrationError">{{ backendIntegrationError }}</p>
+          </div>
           <div class="rp-privacy">
             <Icon icon="lucide:shield-check" :width="12" class="rp-privacy__icon" />
-            <p class="rp-privacy__text">内容仅本地处理，不上传至任何服务器</p>
+            <p class="rp-privacy__text">本地联调会请求后端 Pipeline；离线或失败时保留前端演示结果</p>
           </div>
         </div>
 
@@ -928,6 +1001,49 @@ const rightShellStyle = computed(() => ({
 }
 .rp-done-icon { color: #5B7744; flex-shrink: 0; }
 .rp-done-status span { flex: 1; }
+
+.rp-backend-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(67, 111, 150, 0.18);
+  border-radius: 6px;
+  background: rgba(67, 111, 150, 0.06);
+  color: var(--rp-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.rp-backend-status__label {
+  flex-shrink: 0;
+  color: var(--rp-blue);
+  font-weight: 700;
+}
+
+.rp-backend-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(67, 111, 150, 0.18);
+  border-radius: 8px;
+  background: rgba(67, 111, 150, 0.06);
+}
+
+.rp-backend-card__title {
+  margin-bottom: 6px;
+  color: var(--rp-blue);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rp-backend-card p {
+  margin: 4px 0;
+  color: var(--rp-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
 
 .rp-result-reset {
   display: inline-flex; align-items: center; gap: 4px;

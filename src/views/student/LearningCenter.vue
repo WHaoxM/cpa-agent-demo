@@ -1,4 +1,4 @@
-﻿<!-- 页面：技能提升；路由：student/learning（student-learning）；角色：STUDENT -->
+<!-- 页面：技能提升；路由：student/learning（student-learning）；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -296,6 +296,15 @@ const chordResult = computed(() => {
   }
 
   return { nodes: hotTags, matrix, pairCourses: pairPortraits }
+})
+
+/* ═══ 后端同步：课程列表 + 学习进度（失败时保留 mock / 本地数据） ═══ */
+onMounted(async () => {
+  await courseStore.syncFromBackend()
+  const userId = userStore.currentUser?.id
+  if (userId) {
+    await courseStore.syncProgressFromBackend(userId)
+  }
 })
 </script>
 <template>

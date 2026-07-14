@@ -1,9 +1,10 @@
 <!-- 页面：岗位数据集管理；路由：admin/job-dataset；角色：ADMIN -->
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import type { UploadFile, UploadRawFile } from 'element-plus'
+import { fetchDatasets, uploadDataset, deleteDataset, type DatasetItem } from '@/api/backend'
 
 // ─── 类型定义 ───
 interface DatasetRecord {
@@ -52,6 +53,35 @@ const filteredRecords = computed(() => {
   return records.value.filter(r => r.filename.toLowerCase().includes(kw) || r.remark.toLowerCase().includes(kw))
 })
 
+// ─── 后端状态映射 ───
+function mapStatus(s?: string | null): DatasetRecord['status'] {
+  if (s === 'done' || s === 'completed') return 'done'
+  if (s === 'processing' || s === 'running') return 'processing'
+  if (s === 'error' || s === 'failed') return 'error'
+  return 'pending'
+}
+
+// ─── 后端数据同步（失败时保留 mock）───
+onMounted(async () => {
+  try {
+    const resp = await fetchDatasets()
+    if (resp.success && resp.data && resp.data.length > 0) {
+      records.value = resp.data.map((item: DatasetItem) => ({
+        id: item.id,
+        filename: item.title || item.id,
+        size: 0,
+        uploadedAt: item.created_at
+          ? new Date(item.created_at).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+          : '',
+        status: mapStatus(item.status),
+        remark: item.category || '',
+      }))
+    }
+  } catch {
+    // 后端不可用时保留 mock 数据
+  }
+})
+
 // ─── 工具函数（API 调用点，后续替换为真实接口）───
 function formatSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
@@ -67,15 +97,29 @@ function statusType(s: DatasetRecord['status']): '' | 'success' | 'warning' | 'd
   return { pending: 'info', processing: 'warning', done: 'success', error: 'danger' }[s] as '' | 'success' | 'warning' | 'danger' | 'info'
 }
 
-// ─── 上传处理（API 调用点）───
+// ─── 上传处理 ───
 async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
   uploading.value = true
   try {
-    // TODO: 替换为真实 API
-    // const formData = new FormData()
-    // formData.append('file', rawFile)
-    // await axios.post('/api/admin/dataset/upload', formData)
-    await new Promise(r => setTimeout(r, 800))
+    const resp = await uploadDataset(rawFile.name, '通用')
+    const newId = resp.success && resp.data ? resp.data.id : `ds_${Date.now()}`
+    const newRecord: DatasetRecord = {
+      id: newId,
+      filename: rawFile.name,
+      size: rawFile.size,
+      uploadedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      status: 'processing',
+      remark: '',
+    }
+    records.value.unshift(newRecord)
+    setTimeout(() => {
+      const r = records.value.find(r => r.id === newId)
+      if (r) r.status = 'done'
+    }, 2000)
+    ElMessage.success(`「${rawFile.name}」上传成功，正在解析`)
+    return false
+  } catch {
+    // 后端不可用时 fallback 到本地 mock
     const newRecord: DatasetRecord = {
       id: `ds_${Date.now()}`,
       filename: rawFile.name,
@@ -89,10 +133,7 @@ async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
       const r = records.value.find(r => r.id === newRecord.id)
       if (r) r.status = 'done'
     }, 2000)
-    ElMessage.success(`「${rawFile.name}」上传成功，正在解析`)
-    return false
-  } catch {
-    ElMessage.error('上传失败，请重试')
+    ElMessage.success(`「${rawFile.name}」上传成功（本地模式）`)
     return false
   } finally {
     uploading.value = false
@@ -112,23 +153,25 @@ function handleExceed(_files: File[], _fileList: UploadFile[]) {
   ElMessage.warning('请逐个上传文件')
 }
 
-// ─── 删除（API 调用点）───
+// ─── 删除 ───
 async function onDelete(row: DatasetRecord) {
   await ElMessageBox.confirm(`确认删除「${row.filename}」？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '删除',
     cancelButtonText: '取消',
   })
-  // TODO: 替换为真实 API
-  // await axios.delete(`/api/admin/dataset/${row.id}`)
+  try {
+    await deleteDataset(row.id)
+  } catch {
+    // 后端不可用时仍从本地移除
+  }
   records.value = records.value.filter(r => r.id !== row.id)
   ElMessage.success('已删除')
 }
 
-// ─── 备注保存（API 调用点）───
+// ─── 备注保存 ───
 async function onRemarkSave(row: DatasetRecord, val: string) {
-  // TODO: 替换为真实 API
-  // await axios.patch(`/api/admin/dataset/${row.id}`, { remark: val })
+  // 后端暂无备注更新接口，仅本地更新
   row.remark = val
   ElMessage.success('备注已保存')
 }

@@ -1,9 +1,10 @@
 <!-- 页面：本地知识库维护；路由：admin/knowledge-base；角色：ADMIN -->
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import type { UploadRawFile } from 'element-plus'
+import { fetchKnowledgeBase, uploadKnowledgeBase, deleteKnowledgeBase, type KbItem } from '@/api/backend'
 
 // ─── 类型定义 ───
 interface KbDocument {
@@ -75,6 +76,36 @@ const filteredDocs = computed(() => {
 const totalIndexed = computed(() => documents.value.filter(d => d.status === 'indexed').length)
 const totalChunks = computed(() => documents.value.reduce((s, d) => s + d.chunks, 0))
 
+// ─── 后端状态映射 ───
+function mapKbStatus(s?: string | null): KbDocument['status'] {
+  if (s === 'indexed' || s === 'done' || s === 'completed') return 'indexed'
+  if (s === 'indexing' || s === 'processing' || s === 'running') return 'indexing'
+  if (s === 'error' || s === 'failed') return 'error'
+  return 'indexing'
+}
+
+// ─── 后端数据同步（失败时保留 mock）───
+onMounted(async () => {
+  try {
+    const resp = await fetchKnowledgeBase()
+    if (resp.success && resp.data && resp.data.length > 0) {
+      documents.value = resp.data.map((item: KbItem) => ({
+        id: item.id,
+        filename: item.title || item.id,
+        category: item.type || '其他',
+        size: 0,
+        uploadedAt: item.created_at
+          ? new Date(item.created_at).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+          : '',
+        status: mapKbStatus(item.status),
+        chunks: 0,
+      }))
+    }
+  } catch {
+    // 后端不可用时保留 mock 数据
+  }
+})
+
 // ─── 工具函数 ───
 function formatSize(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
@@ -90,16 +121,30 @@ function statusType(s: KbDocument['status']): '' | 'success' | 'warning' | 'dang
   return { indexing: 'warning', indexed: 'success', error: 'danger' }[s] as '' | 'success' | 'warning' | 'danger' | 'info'
 }
 
-// ─── 上传处理（API 调用点）───
+// ─── 上传处理 ───
 async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
   uploading.value = true
   try {
-    // TODO: 替换为真实 API
-    // const formData = new FormData()
-    // formData.append('file', rawFile)
-    // formData.append('category', newDocCategory.value)
-    // await axios.post('/api/admin/knowledge-base/upload', formData)
-    await new Promise(r => setTimeout(r, 700))
+    const resp = await uploadKnowledgeBase(rawFile.name, newDocCategory.value)
+    const newId = resp.success && resp.data ? resp.data.id : `kb_${Date.now()}`
+    const newDoc: KbDocument = {
+      id: newId,
+      filename: rawFile.name,
+      category: newDocCategory.value,
+      size: rawFile.size,
+      uploadedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
+      status: 'indexing',
+      chunks: 0,
+    }
+    documents.value.unshift(newDoc)
+    setTimeout(() => {
+      const d = documents.value.find(d => d.id === newId)
+      if (d) { d.status = 'indexed'; d.chunks = Math.floor(rawFile.size / 1800) + 5 }
+    }, 3000)
+    ElMessage.success(`「${rawFile.name}」上传成功，正在向量化入库`)
+    return false
+  } catch {
+    // 后端不可用时 fallback 到本地 mock
     const newDoc: KbDocument = {
       id: `kb_${Date.now()}`,
       filename: rawFile.name,
@@ -114,10 +159,7 @@ async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
       const d = documents.value.find(d => d.id === newDoc.id)
       if (d) { d.status = 'indexed'; d.chunks = Math.floor(rawFile.size / 1800) + 5 }
     }, 3000)
-    ElMessage.success(`「${rawFile.name}」上传成功，正在向量化入库`)
-    return false
-  } catch {
-    ElMessage.error('上传失败，请重试')
+    ElMessage.success(`「${rawFile.name}」上传成功（本地模式）`)
     return false
   } finally {
     uploading.value = false
@@ -133,10 +175,9 @@ function beforeUpload(file: UploadRawFile) {
   return handleUpload(file)
 }
 
-// ─── 重建索引（API 调用点）───
+// ─── 重建索引 ───
 async function onReindex(row: KbDocument) {
-  // TODO: 替换为真实 API
-  // await axios.post(`/api/admin/knowledge-base/${row.id}/reindex`)
+  // 后端暂无重建索引接口，仅本地模拟
   row.status = 'indexing'
   row.chunks = 0
   ElMessage.info('已重新触发向量化')
@@ -146,15 +187,18 @@ async function onReindex(row: KbDocument) {
   }, 2500)
 }
 
-// ─── 删除（API 调用点）───
+// ─── 删除 ───
 async function onDelete(row: KbDocument) {
   await ElMessageBox.confirm(`确认从知识库移除「${row.filename}」？该文档的所有向量块将被清除。`, '删除确认', {
     type: 'warning',
     confirmButtonText: '删除',
     cancelButtonText: '取消',
   })
-  // TODO: 替换为真实 API
-  // await axios.delete(`/api/admin/knowledge-base/${row.id}`)
+  try {
+    await deleteKnowledgeBase(row.id)
+  } catch {
+    // 后端不可用时仍从本地移除
+  }
   documents.value = documents.value.filter(d => d.id !== row.id)
   ElMessage.success('已移除')
 }
