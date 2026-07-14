@@ -1,23 +1,40 @@
+<div align="center">
+
 # 职导星图 · 前端演示
 
-基于 Vue 3 + TypeScript + Vite + Element Plus + D3.js 的**大学生职业规划智能体前端演示**。  
-内置 Mock 数据，开箱即用，无需后端依赖，已部署至 GitHub Pages。
+**多智能体职业规划决策平台 · 前端交互层**
 
-> 本仓库是 [CPA-Agent](https://github.com/WHaoxM/cpa-agent-demo) 项目的**前端演示子仓库**，仅包含前端代码与 Mock 数据，用于在线展示系统能力。  
+</br>
+<em>Frontend Demo of the CPA-Agent Multi-Agent Career Planning Platform</em>
+
+[![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square&logo=gnu&logoColor=white)](./LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/WHaoxM/cpa-agent-demo?style=flat-square&color=DAA520)](https://github.com/WHaoxM/cpa-agent-demo/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/WHaoxM/cpa-agent-demo?style=flat-square)](https://github.com/WHaoxM/cpa-agent-demo/network)
+[![Vue](https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-6E40C9?style=flat-square&logo=github&logoColor=white)](https://whaoxm.github.io/cpa-agent-demo/)
+
+[中文](./README.md) | [English](./README.en.md)
+
+</div>
+
+> 本仓库是 [CPA-Agent](https://github.com/WHaoxM/cpa-agent) 项目的**前端演示子仓库**，仅包含前端代码与 Mock 数据，用于在线展示系统能力。  
 > 完整项目（含 Flask 后端、知识图谱、多智能体、L0–L4 管线）请访问主仓库。
 
-## 在线演示
+## 🌐 在线演示
 
-🌐 **https://whaoxm.github.io/cpa-agent-demo/**
+👉 **[https://whaoxm.github.io/cpa-agent-demo/](https://whaoxm.github.io/cpa-agent-demo/)**
 
-## 演示账号
+## 🔑 演示账号
 
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
 | 学生 | 123456 | 123456 |
 | 管理员 | 123456 | 123456 |
 
-## 项目定位
+## ⚡ 项目概述
 
 本演示仓库展示 CPA-Agent 系统的**前端交互层**，覆盖学生端职业规划全链路与管理员端数据管理：
 
@@ -25,10 +42,31 @@
 - 三角色权限体系（学生 / 管理员 / 公共页面）
 - D3.js + Three.js 数据可视化（雷达图、弦图、Treemap、3D 书架、力导向气泡图）
 
-**数据说明**：所有页面默认使用 Mock 数据，可独立运行。  
+**数据说明**：所有页面默认使用 Mock 数据，可独立运行，无需后端依赖。  
 本地联调时可通过 `VITE_API_BASE_URL` 连接 CPA-Agent 后端。
 
-## 技术栈
+### 🎯 我们的愿景
+
+让每一个"如果"都能看见结果——基于真实简历与岗位数据的个性化诊断，而非泛泛的职业鸡汤。
+
+## 📸 系统截图
+
+<div align="center">
+<table>
+<tr>
+<td><img src="./docs/screenshots/career-analysis.png" alt="职业分析" width="100%"/></td>
+<td><img src="./docs/screenshots/career-ability.png" alt="能力图谱" width="100%"/></td>
+</tr>
+<tr>
+<td><img src="./docs/screenshots/career-report.png" alt="职业报告" width="100%"/></td>
+<td><img src="./docs/screenshots/talent-portrait.png" alt="人才画像" width="100%"/></td>
+</tr>
+</table>
+</div>
+
+> 截图以实际在线 Demo 为准。
+
+## 🛠️ 技术栈
 
 - **Vue 3** (v3.5) - Composition API + `<script setup>`
 - **TypeScript** (v5.9) - 类型安全
@@ -43,7 +81,7 @@
 - **Tiptap** - 富文本编辑器
 - **Iconify** + Element Plus Icons - 图标体系
 
-## 功能模块
+## 🔄 功能模块
 
 ### 学生端核心模块
 
@@ -77,58 +115,13 @@
 | `D3ChordDiagram` | 技能亲和力弦图，渐变 Ribbon + 外弧刻度 |
 | `D3Treemap` | 课程结构 Treemap 图 |
 
-## 项目结构
+## 🚀 快速开始
 
-```
-src/
-├── api/                  # API 接口层（联调时接后端）
-│   ├── backend.ts
-│   └── report.ts
-├── assets/               # 静态资源
-│   ├── styles/           # CSS 样式 (base / theme / main)
-│   ├── images/           # 图片资源
-│   └── data/             # 大型数据文件（地理 JSON 等）
-├── components/
-│   ├── charts/           # D3.js 图表组件（RadarChart、ChordDiagram、Treemap）
-│   ├── book/             # 古籍风格 UI 组件
-│   ├── bookshelf/        # 书架 3D 场景与展开浮层
-│   ├── career/           # 职业模块子组件
-│   ├── UserInfoBar.vue
-│   └── TiptapEditor.vue
-├── composables/          # Vue Composition API 可复用逻辑（9 个）
-├── constants/
-│   └── icons.ts          # 图标常量集合
-├── layouts/
-│   └── AppLayout.vue     # 应用主框架
-├── mock/                 # 演示数据（5 个文件，开箱即用）
-│   ├── data.ts           # 核心演示数据
-│   ├── careerCourses.ts  # 职业方向课程体系
-│   ├── careerLines.ts    # 职业发展地铁线路
-│   ├── careerPortraits.ts# 岗位画像数据
-│   └── careerReportData.ts # 职业报告数据
-├── plugins/
-│   └── gsap.ts           # GSAP 插件注册
-├── router/
-│   ├── index.ts          # 路由守卫、登录态与角色校验
-│   └── routes.ts         # 全部路由定义
-├── stores/               # Pinia setup store（6 个业务 store）
-├── types/                # 领域类型定义（按领域拆分）
-├── utils/
-│   └── index.ts          # 工具函数
-├── views/
-│   ├── student/          # 学生端页面（14 个 .vue）
-│   ├── admin/            # 管理员端页面（2 个 .vue）
-│   ├── course/           # 公共课程页
-│   ├── HomeCenter.vue    # 首页
-│   ├── LoginView.vue     # 登录页
-│   ├── ProfileView.vue   # 个人中心
-│   └── NotFoundView.vue  # 404
-└── main.ts
-```
+### 在线体验（推荐）
 
-## 快速开始
+直接访问 [在线 Demo](https://whaoxm.github.io/cpa-agent-demo/)，使用演示账号登录。
 
-### 安装与运行
+### 本地运行
 
 ```bash
 # 安装依赖
@@ -136,6 +129,7 @@ npm install
 
 # 启动开发服务器（自动打开浏览器）
 npm run dev
+# → http://localhost:5173
 
 # 类型检查
 npm run type-check
@@ -176,7 +170,42 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 
 未接入后端的页面保留 Mock 数据作为降级展示。
 
-## 部署
+## 📁 项目结构
+
+```
+src/
+├── api/                  # API 接口层（联调时接后端）
+├── assets/               # 静态资源
+│   ├── styles/           # CSS 样式 (base / theme / main)
+│   ├── images/           # 图片资源
+│   └── data/             # 大型数据文件（地理 JSON 等）
+├── components/
+│   ├── charts/           # D3.js 图表组件
+│   ├── book/             # 古籍风格 UI 组件
+│   ├── bookshelf/        # 书架 3D 场景与展开浮层
+│   ├── career/           # 职业模块子组件
+│   ├── UserInfoBar.vue
+│   └── TiptapEditor.vue
+├── composables/          # Vue Composition API 可复用逻辑
+├── constants/            # 图标常量集合
+├── layouts/              # 应用主框架
+├── mock/                 # 演示数据（开箱即用）
+├── plugins/              # GSAP 插件注册
+├── router/               # 路由守卫与路由定义
+├── stores/               # Pinia setup store
+├── types/                # 领域类型定义
+├── utils/                # 工具函数
+├── views/
+│   ├── student/          # 学生端页面
+│   ├── admin/            # 管理员端页面
+│   ├── course/           # 公共课程页
+│   ├── HomeCenter.vue    # 首页
+│   ├── LoginView.vue     # 登录页
+│   └── NotFoundView.vue  # 404
+└── main.ts
+```
+
+## 🚢 部署
 
 本仓库通过 GitHub Actions 自动部署至 GitHub Pages，配置见 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)。
 
@@ -186,7 +215,7 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 
 详细部署说明见 [DEPLOY.md](DEPLOY.md)。
 
-## 角色权限说明
+## 🔐 角色权限说明
 
 系统通过路由守卫实现角色权限控制：
 
@@ -196,7 +225,7 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 - 管理员可访问 `admin/*` 及公共路由
 - 越权访问自动重定向到首页
 
-## 数据存储
+## 💾 数据存储
 
 使用 Pinia + pinia-plugin-persistedstate 实现数据持久化：
 
@@ -205,7 +234,7 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 - 简历与技能解析结果持久化
 - 报告记录持久化
 
-## D3.js 图表封装原则
+## 🎨 D3.js 图表封装原则
 
 1. **响应式**：通过 `useResizeObserver` 监听容器大小变化自动重绘
 2. **数据驱动**：通过 props 传入数据，watch 监听变化自动更新
@@ -213,7 +242,7 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 4. **类型安全**：完整的 TypeScript 类型定义
 5. **生命周期管理**：`onBeforeUnmount` 时自动 dispose，防止内存泄漏
 
-## 关于 CPA-Agent 主项目
+## 📄 关于 CPA-Agent 主项目
 
 本演示仓库是 CPA-Agent（职导星图）的前端展示层。完整项目包含：
 
@@ -223,15 +252,26 @@ VITE_API_BASE_URL=http://127.0.0.1:5001
 - **混合数据层** - MySQL · Neo4j · Redis · Milvus
 - **知识图谱** - 技能/岗位/职业路径关系网络
 
-主项目仓库与文档：[CPA-Agent 主仓库](https://github.com/WHaoxM/cpa-agent-demo)
+主项目仓库与文档：[CPA-Agent 主仓库](https://github.com/WHaoxM/cpa-agent)
 
-## 推荐开发环境
+## 📜 开源协议
 
-- [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) 插件
-- 浏览器扩展：
-  - Chrome: [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - Firefox: [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
+本项目基于 [GNU Affero General Public License v3.0](./LICENSE) 开源。
 
-## 许可证
+## 📈 Star History
 
-MIT License
+<a href="https://www.star-history.com/#WHaoxM/cpa-agent-demo&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date" />
+ </picture>
+</a>
+
+---
+
+<div align="center">
+
+**职导星图** · 由四川轻化工大学团队维护
+
+</div>
