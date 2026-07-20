@@ -1,31 +1,31 @@
 <div align="center">
 
-# 职导星图 · 前端演示
+# 职导星图 · cpa-xingtu
 
 **多智能体职业规划决策平台 · 前端交互层**
 
 </br>
-<em>Frontend Demo of the CPA-Agent Multi-Agent Career Planning Platform</em>
+<em>Frontend of CPA-Agent (cpa-xingtu) — Multi-Agent Career Planning Platform</em>
 
 [![License](https://img.shields.io/badge/License-AGPL--3.0-blue?style=flat-square&logo=gnu&logoColor=white)](./LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/WHaoxM/cpa-agent-demo?style=flat-square&color=DAA520)](https://github.com/WHaoxM/cpa-agent-demo/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/WHaoxM/cpa-agent-demo?style=flat-square)](https://github.com/WHaoxM/cpa-agent-demo/network)
+[![GitHub Stars](https://img.shields.io/github/stars/WHaoxM/cpa-xingtu?style=flat-square&color=DAA520)](https://github.com/WHaoxM/cpa-xingtu/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/WHaoxM/cpa-xingtu?style=flat-square)](https://github.com/WHaoxM/cpa-xingtu/network)
 [![Vue](https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square&logo=vue.js&logoColor=white)](https://vuejs.org/)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-6E40C9?style=flat-square&logo=github&logoColor=white)](https://whaoxm.github.io/cpa-agent-demo/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-6E40C9?style=flat-square&logo=github&logoColor=white)](https://whaoxm.github.io/cpa-xingtu/)
 
 [中文](./README.md) | [English](./README.en.md)
 
 </div>
 
-> 本仓库是 [CPA-Agent](https://github.com/WHaoxM/cpa-agent) 项目的**前端演示子仓库**，仅包含前端代码与 Mock 数据，用于在线展示系统能力。  
+> 本仓库 **cpa-xingtu** 是 [CPA-Agent](https://github.com/WHaoxM/cpa-agent) 的**前端子仓库**（原 `cpa-agent-demo`），包含前端代码与 Mock 数据，用于在线展示与本地联调。  
 > 完整项目（含 Flask 后端、知识图谱、多智能体、L0–L4 管线）请访问主仓库。
 
 ## 🌐 在线演示
 
-👉 **[https://whaoxm.github.io/cpa-agent-demo/](https://whaoxm.github.io/cpa-agent-demo/)**
+👉 **[https://whaoxm.github.io/cpa-xingtu/](https://whaoxm.github.io/cpa-xingtu/)**
 
 ## 🔑 演示账号
 
@@ -119,7 +119,7 @@
 
 ### 在线体验（推荐）
 
-直接访问 [在线 Demo](https://whaoxm.github.io/cpa-agent-demo/)，使用演示账号登录。
+直接访问 [在线 Demo](https://whaoxm.github.io/cpa-xingtu/)，使用演示账号登录。
 
 ### 本地运行
 
@@ -209,7 +209,7 @@ src/
 
 本仓库通过 GitHub Actions 自动部署至 GitHub Pages，配置见 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)。
 
-- **base 路径**：`/cpa-agent-demo/`（见 `vite.config.ts`）
+- **base 路径**：`/cpa-xingtu/`（见 `vite.config.ts`）
 - **SPA 路由**：`public/404.html` 处理 GitHub Pages 刷新重定向
 - **触发条件**：推送至 `main` 分支自动部署
 
@@ -260,11 +260,11 @@ src/
 
 ## 📈 Star History
 
-<a href="https://www.star-history.com/#WHaoxM/cpa-agent-demo&Date">
+<a href="https://www.star-history.com/#WHaoxM/cpa-xingtu&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=WHaoxM/cpa-agent-demo&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-xingtu&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=WHaoxM/cpa-xingtu&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=WHaoxM/cpa-xingtu&type=Date" />
  </picture>
 </a>
 

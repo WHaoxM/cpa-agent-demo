@@ -19,7 +19,7 @@ flowchart TB
         U6[管理员]
     end
 
-    subgraph 前端层["🖥️ Vue3 前端层 (vue-kecheng)"]
+    subgraph 前端层["🖥️ Vue3 前端层 (cpa-xingtu)"]
         direction TB
         
         subgraph 视图层["Views / Pages"]
@@ -249,7 +249,7 @@ flowchart TB
         U2[管理员]
     end
 
-    subgraph F["前端交互层（vue-kecheng）"]
+    subgraph F["前端交互层（cpa-xingtu）"]
         F1[学生端门户<br/>职业分析 / 人才画像 / 学习中心 / AI助手 / 报告中心 / 收藏夹]
         F2[管理端门户<br/>岗位数据集 / 知识库 / 图谱构建]
         F3[路由与状态管理<br/>Vue Router + Pinia + Composables]

@@ -15,5 +15,5 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  base: '/cpa-agent-demo/',
+  base: '/cpa-xingtu/',
 })
