@@ -1,0 +1,144 @@
+import { getApiMode } from './config'
+import { mockGet } from './adapters/mockAdapter'
+import { httpGet, httpPost } from './adapters/httpAdapter'
+
+export type LandscapeCategory = {
+  category: string
+  role_count: number
+  avg_salary_range: string
+  roles: string[]
+}
+
+export type CareerInsight = {
+  role_name: string
+  category?: string
+  avg_salary_low?: number
+  avg_salary_high?: number
+  demand_level?: string
+  core_skills?: string[]
+}
+
+export async function getLandscape(): Promise<LandscapeCategory[]> {
+  if (getApiMode() === 'mock') {
+    const env = await mockGet<LandscapeCategory[]>('career/landscape.json')
+    return env.data ?? []
+  }
+  const env = await httpGet<LandscapeCategory[]>('/api/career/landscape')
+  return env.data ?? []
+}
+
+export async function listInsights(params?: {
+  limit?: number
+  offset?: number
+  category?: string
+}): Promise<CareerInsight[]> {
+  if (getApiMode() === 'mock') {
+    const env = await mockGet<CareerInsight[]>('career/insights.list.json')
+    return env.data ?? []
+  }
+  const env = await httpGet<CareerInsight[]>('/api/career/insights', params)
+  return env.data ?? []
+}
+
+export async function exploreCareers(q: string, topK = 5) {
+  if (getApiMode() === 'mock') {
+    return mockGet('career/explore.json')
+  }
+  // Interest Explore only — short keywords. Resume → use inferRoleFromSkills.
+  return httpGet('/api/career/explore', { q, top_k: topK })
+}
+
+export type InferRoleSkill = string | { name: string; confidence?: number; weight?: number; category?: string }
+
+export type InferRoleCandidate = {
+  role_name: string
+  score: number
+  coverage?: number
+  matched_skills?: string[]
+  missing_core_skills?: string[]
+  sources?: string[]
+  category?: string | null
+  demand_level?: string | null
+}
+
+export type InferRoleResult = {
+  predicted_role: string | null
+  confidence: number
+  candidates: InferRoleCandidate[]
+  skill_count?: number
+  canonical_skills?: string[]
+  evidence_summary?: string
+}
+
+/** Role Inference seam: extracted skills → ranked career directions (not resume text). */
+export async function inferRoleFromSkills(body: {
+  skills: InferRoleSkill[]
+  top_k?: number
+  preferred_role?: string
+}): Promise<InferRoleResult> {
+  if (getApiMode() === 'mock') {
+    const names = (body.skills || [])
+      .map(s => (typeof s === 'string' ? s : s.name))
+      .filter(Boolean)
+    // Mock returns catalog-style roles (not collapsed UI domains)
+    const guess =
+      body.preferred_role ||
+      (names.some(n => /RAG|向量|LangChain/i.test(n))
+        ? 'RAG工程师'
+        : names.some(n => /Agent|Prompt/i.test(n))
+          ? 'AI智能体工程师'
+          : names.some(n => /PyTorch|Transformer|大模型|机器学习/i.test(n))
+            ? '大模型算法工程师'
+            : names.some(n => /Vue|React|TypeScript/i.test(n))
+              ? '前端开发'
+              : '后端开发')
+    return {
+      predicted_role: guess,
+      confidence: 0.78,
+      candidates: [
+        {
+          role_name: guess,
+          score: 2.1,
+          coverage: 0.72,
+          matched_skills: names.slice(0, 5),
+          missing_core_skills: [],
+          sources: ['mock', 'neo4j_requires'],
+        },
+      ],
+      skill_count: names.length,
+      evidence_summary: `mock; top=${guess}`,
+    }
+  }
+  const env = await httpPost<InferRoleResult>('/api/career/infer-role', {
+    skills: body.skills,
+    top_k: body.top_k ?? 5,
+    preferred_role: body.preferred_role,
+  })
+  return (
+    env.data ?? {
+      predicted_role: null,
+      confidence: 0,
+      candidates: [],
+      skill_count: 0,
+    }
+  )
+}
+
+export async function submitAssessment(body: {
+  student_id: string
+  assessed_skills?: string[]
+  assessed_abilities?: Record<string, number>
+  target_role?: string
+}) {
+  if (getApiMode() === 'mock') {
+    return {
+      success: true,
+      data: {
+        assessment_id: 'assess_mock_001',
+        weak_skills: (body.assessed_skills ?? []).slice(0, 3),
+        recommended_roles: body.target_role ? [body.target_role] : [],
+      },
+    }
+  }
+  return httpPost('/api/career/assessment', body)
+}

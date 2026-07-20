@@ -1,0 +1,32 @@
+{
+  "success": true,
+  "data": {
+    "role": "后端开发",
+    "salaryRange": "14K-26K",
+    "medianSalary": 20,
+    "demandLevel": "中大型团队需求持续",
+    "demandCount": 980,
+    "hotCities": [
+      "北京",
+      "深圳",
+      "杭州",
+      "成都"
+    ],
+    "industries": [
+      "互联网",
+      "金融科技"
+    ],
+    "skillTags": [
+      "Java",
+      "Spring Boot",
+      "MySQL",
+      "Redis"
+    ],
+    "sampleJobs": [
+      "Java 后端工程师",
+      "Go 后端工程师"
+    ],
+    "trendNote": "分布式、缓存与接口稳定性仍是高频考点。",
+    "referenceMatch": 69
+  }
+}

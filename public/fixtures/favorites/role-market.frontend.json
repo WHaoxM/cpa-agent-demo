@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "data": {
+    "role": "前端开发",
+    "salaryRange": "12K-24K",
+    "medianSalary": 18,
+    "demandLevel": "需求稳定，校招与实习岗位充足",
+    "demandCount": 1200,
+    "hotCities": [
+      "上海",
+      "杭州",
+      "深圳",
+      "北京"
+    ],
+    "industries": [
+      "互联网",
+      "企业服务",
+      "新消费"
+    ],
+    "skillTags": [
+      "Vue 3",
+      "React",
+      "TypeScript",
+      "工程化",
+      "性能优化"
+    ],
+    "sampleJobs": [
+      "Vue 前端工程师",
+      "React 前端工程师",
+      "可视化工程师"
+    ],
+    "trendNote": "企业更看重组件抽象、工程规范和跨端协作能力。",
+    "referenceMatch": 78
+  }
+}

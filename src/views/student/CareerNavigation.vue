@@ -12,9 +12,21 @@ import CareerNavigationIdlePreview from '@/components/career/CareerNavigationIdl
 import { usePortraitSession } from '@/composables/usePortraitSession'
 import type { AgentPortraitInput } from '@/composables/useAgentPortrait'
 import TalentPortrait from '@/views/student/TalentPortrait.vue'
-import { getCareerInsightsMock, CAREER_DOMAINS } from '@/composables/useCareerInsights'
+import {
+  getCareerInsightsMock,
+  CAREER_DOMAINS,
+  DEFAULT_CAREER_ROLE,
+  mapCatalogRoleToDomain,
+} from '@/composables/useCareerInsights'
 import type { CareerRole } from '@/composables/useCareerInsights'
-import { fetchPipelineStatus, parseResumeText, triggerPipeline, type PipelineStatusData } from '@/api/backend'
+import {
+  uploadResumeFile,
+  extractSkillsOnly,
+  nsleResume,
+} from '@/api/pipeline'
+import { inferRoleFromSkills, listInsights } from '@/api/career'
+import { hybridCandidates, getMatchExplain, type MatchExplain } from '@/api/match'
+import { DEMO_STUDENT_ID } from '@/api/config'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -28,16 +40,17 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const isDragOver = ref(false)
 const pasteText = ref('')
 const uploadedFileName = ref('')
+const uploadedFile = ref<File | null>(null)
+const parseError = ref('')
 const parsePhase = ref<ParsePhase>('idle')
 const selectedDirection = ref<CareerRole | ''>('')
+/** Hybrid retrieve + explain (scores stay authoritative from BE match_result) */
+const matchExplain = ref<MatchExplain | null>(null)
+const hybridNote = ref('')
 const rightLayoutMode = ref<RightLayoutMode>('idle')
 const dashboardPaneRef = ref<HTMLElement | null>(null)
 const isImmersiveLayout = ref(false)
 const dashboardBaselineWidth = ref(0)
-const backendTask = ref<PipelineStatusData | null>(null)
-const backendParseSummary = ref('')
-const backendIntegrationError = ref('')
-const backendIntegrationLoading = ref(false)
 
 const {
   status: portraitSessionStatus,
@@ -147,68 +160,278 @@ function onDrop(e: DragEvent) {
 }
 
 function handleFile(file: File) {
+  uploadedFile.value = file
   uploadedFileName.value = file.name
   pasteText.value = ''
 }
 
-function resetBackendIntegration() {
-  backendTask.value = null
-  backendParseSummary.value = ''
-  backendIntegrationError.value = ''
-  backendIntegrationLoading.value = false
+
+async function resolveResumeText(studentId: string): Promise<{
+  text: string
+  parseSkills: Array<{ name: string; weight: number; category: string }>
+  name?: string
+  studentProfile?: import('@/composables/useAgentPortrait').StudentProfilePayload
+}> {
+  void studentId
+  let text = ''
+
+  // L0: file → MinerU/text；粘贴 → 原文
+  if (uploadedFile.value && !pasteText.value.trim()) {
+    const env = await uploadResumeFile(uploadedFile.value, { extractSkills: false })
+    const data = (env.data || {}) as { text?: string; raw_text?: string }
+    text = String(data.text || data.raw_text || '').trim()
+    if (!text) throw new Error('文件解析未返回可用文本，请改用粘贴简历')
+  } else {
+    text = pasteText.value.trim()
+    if (!text) throw new Error('请粘贴简历文本或上传文件')
+  }
+
+  // Resume Structure Truth：canonical LLM student_profile；缺校/专业拒评（禁止正则修补）
+  let parseSkills: Array<{ name: string; weight: number; category: string }> = []
+  let name: string | undefined
+  let studentProfile: import('@/composables/useAgentPortrait').StudentProfilePayload | undefined
+  try {
+    const env = await nsleResume({ text })
+    const data = env.data
+    const validation = data?.structure_validation
+    if (validation && validation.ok === false) {
+      const issues = (validation.issues || []).join('、') || '结构字段不完整'
+      throw new Error(
+        `简历结构抽取未完成（${issues}）。请确认原文含院校/专业等关键字段后重试，系统不会用正则猜填，也不会对空结构打分。`,
+      )
+    }
+    studentProfile = (data?.student_profile || undefined) as
+      | import('@/composables/useAgentPortrait').StudentProfilePayload
+      | undefined
+    if (!studentProfile?.school?.trim() || !studentProfile?.major?.trim()) {
+      throw new Error(
+        '未从简历解析到院校或专业。请补充完整教育信息后重试；禁止对缺失结构继续评分。',
+      )
+    }
+    name = studentProfile?.name
+    const skills = data?.skills || []
+    parseSkills = skills.map((s, i) => {
+      const skillName = typeof s === 'string' ? s : String(s?.name ?? '')
+      const category = typeof s === 'object' && s && 'category' in s
+        ? String((s as { category?: string }).category || '通用')
+        : '通用'
+      return { name: skillName, weight: Math.max(0.45, 0.95 - i * 0.04), category }
+    }).filter(s => s.name)
+  } catch (e) {
+    console.warn('[career-navigation] nsle/resume failed', e)
+    if (e instanceof Error && (e.message.includes('结构') || e.message.includes('院校'))) {
+      throw e
+    }
+    throw new Error('模型抽取失败（NS-LE）。请确认后端 LLM 可用后重试，勿使用空画像评分。')
+  }
+  return { text, parseSkills, name, studentProfile }
 }
 
-function detectRoleFromText(text: string): CareerRole {
-  const t = text.toLowerCase()
-  if (/机器学习|深度学习|pytorch|tensorflow|ml|ai|算法/.test(t)) return '机器学习工程师'
-  if (/python|数据分析|sql|bi|pandas|数据仓库|etl/.test(t)) return '数据分析'
-  if (/测试|playwright|selenium|jest|自动化测试|qa/.test(t)) return '测试开发'
-  if (/java|spring|mysql|redis|后端|backend|mybatis|golang|go/.test(t)) return '后端开发'
-  if (selectedDirection.value) return selectedDirection.value
-  return '前端开发'
+type RolePack = {
+  /** BE catalog role — preserved for Portrait / Match */
+  catalogRole: string
+  /** UI domain for local mock skill graphs only */
+  domainRole: CareerRole
+  confidence: number
+  candidates: Array<{
+    role: string
+    score: number
+    coverage?: number
+    matched_skills?: string[]
+    missing_core_skills?: string[]
+  }>
 }
 
-async function startParse() {
-  const input = pasteText.value.trim() || uploadedFileName.value
-  if (!input) return
+async function resolveRoleFromSkills(
+  skills: Array<{ name: string; weight?: number; category?: string }>,
+): Promise<RolePack> {
+  const domainFallback: CareerRole = selectedDirection.value || DEFAULT_CAREER_ROLE
 
-  isImmersiveLayout.value = false
-  dashboardBaselineWidth.value = 0
-  resetBackendIntegration()
-  parsePhase.value = 'parsing'
-  resumeStore.reset()
-
-  const text = pasteText.value || uploadedFileName.value
-  const role = detectRoleFromText(text)
-  const insights = getCareerInsightsMock(role)
-  const parsedSkills = insights.skillGraph.nodes.slice(0, 12).map(n => ({
-    name: n.name,
-    weight: n.heat / 100,
-    category: n.category,
-  }))
-
-  resumeStore.setResult({
-    rawText: pasteText.value,
-    fileName: uploadedFileName.value,
-    insights,
-    skills: parsedSkills,
-  })
-  openRightSplitLayout()
-  await syncBackendPipeline(text, role)
-
-  const portraitInput: AgentPortraitInput = {
-    resumeText: text,
-    parsedSkills,
-    predictedRole: insights.predictedRole,
-    confidence: insights.confidence,
-    matchedCareers: insights.candidates,
+  if (!skills.length) {
+    return {
+      catalogRole: domainFallback,
+      domainRole: domainFallback,
+      confidence: 0.45,
+      candidates: [{ role: domainFallback, score: 0.45 }],
+    }
   }
 
   try {
+    const pack = await inferRoleFromSkills({
+      skills: skills.map(s => ({
+        name: s.name,
+        confidence: s.weight,
+        category: s.category,
+      })),
+      top_k: 5,
+      preferred_role: selectedDirection.value || undefined,
+    })
+    const catalog = String(pack.predicted_role || '').trim()
+    const candidates = (pack.candidates || [])
+      .map(r => ({
+        role: String(r.role_name || '').trim(),
+        score: Number(r.score) || 0,
+        coverage: r.coverage,
+        matched_skills: r.matched_skills,
+        missing_core_skills: r.missing_core_skills,
+      }))
+      .filter(c => c.role)
+      .sort((a, b) => b.score - a.score)
+
+    if (catalog || candidates.length) {
+      const top = catalog || candidates[0]!.role
+      return {
+        catalogRole: top,
+        domainRole: mapCatalogRoleToDomain(top),
+        confidence: Math.min(0.95, Number(pack.confidence) || candidates[0]?.score || 0.6),
+        candidates: candidates.length
+          ? candidates.slice(0, 5)
+          : [{ role: top, score: Number(pack.confidence) || 0.6 }],
+      }
+    }
+  } catch (e) {
+    console.warn('[career-navigation] infer-role failed', e)
+  }
+
+  // Fallback: catalog insights by skill overlap names — still no resume text / explore
+  try {
+    const list = await listInsights({ limit: 16 })
+    const skillSet = new Set(skills.map(s => s.name.toLowerCase()))
+    const scored = list
+      .map(item => {
+        const core = (item.core_skills || []).map(s => String(s).toLowerCase())
+        const hits = core.filter(s => skillSet.has(s)).length
+        const score = core.length ? hits / core.length : 0
+        return { role: item.role_name, score }
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+    if (scored.length) {
+      const top = scored[0]!
+      return {
+        catalogRole: top.role,
+        domainRole: mapCatalogRoleToDomain(top.role),
+        confidence: Math.min(0.7, 0.4 + top.score * 0.4),
+        candidates: scored.slice(0, 5),
+      }
+    }
+  } catch (e) {
+    console.warn('[career-navigation] insights list failed', e)
+  }
+
+  return {
+    catalogRole: domainFallback,
+    domainRole: domainFallback,
+    confidence: 0.5,
+    candidates: [{ role: domainFallback, score: 0.5 }],
+  }
+}
+
+async function startParse() {
+  if (!pasteText.value.trim() && !uploadedFile.value) return
+
+  isImmersiveLayout.value = false
+  dashboardBaselineWidth.value = 0
+  parseError.value = ''
+  parsePhase.value = 'parsing'
+  resumeStore.reset()
+
+  const studentId = userStore.currentUser?.id || DEMO_STUDENT_ID
+
+  try {
+    const { text, parseSkills, studentProfile } = await resolveResumeText(studentId)
+
+    // Stronger skill extract (dictionary path; LLM optional)
+    let apiSkills = parseSkills
+    try {
+      const ext = await extractSkillsOnly({ text, use_llm: true })
+      const skills = (ext.data?.skills || []) as Array<{ name?: string; category?: string; confidence?: number }>
+      if (skills.length) {
+        apiSkills = skills.map((s, i) => ({
+          name: String(s.name || ''),
+          weight: Math.min(0.98, Math.max(0.4, Number(s.confidence) || (0.9 - i * 0.03))),
+          category: String(s.category || '通用'),
+        })).filter(s => s.name)
+      }
+    } catch (e) {
+      console.warn('[career-navigation] extract/skills failed', e)
+    }
+
+    const rolePack = selectedDirection.value
+      ? {
+          catalogRole: selectedDirection.value,
+          domainRole: selectedDirection.value,
+          confidence: 0.8,
+          candidates: [{ role: selectedDirection.value, score: 0.8 }],
+        }
+      : await resolveRoleFromSkills(apiSkills)
+
+    // Mock graphs keyed by domain; predictedRole keeps BE catalog name (e.g. RAG工程师)
+    const insights = getCareerInsightsMock(rolePack.domainRole)
+    insights.predictedRole = rolePack.catalogRole
+    insights.domainRole = rolePack.domainRole
+    insights.confidence = rolePack.confidence
+    insights.candidates = rolePack.candidates.length
+      ? rolePack.candidates
+      : insights.candidates
+    insights.salary.predicted.role = rolePack.catalogRole
+    insights.salary.target.role = rolePack.catalogRole
+
+    const parsedSkills = apiSkills.length
+      ? apiSkills
+      : insights.skillGraph.nodes.slice(0, 12).map(n => ({
+          name: n.name,
+          weight: n.heat / 100,
+          category: n.category,
+        }))
+
+    // Hybrid retrieve (not score) + optional explain when job_portrait fixture exists
+    matchExplain.value = null
+    hybridNote.value = ''
+    try {
+      const hybrid = await hybridCandidates({
+        skills: parsedSkills.map(s => ({ name: s.name })),
+        preferred_role: rolePack.catalogRole,
+        top_k: 5,
+      })
+      hybridNote.value = hybrid.note || ''
+      if (hybrid.candidates?.length) {
+        insights.candidates = hybrid.candidates.map(c => ({
+          role: String(c.position_name || c.role_name || c.id),
+          score: Number(c.retrieve_score) || 0,
+          matched_skills: c.matched_keywords,
+        }))
+        const jobId = hybrid.candidates[0]?.job_portrait_id
+        if (jobId) {
+          matchExplain.value = await getMatchExplain(DEMO_STUDENT_ID, String(jobId))
+        }
+      }
+    } catch (e) {
+      console.warn('[career-navigation] hybrid/explain optional failed', e)
+    }
+
+    resumeStore.setResult({
+      rawText: pasteText.value || text,
+      fileName: uploadedFileName.value,
+      insights,
+      skills: parsedSkills,
+    })
+    openRightSplitLayout()
+
+    const portraitInput: AgentPortraitInput = {
+      resumeText: text,
+      parsedSkills,
+      predictedRole: insights.predictedRole,
+      confidence: insights.confidence,
+      matchedCareers: insights.candidates,
+      studentProfile,
+    }
+
     await runPortraitSession(portraitInput)
     parsePhase.value = 'done'
     collapseRightDashboard()
-  } catch {
+  } catch (e) {
+    parseError.value = e instanceof Error ? e.message : '分析失败，请检查后端是否已启动'
     parsePhase.value = 'idle'
     isImmersiveLayout.value = false
     dashboardBaselineWidth.value = 0
@@ -216,51 +439,6 @@ async function startParse() {
     resetPortraitSession()
     clearRightLayoutTimers()
     rightLayoutMode.value = 'idle'
-  }
-}
-
-async function syncBackendPipeline(text: string, role: CareerRole) {
-  backendIntegrationLoading.value = true
-  backendIntegrationError.value = ''
-
-  try {
-    const studentId = userStore.currentUser?.id || 'student_demo_001'
-    const trimmedText = pasteText.value.trim()
-
-    if (trimmedText) {
-      const parseResponse = await parseResumeText(trimmedText, studentId)
-      if (parseResponse.success && parseResponse.data) {
-        const blocks = parseResponse.data.blocks || []
-        const blockTypes = blocks.map(block => block.block_type).slice(0, 3).join(' / ')
-        backendParseSummary.value = `文本解析 ${parseResponse.data.block_count} 个区块${blockTypes ? `：${blockTypes}` : ''}`
-      }
-    }
-
-    const triggerResponse = await triggerPipeline({
-      pipeline: 'L0_parse_resume',
-      student_id: studentId,
-      resume_text: trimmedText || undefined,
-      file_path: trimmedText ? undefined : text,
-      target_role: role,
-      source: 'frontend_career_navigation',
-    })
-
-    const taskId = triggerResponse.data?.task_id
-    if (!triggerResponse.success || !taskId) {
-      throw new Error(triggerResponse.error || '后端管线任务未返回 task_id')
-    }
-
-    const statusResponse = await fetchPipelineStatus(taskId)
-    backendTask.value = statusResponse.data || {
-      task_id: taskId,
-      pipeline: 'L0_parse_resume',
-      status: triggerResponse.data?.status || 'pending',
-      progress: 0,
-    }
-  } catch (error) {
-    backendIntegrationError.value = error instanceof Error ? error.message : '后端管线联调失败，已使用前端演示结果'
-  } finally {
-    backendIntegrationLoading.value = false
   }
 }
 
@@ -272,9 +450,12 @@ function resetPage() {
   parsePhase.value = 'idle'
   isImmersiveLayout.value = false
   dashboardBaselineWidth.value = 0
-  resetBackendIntegration()
   pasteText.value = ''
   uploadedFileName.value = ''
+  uploadedFile.value = null
+  parseError.value = ''
+  matchExplain.value = null
+  hybridNote.value = ''
   resumeStore.reset()
   resetPortraitSession()
   clearRightLayoutTimers()
@@ -348,7 +529,7 @@ const rightShellStyle = computed(() => ({
         <!-- Editorial headline -->
         <div class="rp-editorial">
           <span class="rp-greeting">
-            {{ (() => { const h = new Date().getHours(); return h < 12 ? '早上好' : h < 18 ? '下午好' : '晚上好' })() }}，{{ userStore.currentUser?.name || '同学' }}
+            {{ (() => { const h = new Date().getHours(); return h < 12 ? '早上好' : h < 18 ? '下午好' : '晚上好' })() }}，{{ userStore.currentUser?.name || '钟同学' }}
           </span>
           <h1 class="rp-display-title">
             <span class="rp-dt-a">找到你</span>
@@ -462,7 +643,8 @@ const rightShellStyle = computed(() => ({
             </div>
           </div>
 
-          <button class="rp-parse-btn" :disabled="!pasteText.trim() && !uploadedFileName" @click="startParse">
+          <p v-if="parseError" class="rp-parse-error">{{ parseError }}</p>
+          <button class="rp-parse-btn" :disabled="!pasteText.trim() && !uploadedFile" @click="startParse">
             <span>查看个人能力画像</span>
             <Icon icon="lucide:arrow-right" :width="15" class="rp-parse-btn__arrow" />
           </button>
@@ -478,17 +660,10 @@ const rightShellStyle = computed(() => ({
               <div class="rp-progress-track">
                 <div class="rp-progress-fill" :style="{ width: parseProgress + '%' }"></div>
               </div>
-            <div class="rp-progress-meta">
-              <span class="rp-progress-pct">{{ Math.round(parseProgress) }}%</span>
-              <span class="rp-progress-steps">{{ currentStep }} / {{ totalSteps }} 步</span>
-            </div>
-            <div class="rp-backend-status">
-              <span class="rp-backend-status__label">后端联调</span>
-              <span v-if="backendIntegrationLoading">连接 Pipeline...</span>
-              <span v-else-if="backendTask">任务 {{ backendTask.task_id }} · {{ backendTask.status }}</span>
-              <span v-else-if="backendIntegrationError">{{ backendIntegrationError }}</span>
-              <span v-else>等待任务返回</span>
-            </div>
+              <div class="rp-progress-meta">
+                <span class="rp-progress-pct">{{ Math.round(parseProgress) }}%</span>
+                <span class="rp-progress-steps">{{ currentStep }} / {{ totalSteps }} 步</span>
+              </div>
             </div>
         </div>
 
@@ -501,15 +676,9 @@ const rightShellStyle = computed(() => ({
               <Icon icon="lucide:rotate-ccw" :width="12" />重新上传
             </button>
           </div>
-          <div v-if="backendTask || backendParseSummary || backendIntegrationError" class="rp-backend-card">
-            <div class="rp-backend-card__title">后端 Pipeline 联调</div>
-            <p v-if="backendParseSummary">{{ backendParseSummary }}</p>
-            <p v-if="backendTask">任务 {{ backendTask.task_id }} 已写入 MySQL，当前状态：{{ backendTask.status }}</p>
-            <p v-if="backendIntegrationError">{{ backendIntegrationError }}</p>
-          </div>
           <div class="rp-privacy">
             <Icon icon="lucide:shield-check" :width="12" class="rp-privacy__icon" />
-            <p class="rp-privacy__text">本地联调会请求后端 Pipeline；离线或失败时保留前端演示结果</p>
+            <p class="rp-privacy__text">内容仅本地处理，不上传至任何服务器</p>
           </div>
         </div>
 
@@ -561,6 +730,23 @@ const rightShellStyle = computed(() => ({
               :current-step="currentStep"
               :total-steps="totalSteps"
             />
+            <aside v-if="matchExplain" class="rp-match-explain" aria-label="匹配解释">
+              <h3 class="rp-match-explain__title">匹配解释（分数只读）</h3>
+              <p class="rp-match-explain__score">
+                总分 {{ matchExplain.total_score ?? '—' }}
+                · 覆盖率 {{ matchExplain.skill_coverage ?? '—' }}
+                <span v-if="matchExplain.scores_authoritative">· 权威分</span>
+              </p>
+              <p v-if="matchExplain.keyword_coverage?.highlight_missing?.length" class="rp-match-explain__gap">
+                缺失技能：{{ matchExplain.keyword_coverage.highlight_missing.join('、') }}
+              </p>
+              <ul v-if="matchExplain.related_courses?.length" class="rp-match-explain__courses">
+                <li v-for="(c, i) in matchExplain.related_courses.slice(0, 4)" :key="i">
+                  {{ c.title || c.course_id }} <span v-if="c.skill">({{ c.skill }})</span>
+                </li>
+              </ul>
+              <p v-if="hybridNote" class="rp-match-explain__note">{{ hybridNote }}</p>
+            </aside>
           </div>
         </div>
       </div>
@@ -569,6 +755,29 @@ const rightShellStyle = computed(() => ({
 </template>
 
 <style scoped>
+.rp-match-explain {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--parchment-400, #CBCBC8);
+  background: var(--parchment-200, #EDEDEB);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.rp-match-explain__title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.rp-match-explain__score,
+.rp-match-explain__gap,
+.rp-match-explain__note {
+  margin: 4px 0;
+  color: var(--parchment-700, #555);
+}
+.rp-match-explain__courses {
+  margin: 6px 0 0;
+  padding-left: 1.1em;
+}
 /* ── CSS vars ── */
 :root {
   --rp-bg: var(--parchment-100, #F5F5F3);
@@ -921,6 +1130,12 @@ const rightShellStyle = computed(() => ({
 .rp-dir-expand-leave-to { opacity: 0; transform: translateY(-4px); }
 
 /* Parse button */
+.rp-parse-error {
+  margin: 0 0 10px;
+  color: #8b1a00;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .rp-parse-btn {
   width: 100%; height: 46px;
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -1001,49 +1216,6 @@ const rightShellStyle = computed(() => ({
 }
 .rp-done-icon { color: #5B7744; flex-shrink: 0; }
 .rp-done-status span { flex: 1; }
-
-.rp-backend-status {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-  padding: 8px 10px;
-  border: 1px solid rgba(67, 111, 150, 0.18);
-  border-radius: 6px;
-  background: rgba(67, 111, 150, 0.06);
-  color: var(--rp-text-muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.rp-backend-status__label {
-  flex-shrink: 0;
-  color: var(--rp-blue);
-  font-weight: 700;
-}
-
-.rp-backend-card {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid rgba(67, 111, 150, 0.18);
-  border-radius: 8px;
-  background: rgba(67, 111, 150, 0.06);
-}
-
-.rp-backend-card__title {
-  margin-bottom: 6px;
-  color: var(--rp-blue);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.rp-backend-card p {
-  margin: 4px 0;
-  color: var(--rp-text);
-  font-size: 12px;
-  line-height: 1.5;
-}
 
 .rp-result-reset {
   display: inline-flex; align-items: center; gap: 4px;
@@ -1462,8 +1634,35 @@ const rightShellStyle = computed(() => ({
    打印 / 导出报告样式
 ══════════════════════════════════════════ */
 @media print {
-  .rp-header, .rp-left, .rp-orbital-scene, .rp-right-footer { display: none !important; }
-  .rp-page { display: block !important; height: auto !important; overflow: visible !important; }
+  .rp-header,
+  .rp-left,
+  .rp-orbital-scene,
+  .rp-right-footer,
+  .rp-right-idle-preview,
+  .rp-right-dashboard-pane,
+  .rp-layout-toggle { display: none !important; }
+
+  .rp-page,
+  .rp-workspace,
+  .rp-right,
+  .rp-right-shell,
+  .rp-right-portrait-pane {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    background: #fff !important;
+  }
+
+  .rp-workspace {
+    grid-template-columns: 1fr !important;
+    padding: 0 !important;
+  }
 }
 /* Responsive */
 @media (max-width: 1280px) { .rp-workspace { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); } }

@@ -1,0 +1,77 @@
+{
+  "success": true,
+  "data": {
+    "variant": "course",
+    "nodes": [
+      {
+        "id": "html",
+        "name": "HTML/CSS",
+        "tier": "foundation",
+        "heat": 90,
+        "domainId": "frontend"
+      },
+      {
+        "id": "js",
+        "name": "JavaScript",
+        "tier": "foundation",
+        "heat": 95,
+        "domainId": "frontend"
+      },
+      {
+        "id": "vue3",
+        "name": "Vue 3",
+        "tier": "junior",
+        "heat": 92,
+        "domainId": "frontend",
+        "relatedCareers": [
+          "job-frontend-0"
+        ]
+      },
+      {
+        "id": "job-frontend-0",
+        "name": "Vue 前端工程师",
+        "tier": "job",
+        "heat": 100,
+        "domainId": "frontend"
+      }
+    ],
+    "edges": [
+      {
+        "source": "html",
+        "target": "js",
+        "relation": "prerequisite"
+      },
+      {
+        "source": "js",
+        "target": "vue3",
+        "relation": "prerequisite",
+        "isCareerPath": true
+      },
+      {
+        "source": "vue3",
+        "target": "job-frontend-0",
+        "relation": "compose",
+        "isCareerPath": true
+      }
+    ],
+    "courseNodes": [
+      {
+        "id": "c-vue",
+        "title": "Vue 3 入门",
+        "group": "framework-course",
+        "difficulty": "beginner",
+        "relatedSkillIds": [
+          "vue3"
+        ],
+        "importance": "core"
+      }
+    ],
+    "skillCourseEdges": [
+      {
+        "skillId": "vue3",
+        "courseId": "c-vue",
+        "relation": "core"
+      }
+    ]
+  }
+}

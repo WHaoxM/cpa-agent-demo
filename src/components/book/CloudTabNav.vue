@@ -1,4 +1,4 @@
-<!-- 组件：祥云连续 Tab 导航 -->
+<!-- 组件：顶部 Tab 导航 -->
 <script setup lang="ts">
 defineProps<{ tabs: { key: string; label: string }[]; modelValue: string }>()
 
@@ -24,12 +24,6 @@ const emit = defineEmits<{ (e: 'update:modelValue', val: string): void }>()
         aria-hidden="true"
         focusable="false"
       >
-        <!--
-          S 形波浪路径：
-          右边 C 110,0 66,100 94,100 → 上凸出（CP1 x=110）再下收（CP2 x=66），形成 S 波
-          左边 C 28,100 -16,0 0,0     → 与右边对称，形成咬合的另一侧波浪
-          相邻 tab margin-right:-12px 叠压，波浪咬合呈现分隔线
-        -->
         <path class="cloud-fill" d="M 0,0 L 82,0 C 110,0 66,100 94,100 L 0,100 C 28,100 -16,0 0,0 Z" />
       </svg>
       <span class="cloud-label">{{ tab.label }}</span>

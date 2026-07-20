@@ -1,12 +1,6 @@
 <!-- 组件：内容页容器 -->
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const pageRef = ref<HTMLElement | null>(null)
-</script>
-
 <template>
-  <div ref="pageRef" class="book-page">
+  <div class="book-page">
     <div class="book-page__body">
       <slot />
     </div>

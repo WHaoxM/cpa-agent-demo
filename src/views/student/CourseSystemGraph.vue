@@ -109,6 +109,8 @@ let animFrameId = 0
 const nodeMeshes = new Map<string, THREE.Mesh>()
 const edgeMeshes: { mesh: THREE.Mesh; edge: CourseEdge }[] = []
 const labelDivs = new Map<string, HTMLDivElement>()
+const tierLabelDivs = new Map<SkillTier, HTMLDivElement>()
+const tierLabelPos3D = new Map<SkillTier, THREE.Vector3>()
 let posMap3D = new Map<string, THREE.Vector3>()
 const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 12, 28)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 7, 0)
@@ -532,6 +534,7 @@ function resetView(animate = true) {
 /* ═══ 构建分层平台 ═══ */
 function buildPlatforms() {
   if (!scene) return
+  const labelContainer = graphContainerEl.value
   for (const tier of TIER_ORDER) {
     if (tier === 'job') continue
     const scale = TIER_PLATFORM_SCALE[tier]
@@ -549,6 +552,19 @@ function buildPlatforms() {
     mesh.position.set(0, TIER_Y_3D[tier] - 0.05, 0)
     mesh.receiveShadow = true
     scene.add(mesh)
+    tierLabelPos3D.set(tier, new THREE.Vector3(-pw / 2, TIER_Y_3D[tier], pd / 2))
+    if (labelContainer) {
+      const div = document.createElement('div')
+      div.className = 'cs-tier-label'
+      div.textContent = TIER_LABELS[tier]
+      div.style.color = TIER_COLORS[tier]
+      div.addEventListener('click', (e) => {
+        e.stopPropagation()
+        toggleTierHighlight(tier)
+      })
+      labelContainer.appendChild(div)
+      tierLabelDivs.set(tier, div)
+    }
   }
 }
 
@@ -691,6 +707,16 @@ function updateLabels() {
     div.style.transform = `translate(${x + r3d * 30}px, ${y - 6}px)`
     const op = (mesh.material as THREE.MeshStandardMaterial).opacity
     div.style.opacity = String(Math.max(op, 0.1))
+  }
+  for (const [tier, div] of tierLabelDivs) {
+    const pos3d = tierLabelPos3D.get(tier)
+    if (!pos3d) continue
+    const v = pos3d.clone().project(camera)
+    const x = v.x * w2 + w2
+    const y = -(v.y * h2) + h2
+    div.style.transform = `translate(${x - 10}px, ${y}px) translateX(-100%) translateY(-50%)`
+    const isActive = highlightTier.value === tier
+    div.classList.toggle('cs-tier-label--active', isActive)
   }
 }
 
@@ -838,6 +864,9 @@ function disposeScene() {
   edgeMeshes.length = 0
   for (const [, div] of labelDivs) div.remove()
   labelDivs.clear()
+  for (const [, div] of tierLabelDivs) div.remove()
+  tierLabelDivs.clear()
+  tierLabelPos3D.clear()
   renderer?.dispose()
   renderer?.domElement.remove()
   renderer = null; scene = null; camera = null; controls = null
@@ -938,24 +967,6 @@ const importanceLabels: Record<string, string> = {
           <button class="cs-tools__btn" :class="{ 'is-active': showLabels }" @click="toggleLabels">
             <Icon :icon="showLabels ? 'lucide:tag' : 'lucide:tag-off'" :width="14" />
             <span>{{ showLabels ? '隐藏节点名称' : '显示节点名称' }}</span>
-          </button>
-        </div>
-
-        <!-- 左侧书签式分层控件 -->
-        <div class="cs-bookmarks">
-          <button
-            v-for="tier in legendTiers"
-            :key="tier"
-            class="cs-bookmark"
-            :class="{ 'is-active': highlightTier === tier }"
-            :style="{
-              '--bm-color': TIER_COLORS[tier],
-              '--bm-bg': highlightTier === tier ? TIER_COLORS[tier] : 'transparent',
-            }"
-            @click="toggleTierHighlight(tier)"
-          >
-            <span class="cs-bookmark__dot" :style="{ background: TIER_COLORS[tier] }"></span>
-            <span class="cs-bookmark__label">{{ TIER_LABELS[tier] }}</span>
           </button>
         </div>
 
@@ -1159,6 +1170,30 @@ const importanceLabels: Record<string, string> = {
   font-size: 13px;
   font-weight: 700;
 }
+:global(.cs-tier-label) {
+  position: absolute;
+  top: 0; left: 0;
+  z-index: 4;
+  pointer-events: auto;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255,255,255,0.98), 0 1px 4px rgba(255,255,255,0.9);
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+  transition: opacity 0.3s, filter 0.3s;
+  user-select: none;
+}
+:global(.cs-tier-label:hover) {
+  opacity: 1;
+  filter: brightness(1.3) drop-shadow(0 0 6px currentColor);
+}
+:global(.cs-tier-label--active) {
+  opacity: 1;
+  font-size: 13px;
+  text-shadow: 0 0 12px rgba(255,255,255,1), 0 0 20px currentColor;
+}
 
 /* ═══ hover 浮窗 ═══ */
 .cs-tooltip {
@@ -1245,70 +1280,6 @@ const importanceLabels: Record<string, string> = {
 .cs-tools__btn--learning:hover {
   background: rgba(192,74,43,0.14);
   border-color: rgba(192,74,43,0.4);
-}
-
-/* ═══ 左侧书签式分层控件 ═══ */
-.cs-bookmarks {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  max-height: 50%;
-  z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  pointer-events: auto;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-.cs-bookmarks::-webkit-scrollbar { display: none; }
-.cs-bookmark {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 14px 8px 12px;
-  border: none;
-  border-left: 3px solid var(--bm-color, #C04A2B);
-  background: rgba(255,255,255,0.88);
-  color: #666;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  border-radius: 0 6px 6px 0;
-  backdrop-filter: blur(8px);
-  box-shadow: 1px 1px 6px rgba(0,0,0,0.04);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-.cs-bookmark:hover {
-  background: rgba(255,255,255,0.96);
-  color: #333;
-  padding-right: 18px;
-  box-shadow: 2px 1px 10px rgba(0,0,0,0.06);
-}
-.cs-bookmark.is-active {
-  background: var(--bm-bg, #C04A2B);
-  color: #fff;
-  font-weight: 600;
-  padding-right: 20px;
-  box-shadow: 2px 2px 12px rgba(0,0,0,0.08);
-}
-.cs-bookmark.is-active .cs-bookmark__dot {
-  background: #fff !important;
-  box-shadow: 0 0 4px rgba(255,255,255,0.5);
-}
-.cs-bookmark__dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-.cs-bookmark__label {
-  line-height: 1;
 }
 
 /* ═══ 左下角领域图例 ═══ */
@@ -1592,9 +1563,6 @@ const importanceLabels: Record<string, string> = {
 }
 @media (max-width: 768px) {
   .cs-legend { bottom: 10px; left: 10px; padding: 8px 12px; }
-  .cs-bookmarks { top: 6%; max-height: 52%; gap: 1px; }
-  .cs-bookmark { font-size: 10px; padding: 6px 10px 6px 8px; }
-  .cs-bookmark__label { display: none; }
   .cs-primary-action { top: 10px; left: 10px; }
   .cs-tools { top: 10px; right: 10px; }
   .cs-tools__btn span,

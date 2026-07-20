@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "portrait_id": "job_001",
+    "title": "前端开发工程师",
+    "d1_weight": 0.25,
+    "d2_weight": 0.35,
+    "d3_weight": 0.2,
+    "d4_weight": 0.2,
+    "portrait_json": {}
+  }
+}

@@ -8,9 +8,13 @@ export type CareerEvidence = {
   weight: number
 }
 
+/** Catalog role name from BE Role Inference (e.g. RAG工程师); domain CareerRole only for mock viz. */
 export type CareerCandidate = {
-  role: CareerRole
+  role: string
   score: number
+  coverage?: number
+  matched_skills?: string[]
+  missing_core_skills?: string[]
 }
 
 export type SkillNode = {
@@ -34,7 +38,10 @@ export type SalaryPoint = {
 }
 
 export type CareerInsights = {
-  predictedRole: CareerRole
+  /** BE catalog role (Role Inference); do not collapse to 5 UI domains. */
+  predictedRole: string
+  /** Domain bucket for local mock graphs / bubble layout only. */
+  domainRole?: CareerRole
   confidence: number
   candidates: CareerCandidate[]
   evidence: CareerEvidence[]
@@ -47,8 +54,8 @@ export type CareerInsights = {
     links: Array<{ source: string; target: string; value: number }>
   }
   salary: {
-    predicted: { role: CareerRole; points: SalaryPoint[] }
-    target: { role: CareerRole; points: SalaryPoint[] }
+    predicted: { role: string; points: SalaryPoint[] }
+    target: { role: string; points: SalaryPoint[] }
   }
 }
 
@@ -60,6 +67,9 @@ export type CareerAgentInput = {
 }
 
 export const roleOptions: CareerRole[] = ['前端开发', '后端开发', '测试开发', '数据分析', '机器学习工程师']
+
+/** 默认展示职业 — 后续接入 API 时替换为动态返回值即可 */
+export const DEFAULT_CAREER_ROLE: CareerRole = '机器学习工程师'
 
 // ── 五领域 × 三细分岗位 统一数据源 ──
 export interface BubbleDomain {
@@ -89,7 +99,7 @@ export const CAREER_DOMAINS: BubbleDomain[] = [
   },
   {
     id: 'ml', role: '机器学习工程师', name: '机器学习工程师', color: '#1B4E8B',
-    jobs: ['算法工程师', '深度学习工程师', 'AI 应用工程师'],
+    jobs: ['算法工程师', 'AI 应用工程师', '大模型应用工程师'],
   },
 ]
 
@@ -274,6 +284,13 @@ function buildSkillGraphForRole(
       { id: 'eval', name: '评估指标', category: '机器学习', heat: 66 },
       { id: 'tune', name: '调参与实验', category: '机器学习', heat: 64 },
       { id: 'mlops', name: 'MLOps', category: '机器学习', heat: 58 },
+      { id: 'langchain', name: 'LangChain/LangGraph', category: '机器学习', heat: 90 },
+      { id: 'rag', name: 'RAG 系统', category: '机器学习', heat: 88 },
+      { id: 'prompt', name: 'Prompt Engineering', category: '机器学习', heat: 86 },
+      { id: 'neo4j', name: 'Neo4j/图数据库', category: '数据', heat: 76 },
+      { id: 'milvus', name: 'Milvus/向量检索', category: '数据', heat: 78 },
+      { id: 'lora', name: 'LoRA 微调', category: '机器学习', heat: 72 },
+      { id: 'fastapi', name: 'FastAPI', category: '后端', heat: 74 },
     ],
   }
 
@@ -362,6 +379,13 @@ function buildSkillGraphForRole(
       { source: 'eval', target: 'ml', weight: 0.5 },
       { source: 'tune', target: 'ml', weight: 0.46 },
       { source: 'mlops', target: 'deploy', weight: 0.44 },
+      { source: 'langchain', target: 'py', weight: 0.82 },
+      { source: 'rag', target: 'langchain', weight: 0.74 },
+      { source: 'prompt', target: 'langchain', weight: 0.68 },
+      { source: 'neo4j', target: 'rag', weight: 0.62 },
+      { source: 'milvus', target: 'rag', weight: 0.66 },
+      { source: 'lora', target: 'dl', weight: 0.56 },
+      { source: 'fastapi', target: 'py', weight: 0.72 },
     ],
   }
 
@@ -384,6 +408,17 @@ function buildMockSalary(base: number): SalaryPoint[] {
       p75: Number(p75.toFixed(2)),
     }
   })
+}
+
+/** Map BE catalog role → UI domain for decorative mock graphs only. */
+export function mapCatalogRoleToDomain(catalogRole: string): CareerRole {
+  const n = catalogRole.toLowerCase()
+  if (/前端|vue|react|web|可视化/.test(n)) return '前端开发'
+  if (/测试|qa|质量/.test(n)) return '测试开发'
+  if (/数据.?分析|数据分析师|数仓|bi/.test(n)) return '数据分析'
+  if (/机器|算法|ai|大模型|智能|rag|agent|nlp|视觉|mlops/.test(n)) return '机器学习工程师'
+  if (/后端|java|go|python|服务端|全栈|devops|infra/.test(n)) return '后端开发'
+  return DEFAULT_CAREER_ROLE
 }
 
 export function getCareerInsightsMock(targetRole: CareerRole, cfg?: CareerInsightsConfig): CareerInsights {
@@ -431,6 +466,7 @@ export function getCareerInsightsMock(targetRole: CareerRole, cfg?: CareerInsigh
 
   return {
     predictedRole,
+    domainRole: predictedRole,
     confidence: 0.78,
     candidates,
     evidence: [
@@ -453,7 +489,7 @@ export async function getCareerInsightsFromAgent(_input: CareerAgentInput, targe
 }
 
 export function useCareerInsights(cfg?: CareerInsightsConfig) {
-  const targetRole = ref<CareerRole>('前端开发')
+  const targetRole = ref<CareerRole>(DEFAULT_CAREER_ROLE)
 
   const insights = computed<CareerInsights>(() => {
     return getCareerInsightsMock(targetRole.value, cfg)

@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { CareerRole, CareerInsights } from '@/composables/useCareerInsights'
+import type { SevenDim } from '@/types'
 
 export type ParsedSkill = {
   name: string
@@ -24,6 +25,7 @@ export const useResumeStore = defineStore('resume', () => {
   const isParsed = ref(false)
   const draftText = ref('')
   const evaluatingRole = ref('')
+  const portraitDimensions = ref<SevenDim | null>(null)
 
   function setResult(result: ResumeParseResult) {
     rawText.value = result.rawText
@@ -59,12 +61,16 @@ export const useResumeStore = defineStore('resume', () => {
     evaluatingRole.value = ''
   }
 
-  return { rawText, fileName, parsedSkills, matchedCareers, insights, isParsed, draftText, evaluatingRole, setResult, reset, setDraftText, clearDraftText, setEvaluatingRole, clearEvaluatingRole }
+  function setPortraitDimensions(dim: SevenDim) {
+    portraitDimensions.value = dim
+  }
+
+  return { rawText, fileName, parsedSkills, matchedCareers, insights, isParsed, draftText, evaluatingRole, portraitDimensions, setResult, reset, setDraftText, clearDraftText, setEvaluatingRole, clearEvaluatingRole, setPortraitDimensions }
 },
 {
   persist: {
     key: 'resume-store',
     storage: localStorage,
-    pick: ['rawText', 'fileName', 'parsedSkills', 'matchedCareers', 'insights', 'isParsed', 'evaluatingRole'],
+    pick: ['rawText', 'fileName', 'parsedSkills', 'matchedCareers', 'insights', 'isParsed', 'evaluatingRole', 'draftText', 'portraitDimensions'],
   },
 })

@@ -8,6 +8,7 @@ import BookPage from '@/components/book/BookPage.vue'
 import { JOB_PORTRAITS, getGrowthPlan, type SevenDim } from '@/mock/careerReportData'
 import type { AbilityDimension, PersonInfo } from '@/composables/useAgentPortrait'
 import { useUserStore } from '@/stores'
+import { mockUsers } from '@/mock/data'
 import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
 
@@ -62,7 +63,9 @@ const portraitSnap = computed(() => {
 
   // personInfo 优先从 snapshot 取，否则用 fallback
   const snapInfo = snap.personInfo as PersonInfo | undefined
-  const userName = userStore.currentUser?.name ?? '同学'
+  const userName = userStore.currentUser?.name
+    ?? mockUsers.find(u => u.id === userStore.currentUser?.id)?.name
+    ?? '钟同学'
   const predictedRole = String(snap.predictedRole ?? snap.role ?? '未知方向')
   const personInfo: PersonInfo = snapInfo ?? {
     name: userName,
@@ -191,7 +194,7 @@ watch(
 
         <div ref="bookRef" class="open-book-shell">
           <div ref="pageRef" class="open-book-page" :class="{ 'open-book-page--portrait': type === 'portrait' }">
-            <BookPage :chapter-name="record.title" :show-footer="false" :show-corners="type !== 'portrait'">
+            <BookPage>
               <div class="detail-head">
                 <span class="detail-date">{{ record.createdAt }}</span>
                 <span class="detail-sub">{{ type === 'portrait' ? '个人能力画像报告' : '职业生涯发展报告' }}</span>

@@ -1,10 +1,12 @@
 ﻿<!-- 页面：个人中心；路由：profile（profile） -->
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { EditPen } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { useUserStore } from '@/stores'
+import { getStudent4d } from '@/api/profile'
+import { DEMO_STUDENT_ID } from '@/api/config'
 import jiImg from '@/assets/images/ji.png'
 
 const userStore = useUserStore()
@@ -61,6 +63,23 @@ const form = reactive({
   phone: userStore.currentUser?.phone || '13800000000',
   signature: userStore.currentUser?.signature || '保持专注，持续迭代。',
   email: userStore.currentUser?.email || profile.value.account,
+})
+
+onMounted(async () => {
+  const id = userStore.currentUser?.id || DEMO_STUDENT_ID
+  try {
+    const env = await getStudent4d(id)
+    const data = env.data as { student_id?: string; completeness?: number } | undefined
+    if (data?.student_id && userStore.currentUser) {
+      const sig = `画像完整度 ${Math.round(Number(data.completeness) || 0)}%`
+      if (!userStore.currentUser.signature || userStore.currentUser.signature === '保持专注，持续迭代。') {
+        userStore.updateUserInfo({ signature: sig })
+        form.signature = sig
+      }
+    }
+  } catch {
+    /* profile read optional */
+  }
 })
 
 const saving = ref(false)

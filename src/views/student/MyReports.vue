@@ -4,14 +4,20 @@ import { computed, onMounted, ref } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import { useReportStore } from '@/stores/report'
-import type { ReportRecord } from '@/types'
+import { useUserStore } from '@/stores/user'
+import { useLearningStore } from '@/stores'
+import type { ReportRecord, AIAnalysisResult } from '@/types'
 import { mockReportRecords } from '@/mock/data'
 import BookshelfScene from '@/components/bookshelf/BookshelfScene.vue'
 import BookOpenOverlay from '@/components/bookshelf/BookOpenOverlay.vue'
+import AIMascot from '@/components/ai-mascot/AIMascot.vue'
+import AIMascotResultCard from '@/components/ai-mascot/AIMascotResultCard.vue'
 
 const router = useRouter()
 
 const reportStore = useReportStore()
+const userStore = useUserStore()
+const learningStore = useLearningStore()
 
 const portraitList = computed(() => reportStore.portraitRecords)
 const careerList = computed(() => reportStore.careerRecords)
@@ -20,6 +26,14 @@ const overlayVisible = ref(false)
 const overlayRecord = ref<ReportRecord | null>(null)
 const overlayType = ref<'portrait' | 'career' | null>(null)
 const overlayOrigin = ref({ x: 0, y: 0 })
+
+const analysisResult = ref<AIAnalysisResult | null>(null)
+const showResultCard = ref(false)
+
+function onAnalysisReady(result: AIAnalysisResult) {
+  analysisResult.value = result
+  showResultCard.value = true
+}
 
 async function onBookFlyOut(payload: { record: ReportRecord; originX: number; originY: number; type: 'portrait' | 'career' }) {
   const detail = await reportStore.fetchReportDetailById(payload.record.id)
@@ -41,9 +55,10 @@ function removeAndCloseOverlay(id: string) {
 }
 
 onMounted(async () => {
-  await reportStore.fetchReportList()
+  const uid = userStore.currentUser?.id
+  await reportStore.fetchReportList(uid)
+  // fixtures/API 已返回列表时不再灌入旧 mockReportRecords
   if (!reportStore.mockInitialized) {
-    // [MOCK] 后端接口未接通时，回填本地演示报告数据。仅首次触发。
     if (reportStore.records.length === 0) {
       reportStore.records.push(...mockReportRecords.map(item => ({ ...item })))
     }
@@ -97,6 +112,19 @@ onMounted(async () => {
       @close="closeOverlay"
       @remove="removeAndCloseOverlay"
     />
+
+    <AIMascot
+      :report-records="reportStore.records"
+      :user-id="userStore.currentUser?.id"
+      :target-roles="learningStore.targetRoles"
+      @analysis-ready="onAnalysisReady"
+    />
+
+    <AIMascotResultCard
+      :visible="showResultCard"
+      :result="analysisResult"
+      @close="showResultCard = false"
+    />
   </div>
 </template>
 
@@ -109,6 +137,7 @@ onMounted(async () => {
   overflow: hidden;
   padding-left: 0 !important;
   padding-right: 0 !important;
+  position: relative;
 }
 
 .bookcases-layout {

@@ -1,0 +1,39 @@
+{
+  "success": true,
+  "count": 3,
+  "data": [
+    {
+      "category": "AI算法",
+      "role_count": 6,
+      "avg_salary_range": "19K-38K",
+      "roles": [
+        "计算机视觉工程师",
+        "NLP工程师",
+        "算法工程师",
+        "大模型算法工程师"
+      ]
+    },
+    {
+      "category": "前端开发",
+      "role_count": 4,
+      "avg_salary_range": "12K-24K",
+      "roles": [
+        "Vue前端工程师",
+        "React前端工程师",
+        "可视化工程师",
+        "全栈前端"
+      ]
+    },
+    {
+      "category": "后端开发",
+      "role_count": 4,
+      "avg_salary_range": "14K-26K",
+      "roles": [
+        "Java后端",
+        "Go后端",
+        "Python后端",
+        "服务端开发"
+      ]
+    }
+  ]
+}

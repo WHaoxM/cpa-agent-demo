@@ -21,7 +21,6 @@ let removeResize:  (() => void) | null = null
 
 // ── Particle types ────────────────────────────────────────────────────────
 interface Particle { x: number; y: number; r: number; vx: number; vy: number; a: number; ad: number; asp: number; color: number; brightness: number }
-interface Meteor   { x: number; y: number; vx: number; vy: number; life: number; maxLife: number }
 
 // ── Canvas: star dust + shooting stars ───────────────────────────────────
 function initCanvas() {
@@ -59,14 +58,11 @@ function initCanvas() {
 
   const BRAND_COLORS = [
     [255, 255, 255],   // white
-    [190, 42, 0],      // vermilion
     [201, 162, 39],    // imperial gold
-    [27, 78, 139],     // indigo
-    [232, 112, 85],    // vermilion-300
   ]
-  const ps: Particle[] = Array.from({ length: 280 }, () => {
-    const isBrand = Math.random() < 0.3
-    const cIdx = isBrand ? 1 + Math.floor(Math.random() * (BRAND_COLORS.length - 1)) : 0
+  const ps: Particle[] = Array.from({ length: 140 }, () => {
+    const isBrand = Math.random() < 0.08
+    const cIdx = isBrand ? 1 : 0
     return {
       x:   Math.random() * canvas.width,
       y:   Math.random() * canvas.height,
@@ -80,17 +76,7 @@ function initCanvas() {
       brightness: 0.5 + Math.random() * 0.5,
     }
   })
-  const ms: Meteor[] = []
-  let mTimer = 0
 
-  function spawnMeteor() {
-    const dir = Math.random() < 0.5 ? 1 : -1
-    const ang = (22 + Math.random() * 36) * (Math.PI / 180)
-    const spd = 4 + Math.random() * 4
-    ms.push({ x: Math.random() * cv.width, y: -20,
-      vx: dir * Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
-      life: 0, maxLife: 45 + Math.random() * 35 })
-  }
 
   function tick() {
     rafId = requestAnimationFrame(tick)
@@ -130,30 +116,12 @@ function initCanvas() {
       c2d.beginPath()
       c2d.arc(p.x, p.y, p.r, 0, Math.PI * 2)
       const c = BRAND_COLORS[p.color] ?? BRAND_COLORS[0]!
-      const baseA = p.color === 0 ? 0.5 : 0.65
+      const baseA = p.color === 0 ? 0.30 : 0.42
       const finalAlpha = (p.a * baseA * p.brightness).toFixed(3)
       c2d.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${finalAlpha})`
       c2d.fill()
     }
 
-    mTimer++
-    if (mTimer > 280 + Math.random() * 180) { spawnMeteor(); mTimer = 0 }
-    for (let i = ms.length - 1; i >= 0; i--) {
-      const m = ms[i]!
-      const prog = m.life / m.maxLife
-      const al   = (1 - prog) * 0.85
-      const tx   = -m.vx * 35, ty = -m.vy * 35
-      const g    = c2d.createLinearGradient(m.x, m.y, m.x + tx, m.y + ty)
-      g.addColorStop(0,   `rgba(255,255,255,${al.toFixed(2)})`)
-      g.addColorStop(0.3, `rgba(201,162,39,${(al * 0.35).toFixed(2)})`)
-      g.addColorStop(0.6, `rgba(190,42,0,${(al * 0.4).toFixed(2)})`)
-      g.addColorStop(1,   'rgba(0,0,0,0)')
-      c2d.strokeStyle = g
-      c2d.lineWidth   = Math.max(0.5, 2 - prog)
-      c2d.beginPath(); c2d.moveTo(m.x, m.y); c2d.lineTo(m.x + tx, m.y + ty); c2d.stroke()
-      m.x += m.vx; m.y += m.vy; m.life++
-      if (m.life >= m.maxLife || m.y > H) ms.splice(i, 1)
-    }
   }
   tick()
 }
@@ -171,7 +139,7 @@ let bgY:   QFn | null = null
 function onMouse(e: MouseEvent) {
   const nx = e.clientX / window.innerWidth  - 0.5
   const ny = e.clientY / window.innerHeight - 0.5
-  glowX?.(e.clientX - 300); glowY?.(e.clientY - 300)
+  glowX?.(e.clientX - 180); glowY?.(e.clientY - 180)
   mapX?.(nx * -28);          mapY?.(ny * -28)
   bgX?.(nx * -14);           bgY?.(ny * -14)
   // 更新 CSS 变量驱动鼠标散开层
@@ -181,7 +149,7 @@ function onMouse(e: MouseEvent) {
 
 function initParallax() {
   if (!glowRef.value || !mapRef.value || !bgRef.value) return
-  gsap.set(glowRef.value, { x: -300, y: -300 })
+  gsap.set(glowRef.value, { x: -180, y: -180 })
   glowX = gsap.quickTo(glowRef.value, 'x', { duration: 0.5,  ease: 'power3.out' })
   glowY = gsap.quickTo(glowRef.value, 'y', { duration: 0.5,  ease: 'power3.out' })
   mapX  = gsap.quickTo(mapRef.value,  'x', { duration: 0.9,  ease: 'power2.out' })
@@ -272,7 +240,7 @@ onBeforeUnmount(() => {
 
     <!-- 角落标注 -->
     <span class="ld-corner ld-corner--tl">职业导航平台</span>
-    <span class="ld-corner ld-corner--tr">2025</span>
+    <span class="ld-corner ld-corner--tr">2026</span>
 
     <!-- 星图主体（视差层） -->
     <div ref="mapRef" class="ld-map-wrap">
@@ -308,7 +276,9 @@ onBeforeUnmount(() => {
   flex-direction: column;
   width: 100%;
   height: 100vh;
-  background: #1A1A24;
+  background: #13131A;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 30px 30px;
   overflow: hidden;
 }
 
@@ -337,30 +307,23 @@ onBeforeUnmount(() => {
 }
 
 .ld-nebula--a {
-  background:
-    radial-gradient(ellipse 55% 42% at 28% 38%, rgba(190,42,0,0.28) 0%, rgba(190,42,0,0.08) 40%, transparent 65%),
-    radial-gradient(ellipse 30% 25% at 22% 30%, rgba(201,162,39,0.10) 0%, transparent 50%);
-  animation: ld-nebula-drift 18s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse 70% 60% at 50% 48%, rgba(201,162,39,0.042) 0%, transparent 65%);
+  animation: ld-nebula-drift 28s ease-in-out infinite alternate;
 }
 
 .ld-nebula--b {
-  background:
-    radial-gradient(ellipse 45% 52% at 72% 62%, rgba(27,78,139,0.22) 0%, rgba(27,78,139,0.06) 40%, transparent 65%),
-    radial-gradient(ellipse 28% 22% at 78% 55%, rgba(74,127,168,0.10) 0%, transparent 45%);
-  animation: ld-nebula-drift 24s ease-in-out infinite alternate-reverse;
+  background: radial-gradient(ellipse 90% 70% at 50% 50%, rgba(255,255,255,0.013) 0%, transparent 60%);
+  animation: none;
 }
 
 .ld-nebula--c {
-  background:
-    radial-gradient(ellipse 38% 30% at 56% 20%, rgba(201,162,39,0.14) 0%, rgba(100,60,20,0.06) 40%, transparent 60%),
-    radial-gradient(ellipse 25% 20% at 50% 15%, rgba(232,112,85,0.08) 0%, transparent 45%);
-  animation: ld-nebula-drift 30s ease-in-out infinite alternate;
+  background: none;
+  animation: none;
 }
 
 @keyframes ld-nebula-drift {
-  0%   { opacity: 0.6; transform: scale(1) translate(0, 0); }
-  50%  { opacity: 0.95; }
-  100% { opacity: 0.7; transform: scale(1.07) translate(2%, 1.5%); }
+  0%   { opacity: 0.75; transform: scale(1) translate(0, 0); }
+  100% { opacity: 1;   transform: scale(1.03) translate(0.5%, 0.4%); }
 }
 
 /* ── 暗角遮罩 ──────────────────────────────────────────────────────────────── */
@@ -377,21 +340,19 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 600px;
-  height: 600px;
+  width: 360px;
+  height: 360px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(190, 42, 0, 0.12) 0%,
-    rgba(201, 162, 39, 0.08) 25%,
-    rgba(255, 120, 60, 0.03) 45%,
-    transparent 65%
+    rgba(201, 162, 39, 0.04) 0%,
+    rgba(255, 255, 255, 0.015) 35%,
+    transparent 62%
   );
   pointer-events: none;
   z-index: 3;
-  mix-blend-mode: screen;
   will-change: transform;
-  opacity: 0.8;
+  opacity: 0.55;
 }
 
 /* ── 鼠标散开层（覆盖整个页面的粒子交互区） ────────────────────────────── */
@@ -401,12 +362,11 @@ onBeforeUnmount(() => {
   z-index: 1;
   pointer-events: none;
   background: radial-gradient(
-    circle 300px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(190, 42, 0, 0.04) 0%,
-    rgba(201, 162, 39, 0.02) 30%,
-    transparent 60%
+    circle 160px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.016) 0%,
+    transparent 55%
   );
-  transition: background 0.3s ease;
+  transition: background 0.4s ease;
 }
 
 /* ── 角落标注 ──────────────────────────────────────────────────────────────── */
@@ -445,16 +405,16 @@ onBeforeUnmount(() => {
   height: 240px;
   margin: -120px 0 0 -120px;
   border-radius: 50%;
-  border: 1px solid rgba(190,42,0,0.25);
-  box-shadow: 0 0 40px rgba(190,42,0,0.14), 0 0 80px rgba(201,162,39,0.06), inset 0 0 25px rgba(190,42,0,0.06);
+  border: 1px solid rgba(190,42,0,0.13);
+  box-shadow: 0 0 16px rgba(190,42,0,0.07), inset 0 0 10px rgba(190,42,0,0.03);
   pointer-events: none;
   z-index: 4;
-  animation: ld-pulse 3.5s ease-in-out infinite;
+  animation: ld-pulse 5s ease-in-out infinite;
 }
 
 @keyframes ld-pulse {
-  0%, 100% { box-shadow: 0 0 40px rgba(190,42,0,0.14), 0 0 80px rgba(201,162,39,0.06), inset 0 0 25px rgba(190,42,0,0.06); }
-  50%       { box-shadow: 0 0 65px rgba(190,42,0,0.24), 0 0 100px rgba(201,162,39,0.10), inset 0 0 40px rgba(190,42,0,0.12); }
+  0%, 100% { box-shadow: 0 0 16px rgba(190,42,0,0.07), inset 0 0 10px rgba(190,42,0,0.03); }
+  50%       { box-shadow: 0 0 26px rgba(190,42,0,0.12), inset 0 0 16px rgba(190,42,0,0.05); }
 }
 
 .ld-starmap {
@@ -513,16 +473,16 @@ onBeforeUnmount(() => {
   min-height: 1.2em;
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.92) 0%,
-    rgba(201,162,39,0.95) 45%,
-    rgba(255,255,255,0.92) 55%,
-    rgba(255,255,255,0.92) 100%
+    rgba(255,255,255,0.88) 0%,
+    rgba(201,162,39,0.55) 46%,
+    rgba(255,255,255,0.88) 54%,
+    rgba(255,255,255,0.88) 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: ld-title-shimmer 6s ease-in-out infinite;
+  animation: ld-title-shimmer 10s ease-in-out infinite;
 }
 
 @keyframes ld-title-shimmer {
@@ -538,12 +498,12 @@ onBeforeUnmount(() => {
   font-weight: 400;
   letter-spacing: 0.2em;
   color: rgba(255, 255, 255, 0.65);
-  background: linear-gradient(90deg, rgba(255,255,255,0.65), rgba(201,162,39,0.7), rgba(255,255,255,0.65));
+  background: linear-gradient(90deg, rgba(255,255,255,0.58), rgba(201,162,39,0.38), rgba(255,255,255,0.58));
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: ld-title-shimmer 8s ease-in-out infinite;
+  animation: ld-title-shimmer 12s ease-in-out infinite;
 }
 
 /* ── CTA 按钮 ──────────────────────────────────────────────────────────────── */
@@ -565,7 +525,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
   will-change: transform;
-  box-shadow: 0 0 20px rgba(190, 42, 0, 0.15), 0 0 40px rgba(201, 162, 39, 0.08);
+  box-shadow: 0 0 12px rgba(190, 42, 0, 0.08);
 }
 
 .ld-cta::before {
@@ -585,7 +545,7 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.98);
   border-color: rgba(201,162,39,0.7);
   background: rgba(190, 42, 0, 0.2);
-  box-shadow: 0 0 30px rgba(190, 42, 0, 0.3), 0 0 60px rgba(201,162,39, 0.15);
+  box-shadow: 0 0 18px rgba(190, 42, 0, 0.16), 0 0 36px rgba(201, 162, 39, 0.06);
 }
 
 .ld-cta__arrow {

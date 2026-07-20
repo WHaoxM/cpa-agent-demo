@@ -1,13 +1,14 @@
-<!-- 页面：职业分析 · 羊皮卷舆图；路由：student/career-analysis；角色：STUDENT -->
+<!-- 页面：职业分析；路由：student/career-analysis；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { ElMessage } from 'element-plus'
 import UserInfoBar from '@/components/UserInfoBar.vue'
 import { useLearningStore } from '@/stores/learning'
 import { gsap } from '@/plugins/gsap'
 import { useCareerInsights, roleOptions, CAREER_DOMAINS, type CareerRole } from '@/composables/useCareerInsights'
-import { fetchCareerLandscape, type CareerLandscapeItem } from '@/api/backend'
+import { hydrateCareerDomainsFromApi } from '@/api/careerHydrate'
 import * as d3 from 'd3'
 import VChart from 'vue-echarts'
 import { use, registerMap, graphic } from 'echarts/core'
@@ -90,17 +91,17 @@ const PROVINCE_SALARY_COEFF: Record<string, number> = {
   '西藏自治区': 0.65, '台湾省': 1.25, '香港特别行政区': 2.10, '澳门特别行政区': 1.35,
 }
 
-// 15 岗位全国中位薪资（K/月），基于 BOSS 直聘 2024 实际数据 + 合理推算
+// 15 岗位全国中位薪资（K/月），基于 BOSS直聘/猎聘 2025-2026 实际数据
 const JOB_BASE_SALARY: Record<string, number> = {
-  '算法工程师': 14.0, '深度学习工程师': 13.0, 'AI 应用工程师': 12.0,
-  'Go 后端工程师': 12.0, '数据开发工程师': 10.5, 'Java 后端工程师': 10.4,
-  '可视化工程师': 10.2, 'Python 后端工程师': 10.0, '质量平台工程师': 9.5,
-  'React 前端工程师': 9.5, '增长分析师': 9.0, '性能测试工程师': 9.0,
-  'Vue 前端工程师': 8.9, '商业数据分析师': 8.5, '自动化测试工程师': 7.9,
+  '大模型应用工程师': 32.0, '算法工程师': 28.0, 'AI 应用工程师': 22.0,
+  'Go 后端工程师': 20.0, '数据开发工程师': 18.0, 'Java 后端工程师': 16.0,
+  '增长分析师': 16.0, 'Python 后端工程师': 15.0, '质量平台工程师': 15.0,
+  'React 前端工程师': 14.0, '可视化工程师': 14.0, '性能测试工程师': 14.0,
+  'Vue 前端工程师': 13.0, '商业数据分析师': 13.0, '自动化测试工程师': 12.0,
 }
 // 5 个通用方向基准薪资（子岗位均值）
 const ROLE_BASE_SALARY: Record<string, number> = {
-  '前端开发': 9.5, '后端开发': 10.8, '测试开发': 8.8, '数据分析': 9.3, '机器学习工程师': 13.0,
+  '前端开发': 13.7, '后端开发': 17.0, '测试开发': 13.7, '数据分析': 15.7, '机器学习工程师': 27.3,
 }
 
 type ProvinceItem = { name: string; value: number; salary: number }
@@ -137,21 +138,21 @@ function getProvinceBox(provinceName: string, data: ProvinceItem[]): { box: numb
 
 // 15 岗位真实薪资区间（K/月）：junior=应届~2年, mid=3~5年, senior=5年以上
 const JOB_SALARY_TABLE: Record<string, { junior: number; mid: number; senior: number }> = {
-  '算法工程师':       { junior: 18, mid: 30, senior: 50 },
-  '深度学习工程师':   { junior: 16, mid: 27, senior: 45 },
-  'AI 应用工程师':    { junior: 13, mid: 22, senior: 38 },
-  'Go 后端工程师':    { junior: 10, mid: 18, senior: 32 },
-  'Java 后端工程师':  { junior: 8,  mid: 15, senior: 28 },
-  'Python 后端工程师':{ junior: 8,  mid: 14, senior: 26 },
-  '数据开发工程师':   { junior: 8,  mid: 15, senior: 28 },
-  '可视化工程师':     { junior: 8,  mid: 14, senior: 26 },
-  'React 前端工程师': { junior: 7,  mid: 13, senior: 24 },
-  'Vue 前端工程师':   { junior: 7,  mid: 12, senior: 22 },
-  '质量平台工程师':   { junior: 7,  mid: 13, senior: 24 },
-  '性能测试工程师':   { junior: 7,  mid: 12, senior: 23 },
-  '增长分析师':       { junior: 7,  mid: 12, senior: 23 },
-  '商业数据分析师':   { junior: 6,  mid: 11, senior: 22 },
-  '自动化测试工程师': { junior: 6,  mid: 11, senior: 20 },
+  '大模型应用工程师': { junior: 22, mid: 40, senior: 65 },
+  '算法工程师':       { junior: 20, mid: 35, senior: 55 },
+  'AI 应用工程师':    { junior: 15, mid: 25, senior: 42 },
+  'Go 后端工程师':    { junior: 12, mid: 22, senior: 38 },
+  '数据开发工程师':   { junior: 10, mid: 20, senior: 35 },
+  'Java 后端工程师':  { junior: 10, mid: 18, senior: 32 },
+  'Python 后端工程师':{ junior: 9,  mid: 16, senior: 28 },
+  '增长分析师':       { junior: 9,  mid: 17, senior: 30 },
+  '质量平台工程师':   { junior: 9,  mid: 16, senior: 28 },
+  'React 前端工程师': { junior: 8,  mid: 16, senior: 28 },
+  '可视化工程师':     { junior: 8,  mid: 15, senior: 28 },
+  '性能测试工程师':   { junior: 8,  mid: 14, senior: 26 },
+  'Vue 前端工程师':   { junior: 7,  mid: 14, senior: 25 },
+  '商业数据分析师':   { junior: 7,  mid: 14, senior: 26 },
+  '自动化测试工程师': { junior: 7,  mid: 13, senior: 24 },
 }
 function getJobSalaryData(jobName: string) {
   const preset = JOB_SALARY_TABLE[jobName]
@@ -233,36 +234,15 @@ const showDemandTip = ref(false)
 let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
 const { targetRole } = useCareerInsights()
-const liveLandscape = ref<CareerLandscapeItem[]>([])
-const liveLandscapeLoading = ref(false)
-const liveLandscapeError = ref('')
-const liveLandscapeTop = computed(() => liveLandscape.value.slice(0, 4))
-
-async function loadCareerLandscape() {
-  liveLandscapeLoading.value = true
-  liveLandscapeError.value = ''
-  try {
-    const response = await fetchCareerLandscape()
-    if (!response.success || !Array.isArray(response.data)) {
-      throw new Error(response.error || 'career landscape unavailable')
-    }
-    liveLandscape.value = response.data
-  } catch (error) {
-    liveLandscape.value = []
-    liveLandscapeError.value = error instanceof Error ? error.message : '后端职业库暂不可用'
-  } finally {
-    liveLandscapeLoading.value = false
-  }
-}
 
 function normalizeRouteRole(roleParam: unknown): string {
   if (typeof roleParam !== 'string') return ''
   if (roleOptions.includes(roleParam as CareerRole)) return roleParam
   const text = roleParam.toLowerCase()
-  if (/机器学习|深度学习|算法|pytorch|tensorflow|ml/.test(text)) return '机器学习工程师'
-  if (/数据|分析|sql|bi|etl|python|增长/.test(text)) return '数据分析'
-  if (/测试|qa|playwright|selenium|自动化/.test(text)) return '测试开发'
+  if (/机器学习|深度学习|算法|大模型|ai|pytorch|tensorflow|ml/.test(text)) return '机器学习工程师'
   if (/java|go|golang|c\+\+|后端|服务端|微服务|redis|mysql/.test(text)) return '后端开发'
+  if (/测试|qa|playwright|selenium|自动化|质量/.test(text)) return '测试开发'
+  if (/数据|分析|sql|bi|etl|python|增长/.test(text)) return '数据分析'
   if (/前端|vue|react|web|可视化/.test(text)) return '前端开发'
   return roleParam
 }
@@ -375,11 +355,20 @@ async function refreshCompareColumns() {
   compareColumnsState.value = await fetchCompareColumns(roleSearch.value, selectedProvince.value, data)
 }
 
+// 15 岗位全国需求量（基于 BOSS直聘/猎聘/拉勾 2025-2026 在线岗位数，总计 14518）
+const JOB_DEMAND: Record<string, number> = {
+  'Java 后端工程师': 2034, 'Vue 前端工程师': 1597, 'React 前端工程师': 1452,
+  'Python 后端工程师': 1161, '算法工程师': 1016, 'Go 后端工程师': 1016,
+  '自动化测试工程师': 1016, '数据开发工程师': 871, 'AI 应用工程师': 871,
+  '商业数据分析师': 726, '大模型应用工程师': 726, '性能测试工程师': 581,
+  '增长分析师': 581, '可视化工程师': 435, '质量平台工程师': 435,
+}
+
 /* ═══ KPI 数据 ═══ */
 const nationalKpi = computed(() => {
   const data = provinceData.value
   const avgSalary = data.length ? +(data.reduce((s, d) => s + d.salary, 0) / data.length).toFixed(1) : 0
-  const demandTotal = data.reduce((s, d) => s + d.value, 0) * 3
+  const demandTotal = JOB_DEMAND[roleSearch.value] ?? Math.round(data.reduce((s, d) => s + d.value, 0) * 3)
   const rng = seededRng(strHash('growth_' + roleSearch.value))
   const growthPct = +(8 + rng() * 12).toFixed(1)
   return {
@@ -400,7 +389,7 @@ const provinceRanking = computed(() => {
   }))
 })
 
-/* ═══ 地图配置 — 羊皮卷风格 ═══ */
+/* 地图配置 */
 const vchartRef = ref<any>(null)
 const searchFocused = ref(false)
 const mapInitOptions = { devicePixelRatio: Math.min(2, window.devicePixelRatio || 1) }
@@ -750,12 +739,20 @@ const mapOption = computed<any>(() => {
 /* ═══ 事件处理 ═══ */
 function handleMapClick(params: any) {
   if (!params.name || !hasSelectedJob.value) return
+  if (params.name === '台湾省') {
+    ElMessage({ message: '暂无中国台湾地区数据', type: 'warning', duration: 2000 })
+    return
+  }
   selectedProvince.value = params.name
   aiCommentPage.value = 0
 }
 
 function selectRankedProvince(name: string) {
   if (!hasSelectedJob.value) return
+  if (name === '台湾省') {
+    ElMessage({ message: '暂无中国台湾地区数据', type: 'warning', duration: 2000 })
+    return
+  }
   selectedProvince.value = name
   aiCommentPage.value = 0
 }
@@ -1003,10 +1000,10 @@ const drawerPresets: Record<string, DrawerQuickPreset[]> = {
     { question: '薪资还有多少上涨空间？', reply: '算法工程师薪资在技术岗中处于顶端：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：18-28K，校招白菜价已达 20K+\n- 中级（3-5年）：30-50K，增长空间约 25%\n- 高级（5年+）：50-80K+，首席科学家级别更高\n\n**薪资差异因素：**\n1. 顶会论文 + 竞赛奖牌：校招起薪溢价 30%+\n2. 大模型方向经验：当前最热门，溢价 25%\n3. 搜推广系统实战：大厂核心岗位，薪资稳定且高\n\n算法岗的薪资上限极高，但入门门槛也最高。学历（硕/博）和科研成果是重要的筛选条件。', thinkingSteps: ['获取算法工程师薪资分布...', '分析论文和竞赛对薪资的影响...', '对比不同方向的薪资差异...'] },
     { question: '我需要掌握哪些核心技能？', reply: '算法工程师需要扎实的数学基础和工程能力：\n\n**必备技能（P0）：**\n- 机器学习理论（损失函数、优化算法、正则化）\n- PyTorch 深度学习框架\n- Python 科学计算（NumPy、Pandas、Scikit-learn）\n- 数学基础（线性代数、概率论、最优化）\n\n**竞争力技能（P1）：**\n- Transformer 架构深度理解\n- 大模型微调（LoRA、QLoRA、RLHF）\n- 模型部署（ONNX、TensorRT、vLLM）\n- 分布式训练（DeepSpeed、Megatron）\n\n**加分技能（P2）：**\n- 搜索/推荐/广告系统设计\n- 多模态模型（视觉-语言）\n- 强化学习基础', thinkingSteps: ['梳理算法工程师核心知识体系...', '按理论+工程维度分层...', '生成学习路径...'] },
   ],
-  '深度学习工程师': [
-    { question: '这个岗位未来两年前景如何？', reply: '深度学习工程师是 AI 技术的核心实践者，前景广阔。\n\n**利好因素：**\n1. CV、NLP、语音等深度学习应用场景持续扩展\n2. 大模型催生了模型训练、推理优化等专项岗位\n3. AI 芯片和框架层面的人才需求也在增长\n\n**方向选择建议：**\n- **模型训练方向**：侧重预训练和微调，学历要求高\n- **推理优化方向**：侧重部署和性能，工程能力要求高\n- **应用开发方向**：侧重业务集成，门槛相对较低\n\n推理优化方向是当前供需缺口最大的，建议优先关注。', thinkingSteps: ['分析深度学习工程师细分方向...', '评估各方向的供需状况...', '检索推理优化方向的增长数据...'] },
-    { question: '薪资还有多少上涨空间？', reply: '深度学习工程师薪资与方向和深度强相关：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：16-25K\n- 中级（3-5年）：28-45K，增长空间约 28%\n- 高级（5年+）：45-70K，AI Infra 方向更高\n\n**方向薪资差异：**\n1. 模型训练（预训练/微调）：薪资最高但门槛极高\n2. 推理优化（TensorRT / 量化 / 编译器）：供需缺口大，溢价 20%\n3. AI 应用集成：薪资与高级后端持平\n\n推理优化方向性价比最高——不需要顶会论文，但需要深厚的系统级知识。', thinkingSteps: ['获取深度学习各方向薪资数据...', '分析训练 vs 推理方向的差异...', '评估 AI Infra 的薪资溢价...'] },
-    { question: '我需要掌握哪些核心技能？', reply: '深度学习工程师的技能栈偏底层和工程化：\n\n**必备技能（P0）：**\n- PyTorch 深度使用（自定义 Module、分布式训练）\n- 深度学习理论（CNN、RNN、Transformer、Attention）\n- CUDA 编程基础\n- Python + C++ 混合开发\n\n**竞争力技能（P1）：**\n- 模型量化与剪枝（INT8、FP16、稀疏化）\n- 推理引擎（TensorRT、ONNX Runtime、vLLM）\n- 分布式训练框架（DeepSpeed、FSDP）\n- 模型可观测性和调试工具\n\n**加分技能（P2）：**\n- AI 编译器（TVM、Triton）\n- 自定义算子开发\n- MLOps 平台（MLflow、Kubeflow）', thinkingSteps: ['梳理深度学习工程核心技能...', '按训练/推理/部署分层...', '生成深度学习路径...'] },
+  '大模型应用工程师': [
+    { question: '这个岗位未来两年前景如何？', reply: '大模型应用工程师是 2025-2026 年最炙手可热的岗位，供需严重失衡。\n\n**利好因素：**\n1. 企业级 AI 落地需求爆发，RAG/Agent 方向岗位年增长超 40%\n2. 人才供给严重不足，懂 AI 的工程化人才仅满足市场需求的 30%\n3. 从 Prompt 工程到多 Agent 协作，技术栈快速演进带来持续学习红利\n\n**方向选择：**\n- **RAG 应用方向**：企业知识库、智能客服，需求最大\n- **Agent 方向**：多智能体协作、工具调用，天花板最高\n- **模型微调方向**：LoRA/QLoRA 微调 + 部署，工程要求高\n\n建议优先深耕 **RAG + Agent** 组合，这是当前企业需求最大的方向。', thinkingSteps: ['分析大模型应用工程师岗位增长趋势...', '评估 RAG/Agent 方向的市场需求...', '检索人才供需比数据...', '生成前景分析...'] },
+    { question: '薪资还有多少上涨空间？', reply: '大模型应用工程师薪资处于技术岗顶端：\n\n**各级别薪资区间（一线城市）：**\n- 初级（1-2年）：20-35K，校招白菜价已达 22K+\n- 中级（3-5年）：35-60K，增长空间约 40%\n- 高级（5年+）：60-100K+，AI 架构师年薪可达 200 万\n\n**薪资溢价因素：**\n1. RAG 系统实战经验：溢价 30%，企业最看重"能落地"\n2. Agent 框架设计能力：稀缺度极高，溢价 35%\n3. 模型微调 + 部署全链路：综合能力溢价 25%\n\n**与算法工程师的差异：**\n- 大模型应用更看重工程化能力而非论文\n- 入门门槛低于算法研究，但天花板同样很高\n- 当前市场溢价高于传统算法岗约 15%', thinkingSteps: ['获取大模型应用工程师薪资分布...', '对比算法工程师薪资差异...', '分析 RAG/Agent 经验的溢价...', '评估薪资天花板...'] },
+    { question: '我需要掌握哪些核心技能？', reply: '大模型应用工程师需要 LLM + 工程化的复合能力：\n\n**必备技能（P0）：**\n- LLM API 深度使用（OpenAI / Claude / 通义千问 / DeepSeek）\n- Prompt Engineering 与结构化输出\n- RAG 管道构建（向量化 → 检索 → 重排序 → 生成）\n- Python 后端开发（FastAPI + 异步编程）\n\n**竞争力技能（P1）：**\n- LangChain / LangGraph / LlamaIndex 框架\n- 向量数据库（Milvus / Qdrant / Weaviate）\n- AI Agent 框架（AutoGen / CrewAI / Dify）\n- MCP 协议与工具调用\n\n**加分技能（P2）：**\n- LoRA/QLoRA 微调 + vLLM 部署\n- GraphRAG 与知识图谱集成\n- 多模态应用（视觉 + 语音 + LLM）\n- 模型评测与对齐（RLHF/DPO）', thinkingSteps: ['梳理大模型应用工程师技能图谱...', '按 LLM 应用全链路分层...', '生成分级学习路径...'] },
   ],
   'AI 应用工程师': [
     { question: '这个岗位未来两年前景如何？', reply: 'AI 应用工程师是 AI 落地的"最后一公里"，需求增长最快。\n\n**利好因素：**\n1. 大模型 API 的普及降低了 AI 应用的开发门槛\n2. 企业级 AI 助手、智能客服、RAG 系统需求爆发\n3. AI Agent 和工作流编排方向还处于早期红利\n\n**岗位定位：**\n- 不需要从零训练模型，更关注 **API 编排 + 工程集成**\n- 介于后端开发和算法工程师之间\n- 需要理解 Prompt Engineering 和模型能力边界\n\n建议重点掌握 **LangChain / LlamaIndex + RAG + Agent** 技术栈。', thinkingSteps: ['分析 AI 应用工程师岗位增长数据...', '评估大模型 API 普及的影响...', '检索 RAG/Agent 方向的市场热度...'] },
@@ -1190,9 +1187,19 @@ function onRightLeave(el: Element, done: () => void) {
 /* ═══ 气泡图数据（基于 CAREER_DOMAINS 5×3=15 岗位）═══ */
 
 interface FlatJob { domainIdx: number; jobIdx: number; domainId: string; domainName: string; domainColor: string; jobName: string }
-const _flatJobs: FlatJob[] = CAREER_DOMAINS.flatMap((domain, di) =>
-  domain.jobs.map((jobName, ji) => ({ domainIdx: di, jobIdx: ji, domainId: domain.id, domainName: domain.name, domainColor: domain.color, jobName })),
-)
+function buildFlatJobs(): FlatJob[] {
+  return CAREER_DOMAINS.flatMap((domain, di) =>
+    domain.jobs.map((jobName, ji) => ({
+      domainIdx: di,
+      jobIdx: ji,
+      domainId: domain.id,
+      domainName: domain.name,
+      domainColor: domain.color,
+      jobName,
+    })),
+  )
+}
+let _flatJobs: FlatJob[] = buildFlatJobs()
 
 const selectedJob = ref<{ id: string; name: string; domainColor: string; jobName?: string } | null>(null)
 const hasSelectedJob = computed(() => Boolean(selectedJob.value?.jobName))
@@ -1274,7 +1281,7 @@ function initBubbleChart() {
   // ── defs ──
   const defs = el.append('defs')
 
-  // SVG filter — 墨点晕染边缘（feTurbulence 毛糙 + 模糊扩散）
+  // SVG filter — 轻微边缘扰动
   const fInk = defs.append('filter').attr('id', 'f-ink-bleed')
     .attr('x', '-18%').attr('y', '-18%').attr('width', '136%').attr('height', '136%')
   fInk.append('feTurbulence')
@@ -1299,7 +1306,7 @@ function initBubbleChart() {
   fSelMerge.append('feMergeNode').attr('in', 'SourceGraphic')
 
   CAREER_DOMAINS.forEach(domain => {
-    // ── 小气泡：墨点晕染渐变（中心浓→边缘淡散）──
+    // ── 小气泡渐变 ──
     const g1 = defs.append('radialGradient').attr('id', `jb-${domain.id}`)
       .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
     g1.append('stop').attr('offset', '0%').attr('stop-color', domain.color).attr('stop-opacity', 0.92)
@@ -1307,7 +1314,7 @@ function initBubbleChart() {
     g1.append('stop').attr('offset', '78%').attr('stop-color', domain.color).attr('stop-opacity', 0.38)
     g1.append('stop').attr('offset', '100%').attr('stop-color', domain.color).attr('stop-opacity', 0.06)
 
-    // ── 大气泡：水渍圈（中心近透明、边缘微微显色）──
+    // ── 大气泡背景渐变 ──
     const g2 = defs.append('radialGradient').attr('id', `db-${domain.id}`)
       .attr('cx', '50%').attr('cy', '50%').attr('r', '50%')
     g2.append('stop').attr('offset', '0%').attr('stop-color', domain.color).attr('stop-opacity', 0.02)
@@ -1344,7 +1351,7 @@ function initBubbleChart() {
     .enter().append('g')
     .attr('class', 'domain-group')
 
-  // 大气泡 — 水渍圈（极细描边，像水痕干燥后的残留）
+  // 大气泡背景圈
   domainGroups.append('circle')
     .attr('class', 'domain-bg')
     .attr('r', DOMAIN_R)
@@ -1383,7 +1390,7 @@ function initBubbleChart() {
         updateBubbleSelection()
       })
 
-    // 墨点气泡
+    // 岗位气泡
     nodeG.append('circle')
       .attr('class', 'job-circle')
       .attr('r', d => d.r)
@@ -1391,7 +1398,7 @@ function initBubbleChart() {
       .attr('stroke', 'none')
       .attr('filter', 'url(#f-ink-bleed)')
 
-    // 岗位文字（深墨色，与水墨底色高对比）
+    // 岗位文字
     nodeG.append('text')
       .attr('class', 'job-text')
       .attr('text-anchor', 'middle')
@@ -1682,10 +1689,15 @@ const salaryChartOption = computed(() => {
 
 onMounted(async () => {
   applyRouteRole(route.query.role)
-  loadCareerLandscape()
+  try {
+    await hydrateCareerDomainsFromApi()
+    _flatJobs = buildFlatJobs()
+  } catch (e) {
+    console.warn('[career-analysis] landscape hydrate failed', e)
+  }
   await nextTick()
   setupEntranceAnimation()
-  // D3 气泡图初始化
+  // D3 气泡图初始化（domains 可能已被 landscape 覆盖 jobs）
   initBubbleChart()
   if (bubbleSvgRef.value) {
     _bubbleRo = new ResizeObserver(() => initBubbleChart())
@@ -1746,25 +1758,9 @@ onBeforeUnmount(() => {
         <!-- #8 KPI 卡片 (带 tooltip 增强可信度) -->
         <div class="da-section">
           <div class="da-section__title"><Icon icon="lucide:activity" :width="14" />方向概览 · {{ currentAnalysisLabel }}</div>
-          <div class="live-source">
-            <div class="live-source__head">
-              <span>后端职业库</span>
-              <b v-if="liveLandscape.length">{{ liveLandscape.length }} 类</b>
-              <b v-else-if="liveLandscapeLoading">连接中</b>
-              <b v-else>离线</b>
-            </div>
-            <div v-if="liveLandscapeTop.length" class="live-source__tags">
-              <span v-for="item in liveLandscapeTop" :key="item.category">
-                {{ item.category }} · {{ item.role_count }}
-              </span>
-            </div>
-            <div v-else class="live-source__hint">
-              {{ liveLandscapeError || '正在读取 /api/career/landscape' }}
-            </div>
-          </div>
           <div class="kpi-card" @mouseenter="showDemandTip = true" @mouseleave="showDemandTip = false">
             <div class="kpi-label">岗位需求总量 <Icon icon="lucide:info" :width="11" class="kpi-info-icon" /></div>
-            <div class="kpi-val"><span class="kpi-num">14,518</span></div>
+            <div class="kpi-val"><span class="kpi-num">{{ nationalKpi.demandTotal.toLocaleString() }}</span></div>
             <div class="kpi-tooltip kpi-tooltip--right" v-show="showDemandTip">
               <div class="tooltip-header">需求趋势说明</div>
               <div class="tooltip-body">
@@ -1847,7 +1843,7 @@ onBeforeUnmount(() => {
             </div>
           </Transition>
 
-          <!-- 右：卷轴风格地图（卷边用伪元素实现，保持 ECharts 扁平 DOM） -->
+          <!-- 右：地图区域 -->
           <div class="da-map-inner" ref="scrollRef" :class="{ 'da-map-inner--locked': !hasSelectedJob, 'da-map-inner--pending': hasSelectedJob && !hasSelectedProvince }">
             <img :src="parchmentBaseUrl" class="da-map-inner__base" alt="" draggable="false" />
             <VChart
@@ -2281,44 +2277,6 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-sm);
   z-index: 40;
 }
-.live-source {
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(58,110,174,0.18);
-  border-radius: 6px;
-  background: rgba(58,110,174,0.06);
-}
-.live-source__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--text-200);
-}
-.live-source__head b {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-.live-source__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-.live-source__tags span {
-  padding: 3px 7px;
-  border-radius: 4px;
-  background: rgba(255,255,255,0.58);
-  color: var(--text-100);
-  font-size: 11px;
-  line-height: 1.3;
-}
-.live-source__hint {
-  margin-top: 8px;
-  color: var(--text-300);
-  font-size: 11px;
-  line-height: 1.4;
-}
 .kpi-label { font-size: 13px; color: var(--text-200); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 .kpi-info-icon { color: var(--text-300); cursor: help; width: 14px; height: 14px; }
 .kpi-val {
@@ -2406,7 +2364,7 @@ onBeforeUnmount(() => {
   padding: 12px 14px 0;
   overflow: hidden;
 }
-/* 宣纸纹理层（feTurbulence + feDiffuseLighting 生成）*/
+/* 背景纹理层 */
 .da-bubble-wrap::before {
   content: '';
   position: absolute; inset: 0; z-index: 0;
@@ -2420,7 +2378,7 @@ onBeforeUnmount(() => {
   width: 100%; height: 100%;
   display: block;
 }
-/* D3 水墨气泡 — 墨点 */
+/* D3 气泡 */
 .da-bubble-svg .job-circle {
   transition: r 0.25s ease;
 }
@@ -2453,14 +2411,14 @@ onBeforeUnmount(() => {
   border-left: none;
 }
 
-/* 下半左：卷轴风格地图容器 */
+/* 下半左：地图容器 */
 .da-map-inner {
   flex: 1.18; min-width: 0; position: relative;
   border-left: 1px solid var(--bg-300);
   background: var(--bg-100);
   overflow: hidden;
 }
-/* 左右卷轴边（用伪元素模拟，不影响 ECharts DOM） */
+/* 左右装饰边（用伪元素模拟，不影响 ECharts DOM） */
 .da-map-inner::before,
 .da-map-inner::after {
   content: ''; position: absolute; top: 0; bottom: 0; width: 10px; z-index: 5; pointer-events: none;
@@ -2547,7 +2505,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 .da-pin-legend--sm {
-  left: 8px; top: 42%; gap: 3px;
+  left: auto; right: 8px; top: 42%; gap: 3px;
 }
 .da-pin-legend--muted { opacity: 0.35; pointer-events: none; }
 .pin-legend__title {

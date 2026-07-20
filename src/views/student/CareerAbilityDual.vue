@@ -3,7 +3,7 @@
 import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { getRoleIntro } from '@/composables/useAbilityGraph'
+import { getRoleIntro, getRoleIntroAsync, type RoleIntro } from '@/composables/useAbilityGraph'
 import type { LogEntry } from '@/composables/useGraphGeneration'
 
 defineOptions({ name: 'CareerAbilityDual' })
@@ -16,8 +16,15 @@ const visibleNodes = sg.visibleNodes
 const visibleEdges = sg.visibleEdges
 const roleName = sg.roleName
 
-/* ═══ 岗位介绍 ═══ */
-const roleIntro = computed(() => getRoleIntro(roleName.value))
+/* ═══ 岗位介绍（fixture/API → 本地 fallback） ═══ */
+const roleIntro = ref<RoleIntro>(getRoleIntro(roleName.value))
+watch(
+  roleName,
+  async (name) => {
+    roleIntro.value = await getRoleIntroAsync(name)
+  },
+  { immediate: true },
+)
 
 /* ═══ 生成流程（使用 Shell 共享实例，避免重复启动和时序偏差） ═══ */
 const gen = sg.gen

@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "task_id": "task_demo_001",
+    "status": "completed",
+    "progress": 100,
+    "result": {
+      "student_id": "student_001"
+    },
+    "error": null
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "kb_001",
+      "title": "前端技能词条",
+      "type": "skill",
+      "status": "published",
+      "created_at": "2026-07-12T10:00:00Z"
+    },
+    {
+      "id": "kb_002",
+      "title": "职业路径补充",
+      "type": "career_path",
+      "status": "draft",
+      "created_at": "2026-07-11T09:00:00Z"
+    }
+  ]
+}

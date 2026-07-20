@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { User, AuthUser } from '@/types'
+import type { User } from '@/types'
 import { UserRole } from '@/types'
 import { mockUsers } from '@/mock/data'
+import { loginLocal } from '@/api/auth'
 
 export const useUserStore = defineStore(
   'user',
@@ -17,17 +18,37 @@ export const useUserStore = defineStore(
     const isStudent = computed(() => currentUser.value?.role === UserRole.STUDENT)
     const isAdmin = computed(() => currentUser.value?.role === UserRole.ADMIN)
 
-    // Actions
+    function applySession(user: User): void {
+      currentUser.value = user
+      token.value = `mock_token_${user.id}_${Date.now()}`
+    }
+
+    /** Preferred: fixture/auth API. Falls back to inline mockUsers. */
+    async function loginAsync(
+      username: string,
+      password: string,
+      role?: UserRole,
+    ): Promise<boolean> {
+      try {
+        const user = await loginLocal(username, password)
+        if (user && (!role || user.role === role)) {
+          applySession(user)
+          return true
+        }
+      } catch {
+        /* fall through */
+      }
+      return login(username, password, role)
+    }
+
     function login(username: string, password: string, role?: UserRole): boolean {
-      // 模拟登录验证
       const user = mockUsers.find(u => {
         if (role && u.role !== role) return false
         return u.username === username
       })
 
       if (user && password === '123456') {
-        currentUser.value = user
-        token.value = `mock_token_${user.id}_${Date.now()}`
+        applySession(user)
         return true
       }
       return false
@@ -36,8 +57,7 @@ export const useUserStore = defineStore(
     function loginByRole(role: UserRole): boolean {
       const user = mockUsers.find(u => u.role === role)
       if (user) {
-        currentUser.value = user
-        token.value = `mock_token_${user.id}_${Date.now()}`
+        applySession(user)
         return true
       }
       return false
@@ -68,6 +88,7 @@ export const useUserStore = defineStore(
       isStudent,
       isAdmin,
       login,
+      loginAsync,
       loginByRole,
       logout,
       updateUserInfo,

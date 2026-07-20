@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "data": {
+    "student_id": "student_001",
+    "quick_links": [
+      {
+        "title": "职途导航",
+        "route": "student-career-navigation"
+      },
+      {
+        "title": "职业分析",
+        "route": "student-career-analysis"
+      },
+      {
+        "title": "个人画像",
+        "route": "student-career-portrait"
+      },
+      {
+        "title": "心仪岗位",
+        "route": "student-favorites"
+      }
+    ],
+    "recent_activity": []
+  }
+}

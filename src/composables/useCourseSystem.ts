@@ -158,9 +158,9 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'sr-10', name: '团队技术管理',     tier: 'senior', heat: 83, category: '管理',      domainId: 'backend',  relatedCareers: ALL_JOBS },
     { id: 'sr-11', name: '跨端技术方案',     tier: 'senior', heat: 82, category: '前端架构',  domainId: 'frontend', relatedCareers: FE_ALL },
     { id: 'sr-12', name: '云原生架构',       tier: 'senior', heat: 81, category: '运维',      domainId: 'backend',  relatedCareers: BE_ALL },
-    { id: 'sr-13', name: '推荐系统架构',     tier: 'senior', heat: 89, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-2'] },
+    { id: 'sr-13', name: '推荐系统架构',     tier: 'senior', heat: 89, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
     { id: 'sr-14', name: '大模型工程',       tier: 'senior', heat: 92, category: 'ML架构',    domainId: 'ml',       relatedCareers: ML_ALL },
-    { id: 'sr-15', name: 'NLP 系统设计',     tier: 'senior', heat: 86, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
+    { id: 'sr-15', name: 'NLP 系统设计',     tier: 'senior', heat: 86, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-0'] },
     { id: 'sr-16', name: '数据治理体系',     tier: 'senior', heat: 85, category: '数据架构',  domainId: 'data',     relatedCareers: DA_ALL },
     { id: 'sr-17', name: '指标体系设计',     tier: 'senior', heat: 84, category: '数据架构',  domainId: 'data',     relatedCareers: ['job-data-0', 'job-data-2'] },
     { id: 'sr-18', name: '数据产品架构',     tier: 'senior', heat: 83, category: '数据架构',  domainId: 'data',     relatedCareers: DA_ALL },
@@ -169,8 +169,10 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'sr-21', name: '测试基础设施',     tier: 'senior', heat: 81, category: '测试架构',  domainId: 'qa',       relatedCareers: ['job-qa-1', 'job-qa-0'] },
     { id: 'sr-22', name: '后端架构演进',     tier: 'senior', heat: 88, category: '后端架构',  domainId: 'backend',  relatedCareers: BE_ALL },
     { id: 'sr-23', name: '存储架构设计',     tier: 'senior', heat: 85, category: '后端架构',  domainId: 'backend',  relatedCareers: [...BE_ALL, 'job-data-1'] },
-    { id: 'sr-24', name: '计算机视觉架构',   tier: 'senior', heat: 87, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-1', 'job-ml-2'] },
+    { id: 'sr-24', name: '计算机视觉架构',   tier: 'senior', heat: 87, category: 'ML架构',    domainId: 'ml',       relatedCareers: ['job-ml-1'] },
     { id: 'sr-25', name: '实时数据架构',     tier: 'senior', heat: 84, category: '数据架构',  domainId: 'data',     relatedCareers: ['job-data-1', 'job-data-2'] },
+    { id: 'sr-26', name: 'Agent 架构设计',   tier: 'senior', heat: 90, category: 'ML架构',    domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'sr-27', name: '大模型评估体系',   tier: 'senior', heat: 86, category: 'ML架构',    domainId: 'ml',       relatedCareers: ML_ALL },
 
     // ── 中阶岗位技能（模块级能力，多岗位通用）──
     { id: 'md-1',  name: '前端工程化',         tier: 'mid', heat: 82, category: '前端',   domainId: 'frontend', relatedCareers: FE_ALL },
@@ -192,9 +194,9 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'md-17', name: 'Spring Cloud 微服务', tier: 'mid', heat: 80, category: '后端',   domainId: 'backend',  relatedCareers: ['job-backend-0'] },
     { id: 'md-18', name: 'Go 并发编程',        tier: 'mid', heat: 78, category: '后端',   domainId: 'backend',  relatedCareers: ['job-backend-1'] },
     { id: 'md-19', name: '模型训练与调优',     tier: 'mid', heat: 82, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
-    { id: 'md-20', name: '特征平台建设',       tier: 'mid', heat: 78, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-2'] },
+    { id: 'md-20', name: '特征平台建设',       tier: 'mid', heat: 78, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
     { id: 'md-21', name: '模型部署上线',       tier: 'mid', heat: 80, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
-    { id: 'md-22', name: '深度学习框架应用',   tier: 'mid', heat: 81, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-1', 'job-ml-0'] },
+    { id: 'md-22', name: '深度学习框架应用',   tier: 'mid', heat: 81, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-0'] },
     { id: 'md-23', name: '数仓设计建模',       tier: 'mid', heat: 79, category: '数据',   domainId: 'data',     relatedCareers: ['job-data-1', 'job-data-0'] },
     { id: 'md-24', name: '实时计算方案',       tier: 'mid', heat: 77, category: '数据',   domainId: 'data',     relatedCareers: ['job-data-1', 'job-data-2'] },
     { id: 'md-25', name: 'BI 可视化平台',      tier: 'mid', heat: 76, category: '数据',   domainId: 'data',     relatedCareers: ['job-data-0', 'job-data-2'] },
@@ -205,9 +207,13 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'md-30', name: '接口自动化框架',     tier: 'mid', heat: 78, category: '测试',   domainId: 'qa',       relatedCareers: ['job-qa-0', 'job-qa-1'] },
     { id: 'md-31', name: '缓存方案设计',       tier: 'mid', heat: 78, category: '后端',   domainId: 'backend',  relatedCareers: BE_ALL },
     { id: 'md-32', name: '搜索引擎应用',       tier: 'mid', heat: 74, category: '后端',   domainId: 'backend',  relatedCareers: ['job-backend-0', 'job-backend-2'] },
-    { id: 'md-33', name: 'NLP 应用开发',       tier: 'mid', heat: 79, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-2'] },
+    { id: 'md-33', name: 'NLP 应用开发',       tier: 'mid', heat: 79, category: 'ML',     domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
     { id: 'md-34', name: '增长实验平台',       tier: 'mid', heat: 75, category: '数据',   domainId: 'data',     relatedCareers: ['job-data-2', 'job-data-0'] },
     { id: 'md-35', name: '全栈测试覆盖',       tier: 'mid', heat: 74, category: '测试',   domainId: 'qa',       relatedCareers: QA_ALL },
+    { id: 'md-36', name: 'LangGraph 多Agent协作', tier: 'mid', heat: 82, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'md-37', name: 'GraphRAG 实现',        tier: 'mid', heat: 80, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'md-38', name: 'LoRA 微调实践',        tier: 'mid', heat: 78, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'md-39', name: 'MCP 协议应用',         tier: 'mid', heat: 76, category: 'ML',     domainId: 'ml',       relatedCareers: ML_ALL },
 
     // ── 初阶岗位技能（执行开发能力，写代码）──
     { id: 'jr-1',  name: 'Vue / React 开发',    tier: 'junior', heat: 80, category: '前端',  domainId: 'frontend', relatedCareers: FE_ALL },
@@ -232,7 +238,7 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'jr-20', name: '基础性能优化',        tier: 'junior', heat: 70, category: '性能',  domainId: 'frontend', relatedCareers: [...FE_ALL, ...BE_ALL] },
     { id: 'jr-21', name: 'Spring Boot 开发',    tier: 'junior', heat: 78, category: '后端',  domainId: 'backend',  relatedCareers: ['job-backend-0'] },
     { id: 'jr-22', name: 'Go Web 开发',         tier: 'junior', heat: 76, category: '后端',  domainId: 'backend',  relatedCareers: ['job-backend-1'] },
-    { id: 'jr-23', name: 'PyTorch 基础应用',    tier: 'junior', heat: 75, category: 'ML',    domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
+    { id: 'jr-23', name: 'PyTorch 基础应用',    tier: 'junior', heat: 75, category: 'ML',    domainId: 'ml',       relatedCareers: ['job-ml-0'] },
     { id: 'jr-24', name: '数据采集清洗',        tier: 'junior', heat: 73, category: '数据',  domainId: 'data',     relatedCareers: DA_ALL },
     { id: 'jr-25', name: 'SQL 分析查询',        tier: 'junior', heat: 76, category: '数据',  domainId: 'data',     relatedCareers: [...DA_ALL, ...BE_ALL] },
     { id: 'jr-26', name: 'BI 工具使用',         tier: 'junior', heat: 72, category: '数据',  domainId: 'data',     relatedCareers: ['job-data-0', 'job-data-2'] },
@@ -252,6 +258,11 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'jr-40', name: 'Vue 组件开发',        tier: 'junior', heat: 77, category: '前端',  domainId: 'frontend', relatedCareers: ['job-frontend-0'] },
     { id: 'jr-41', name: 'React Hooks 开发',    tier: 'junior', heat: 76, category: '前端',  domainId: 'frontend', relatedCareers: ['job-frontend-1'] },
     { id: 'jr-42', name: 'D3 可视化开发',       tier: 'junior', heat: 74, category: '前端',  domainId: 'frontend', relatedCareers: ['job-frontend-2'] },
+    { id: 'jr-43', name: 'LangChain 应用开发',  tier: 'junior', heat: 80, category: 'ML',    domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'jr-44', name: 'FastAPI 接口开发',    tier: 'junior', heat: 76, category: '后端',  domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'jr-45', name: 'RAG 基础实践',        tier: 'junior', heat: 78, category: 'ML',    domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'jr-46', name: 'Ollama 本地部署',     tier: 'junior', heat: 70, category: 'ML',    domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'jr-47', name: 'Docker 容器化部署',   tier: 'junior', heat: 74, category: '运维',  domainId: 'ml',       relatedCareers: ML_ALL },
 
     // ── 专业技能底层（基础知识与原理）──
     { id: 'fn-1',  name: 'HTML 语义化',         tier: 'foundation', heat: 72, category: 'Web基础',  domainId: 'frontend', relatedCareers: FE_ALL },
@@ -286,9 +297,12 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'fn-30', name: 'SQL 基础',            tier: 'foundation', heat: 75, category: '数据基础', domainId: 'data',     relatedCareers: [...DA_ALL, ...BE_ALL] },
     { id: 'fn-31', name: '测试理论基础',        tier: 'foundation', heat: 70, category: '测试基础', domainId: 'qa',       relatedCareers: QA_ALL },
     { id: 'fn-32', name: '质量体系概论',        tier: 'foundation', heat: 66, category: '测试基础', domainId: 'qa',       relatedCareers: QA_ALL },
-    { id: 'fn-33', name: '信息检索原理',        tier: 'foundation', heat: 64, category: 'CS核心',   domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-2'] },
+    { id: 'fn-33', name: '信息检索原理',        tier: 'foundation', heat: 64, category: 'CS核心',   domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
     { id: 'fn-34', name: '分布式计算原理',      tier: 'foundation', heat: 72, category: 'CS核心',   domainId: 'backend',  relatedCareers: [...BE_ALL, 'job-data-1'] },
-    { id: 'fn-35', name: '自然语言处理基础',    tier: 'foundation', heat: 74, category: 'ML基础',   domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-2'] },
+    { id: 'fn-35', name: '自然语言处理基础',    tier: 'foundation', heat: 74, category: 'ML基础',   domainId: 'ml',       relatedCareers: ['job-ml-0', 'job-ml-1'] },
+    { id: 'fn-36', name: 'Prompt Engineering 基础', tier: 'foundation', heat: 78, category: 'ML基础',   domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'fn-37', name: '向量检索原理',        tier: 'foundation', heat: 72, category: 'ML基础',   domainId: 'ml',       relatedCareers: ML_ALL },
+    { id: 'fn-38', name: '图数据库基础',        tier: 'foundation', heat: 68, category: '数据基础', domainId: 'ml',       relatedCareers: ML_ALL },
   ]
 
   // ── 边数据 ──
@@ -342,14 +356,14 @@ function buildMockData(_role: string): CourseSystemData {
     { source: 'sr-25', target: 'job-data-2',     relation: 'compose' },
     // ML
     { source: 'sr-13', target: 'job-ml-0',       relation: 'compose' },
-    { source: 'sr-13', target: 'job-ml-2',       relation: 'compose' },
+    { source: 'sr-13', target: 'job-ml-1',       relation: 'compose' },
     { source: 'sr-14', target: 'job-ml-0',       relation: 'compose' },
     { source: 'sr-14', target: 'job-ml-1',       relation: 'compose' },
-    { source: 'sr-14', target: 'job-ml-2',       relation: 'compose' },
     { source: 'sr-15', target: 'job-ml-0',       relation: 'compose' },
-    { source: 'sr-15', target: 'job-ml-1',       relation: 'compose' },
     { source: 'sr-24', target: 'job-ml-1',       relation: 'compose' },
-    { source: 'sr-24', target: 'job-ml-2',       relation: 'compose' },
+    { source: 'sr-14', target: 'job-ml-2',       relation: 'compose' },
+    { source: 'sr-26', target: 'job-ml-2',       relation: 'compose' },
+    { source: 'sr-27', target: 'job-ml-2',       relation: 'compose' },
     // 通用 senior → 多域 job
     { source: 'sr-8',  target: 'job-frontend-0', relation: 'compose' },
     { source: 'sr-8',  target: 'job-backend-0',  relation: 'compose' },
@@ -413,6 +427,10 @@ function buildMockData(_role: string): CourseSystemData {
     { source: 'md-19', target: 'sr-24', relation: 'support' },
     { source: 'md-24', target: 'sr-25', relation: 'support' },
     { source: 'md-12', target: 'sr-25', relation: 'support' },
+    { source: 'md-36', target: 'sr-26', relation: 'support' },
+    { source: 'md-37', target: 'sr-26', relation: 'support' },
+    { source: 'md-38', target: 'sr-14', relation: 'support' },
+    { source: 'md-39', target: 'sr-26', relation: 'support' },
 
     // ── mid ← junior ──
     { source: 'jr-1',  target: 'md-1',  relation: 'prerequisite' },
@@ -488,6 +506,12 @@ function buildMockData(_role: string): CourseSystemData {
     { source: 'jr-34', target: 'md-34', relation: 'prerequisite' },
     { source: 'jr-13', target: 'md-35', relation: 'prerequisite' },
     { source: 'jr-29', target: 'md-35', relation: 'prerequisite' },
+    { source: 'jr-43', target: 'md-36', relation: 'prerequisite' },
+    { source: 'jr-45', target: 'md-37', relation: 'prerequisite' },
+    { source: 'jr-43', target: 'md-37', relation: 'prerequisite' },
+    { source: 'jr-44', target: 'md-39', relation: 'prerequisite' },
+    { source: 'jr-46', target: 'md-38', relation: 'prerequisite' },
+    { source: 'jr-47', target: 'md-39', relation: 'prerequisite' },
 
     // ── junior ← foundation ──
     { source: 'fn-1',  target: 'jr-1',  relation: 'prerequisite' },
@@ -562,6 +586,12 @@ function buildMockData(_role: string): CourseSystemData {
     { source: 'fn-4',  target: 'jr-41', relation: 'prerequisite' },
     { source: 'fn-3',  target: 'jr-42', relation: 'prerequisite' },
     { source: 'fn-15', target: 'jr-42', relation: 'prerequisite' },
+    { source: 'fn-36', target: 'jr-43', relation: 'prerequisite' },
+    { source: 'fn-37', target: 'jr-45', relation: 'prerequisite' },
+    { source: 'fn-38', target: 'jr-43', relation: 'prerequisite' },
+    { source: 'fn-5',  target: 'jr-44', relation: 'prerequisite' },
+    { source: 'fn-5',  target: 'jr-43', relation: 'prerequisite' },
+    { source: 'fn-10', target: 'jr-47', relation: 'prerequisite' },
 
     // ── 跨层连线（基础 → 中阶）──
     { source: 'fn-7',  target: 'md-6',  relation: 'support' },
@@ -573,6 +603,9 @@ function buildMockData(_role: string): CourseSystemData {
     { source: 'fn-26', target: 'md-22', relation: 'support' },
     { source: 'fn-34', target: 'md-24', relation: 'support' },
     { source: 'fn-35', target: 'md-33', relation: 'support' },
+    { source: 'fn-35', target: 'md-36', relation: 'support' },
+    { source: 'fn-33', target: 'md-37', relation: 'support' },
+    { source: 'fn-26', target: 'md-38', relation: 'support' },
   ]
 
   // 动态标记 isCareerPath — 源/目标节点都关联同一个职业时标记
@@ -607,6 +640,12 @@ function buildMockData(_role: string): CourseSystemData {
     { id: 'gc-17', title: '前端架构设计',        group: 'architecture-course', difficulty: 'advanced',    relatedSkillIds: ['sr-1','sr-9','md-2','md-4'],        importance: 'core' },
     { id: 'gc-18', title: '大规模前端应用',      group: 'architecture-course', difficulty: 'advanced',    relatedSkillIds: ['sr-1','sr-4','sr-11','md-3'],       importance: 'core' },
     { id: 'gc-19', title: '可视化与图形学',      group: 'architecture-course', difficulty: 'advanced',    relatedSkillIds: ['md-15','jr-3','fn-15','jr-42'],     importance: 'optional' },
+    { id: 'gc-20', title: '大模型应用开发基础',  group: 'foundation-course',   difficulty: 'beginner',     relatedSkillIds: ['fn-36','fn-37','fn-5'],              importance: 'core' },
+    { id: 'gc-21', title: 'LangChain 与 RAG 实战', group: 'framework-course',  difficulty: 'intermediate', relatedSkillIds: ['jr-43','jr-45','fn-36'],              importance: 'core' },
+    { id: 'gc-22', title: 'FastAPI 后端开发',     group: 'framework-course',   difficulty: 'intermediate', relatedSkillIds: ['jr-44','fn-5'],                      importance: 'recommended' },
+    { id: 'gc-23', title: 'AI Agent 多智能体协作', group: 'engineering-course', difficulty: 'advanced',    relatedSkillIds: ['md-36','md-37','md-39'],              importance: 'core' },
+    { id: 'gc-24', title: '大模型微调与部署',     group: 'engineering-course', difficulty: 'advanced',    relatedSkillIds: ['md-38','jr-46','jr-47'],             importance: 'recommended' },
+    { id: 'gc-25', title: 'Agent 架构与评估',     group: 'architecture-course', difficulty: 'advanced',   relatedSkillIds: ['sr-26','sr-27','sr-14'],             importance: 'core' },
   ]
 
   // ── 技能-课程关联边 ──
@@ -642,5 +681,19 @@ export function computeNode3DPositions(_n: CourseNode[], _l: LayerLayout[]): Map
 
 /* ═══ 数据获取（预留接口替换） ═══ */
 export async function getCourseSystemData(role: string): Promise<CourseSystemData> {
+  const { getApiMode } = await import('@/api/config')
+  const mode = getApiMode()
+  try {
+    const { fetchCourseSystemGraph } = await import('@/api/courseSystem')
+    const remote = await fetchCourseSystemGraph(role)
+    if (remote?.nodes?.length) {
+      if (mode === 'http' || remote.nodes.length >= 12) return remote
+    }
+  } catch (e) {
+    console.warn('[course-system] remote fetch failed', e)
+  }
+  if (mode === 'http') {
+    return { nodes: [], edges: [], courseNodes: [], skillCourseEdges: [] }
+  }
   return buildMockData(role)
 }

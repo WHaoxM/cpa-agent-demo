@@ -1,0 +1,33 @@
+{
+  "success": true,
+  "count": 2,
+  "total": 2,
+  "limit": 5,
+  "offset": 0,
+  "data": [
+    {
+      "role_name": "算法工程师",
+      "category": "AI",
+      "avg_salary_low": 18,
+      "avg_salary_high": 32,
+      "demand_level": "high",
+      "core_skills": [
+        "Python",
+        "机器学习",
+        "PyTorch"
+      ]
+    },
+    {
+      "role_name": "前端开发工程师",
+      "category": "前端",
+      "avg_salary_low": 12,
+      "avg_salary_high": 24,
+      "demand_level": "stable",
+      "core_skills": [
+        "Vue",
+        "TypeScript",
+        "工程化"
+      ]
+    }
+  ]
+}

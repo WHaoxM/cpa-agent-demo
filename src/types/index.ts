@@ -35,4 +35,4 @@ export type {
 export type { ReportRecord } from './report'
 
 // AI
-export type { AIMessage } from './ai'
+export type { AIMessage, AIAnalysisResult, AIToolCall, AIMessageAttachment } from './ai'

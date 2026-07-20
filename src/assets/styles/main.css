@@ -1,9 +1,7 @@
 @import './base.css';
 @import './theme.css';
 
-/* ══════════════════════════════════════
-   故宫博物院 · 全局布局与组件样式
-   ══════════════════════════════════════ */
+/* 全局布局与组件样式 */
 
 #app {
   min-height: 100vh;
@@ -404,32 +402,6 @@ a {
     flex-direction: column;
     text-align: center;
   }
-}
-
-/* 角落装饰（方正风格） */
-.corner-ornament {
-  position: relative;
-}
-.corner-ornament::before,
-.corner-ornament::after {
-  content: '';
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-color: var(--color-gold);
-  border-style: solid;
-  pointer-events: none;
-  opacity: 0.7;
-}
-.corner-ornament::before {
-  top: 0;
-  left: 0;
-  border-width: 2px 0 0 2px;
-}
-.corner-ornament::after {
-  bottom: 0;
-  right: 0;
-  border-width: 0 2px 2px 0;
 }
 
 /* ── 字体工具类 ── */

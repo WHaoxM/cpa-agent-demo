@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "data": {
+    "student_id": "student_001",
+    "job_portrait_id": "job_001",
+    "position_name": "后端开发",
+    "total_score": 78.0,
+    "skill_coverage": 0.72,
+    "scores_authoritative": true,
+    "match_level": "良好",
+    "is_matched": true,
+    "keyword_coverage": {
+      "matched": ["Python", "SQL", "Redis"],
+      "missing": ["Kubernetes", "Go"],
+      "highlight_missing": ["Kubernetes", "Go"],
+      "matched_count": 3,
+      "missing_count": 2
+    },
+    "evidence": [
+      { "skill": "Python", "status": "covered", "span": "Python", "source": "skill_overlap" },
+      { "skill": "Kubernetes", "status": "gap", "span": "Kubernetes", "source": "job_required" }
+    ],
+    "gaps": [{ "skill": "Kubernetes", "priority": "critical" }],
+    "graph_paths": [{ "hop": 0, "name": "Python", "level": 1 }],
+    "related_courses": [{ "title": "容器编排入门", "skill": "Kubernetes", "course_id": "c_k8s" }]
+  }
+}

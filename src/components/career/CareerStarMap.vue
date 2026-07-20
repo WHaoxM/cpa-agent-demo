@@ -206,7 +206,7 @@ function closeStarPopup() {
   <div class="rp-right" :class="{ 'rp-right--dark': isDark }">
     <div class="rp-orbital-scene">
       <div class="rp-orbital-field" @click="closeStarPopup">
-        <svg class="rp-orbital-svg" viewBox="0 0 520 520" fill="none" aria-hidden="true">
+        <svg class="rp-orbital-svg" viewBox="0 0 520 520" overflow="visible" fill="none" aria-hidden="true">
           <defs>
             <radialGradient id="rpCG2" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stop-color="#BE2A00" :stop-opacity="isDark ? 0.18 : 0.07"/>
@@ -304,6 +304,16 @@ function closeStarPopup() {
               @mouseleave="hoveredNodeKey = null"
               @click.stop="handleStarClick(node.key)"
             />
+          </g>
+
+          <g
+            v-for="(group, index) in domainGroups"
+            :key="`dl-${group.domain.id}`"
+            :class="['rp-domain-group', 'rp-domain-label-group', `rp-domain-group--${index}`, {
+              'rp-domain-group--dimmed': hoveredDomainId && hoveredDomainId !== group.domain.id,
+              'rp-domain-group--lit': hoveredDomainId === group.domain.id,
+            }]"
+          >
             <text
               v-for="node in group.nodes"
               :key="`nt-${node.key}`"
@@ -383,6 +393,7 @@ function closeStarPopup() {
 .rp-right--dark {
   background-color: transparent;
   background-image: none;
+  overflow: visible;
 }
 
 .rp-right--dark .rp-dots circle {
@@ -410,6 +421,7 @@ function closeStarPopup() {
 
 .rp-right--dark .rp-orbital-scene {
   padding: 8px;
+  overflow: visible;
 }
 
 .rp-right--dark .rp-orbital-field {
@@ -458,6 +470,10 @@ function closeStarPopup() {
 .rp-domain-group--dimmed { opacity: 0.28; filter: grayscale(0.35); }
 .rp-domain-group--lit { filter: brightness(1.06); }
 .rp-domain-group--lit .rp-star-node { filter: drop-shadow(0 0 5px currentColor); }
+
+.rp-domain-label-group {
+  pointer-events: none;
+}
 
 .rp-ripple {
   fill: none;

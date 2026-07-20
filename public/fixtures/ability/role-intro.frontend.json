@@ -1,0 +1,38 @@
+{
+  "success": true,
+  "data": {
+    "title": "前端开发工程师",
+    "summary": "负责 Web 应用界面与交互实现，关注性能、可访问性与工程化交付。",
+    "responsibilities": [
+      "页面开发与交互实现",
+      "前端架构与技术选型",
+      "性能优化与工程化"
+    ],
+    "requirements": [
+      "本科及以上",
+      "熟练 Vue/React + TypeScript",
+      "了解前端工程化"
+    ],
+    "skills": [
+      "Vue 3",
+      "TypeScript",
+      "Vite",
+      "工程化"
+    ],
+    "topRegions": [
+      {
+        "name": "北京",
+        "demand": "极高"
+      },
+      {
+        "name": "上海",
+        "demand": "极高"
+      },
+      {
+        "name": "深圳",
+        "demand": "高"
+      }
+    ],
+    "outlook": "全栈化与跨端趋势明显，工程化与性能能力持续紧缺。"
+  }
+}

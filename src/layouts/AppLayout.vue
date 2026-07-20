@@ -1,4 +1,4 @@
-<!-- 布局：应用主框架（左侧导航栏/顶部栏/面包屑标题/主内容区 router-view） -->
+﻿<!-- 布局：应用主框架（左侧导航栏/顶部栏/面包屑标题/主内容区 router-view） -->
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -15,12 +15,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 
-const isMobile = ref(false)
 const drawerOpen = ref(false)
-
-function calcIsMobile() {
-  isMobile.value = window.matchMedia('(max-width: 767px)').matches
-}
 
 watch(
   () => route.fullPath,
@@ -108,33 +103,12 @@ const currentMenus = computed(() => {
   return commonMenus
 })
 
-// 学习进度（学生）或待办统计（教师/管理员）
-const quickStats = computed(() => {
-  if (isStudent.value) {
-    return { label: '本周学习', value: '12小时', sub: '3门课程进行中' }
-  } else {
-    return { label: '待审核内容', value: '5项', sub: '2门课程+3条评论' }
-  }
-})
-void quickStats
-
-void 0 /* theme switcher removed — single classical theme */
-
-function toggleCollapse() {
-  drawerOpen.value = true
-}
-
 
 const cloudTabs = computed(() => {
   return currentMenus.value.map(m => ({
     key: m.index,
     label: m.title,
   }))
-})
-
-/* ===== 书页章节名 ===== */
-const currentChapter = computed(() => {
-  return String(route.meta.title ?? '职导星图')
 })
 
 /* ===== 页面入场动效 ===== */
@@ -162,8 +136,6 @@ let gsapCtx: ReturnType<typeof gsap.context> | null = null
 
 onMounted(() => {
   themeStore.initTheme()
-  calcIsMobile()
-  window.addEventListener('resize', calcIsMobile)
   prefersReduced.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   if (shellRef.value && !prefersReduced.value) {
@@ -178,7 +150,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', calcIsMobile)
   gsapCtx?.revert()
 })
 </script>
@@ -194,26 +165,19 @@ onBeforeUnmount(() => {
 
       <UserInfoBar />
     </div>
-
-    <!-- ===== 书页主区域 ===== -->
     <div class="book-main-area" :class="{ 'book-main-area--immersive': isImmersiveRoute }">
-      <!-- 页眉栏 -->
       <header v-if="!isImmersiveRoute && !hideBookHeader" class="book-header">
         <div class="book-header__left">
           <div class="book-header__chapter">
-            <span class="book-header__ornament">◆</span>
             <span class="book-header__breadcrumb">
               <template v-for="(item, index) in breadcrumbs" :key="`${item}-${index}`">
                 <span :class="{ 'is-current': index === breadcrumbs.length - 1 }">{{ item }}</span>
                 <span v-if="index < breadcrumbs.length - 1" class="book-header__sep">·</span>
               </template>
             </span>
-            <span class="book-header__ornament">◆</span>
           </div>
         </div>
       </header>
-
-      <!-- 书页内容区 -->
       <main v-if="!isImmersiveRoute" class="book-content">
         <BookPage>
           <div class="page-turn-perspective">
@@ -302,13 +266,10 @@ onBeforeUnmount(() => {
   margin-right: auto;
 }
 
-
-/* ═══ 书页主区域 ═══ */
 .book-main-area {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0;
   min-height: 0;
   position: relative;
   z-index: 1;
@@ -347,10 +308,6 @@ onBeforeUnmount(() => {
   letter-spacing: 0.01em;
 }
 
-.book-header__ornament {
-  display: none;
-}
-
 .book-header__breadcrumb {
   display: flex;
   align-items: center;
@@ -367,7 +324,6 @@ onBeforeUnmount(() => {
   margin: 0 2px;
 }
 
-/* ═══ 书页内容区 ═══ */
 .book-content {
   flex: 1;
   min-height: 0;

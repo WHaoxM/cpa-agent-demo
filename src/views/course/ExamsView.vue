@@ -3,9 +3,13 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import { roleOptions, type CareerRole } from '@/composables/useCareerInsights'
+import { roleOptions, DEFAULT_CAREER_ROLE, type CareerRole } from '@/composables/useCareerInsights'
+import { submitAssessment } from '@/api/career'
+import { DEMO_STUDENT_ID } from '@/api/config'
+import { useUserStore } from '@/stores'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 type Phase = 'select' | 'quiz' | 'result'
 type RoleTrack = {
@@ -18,7 +22,7 @@ type TrackOption = RoleTrack & {
 }
 
 const phase = ref<Phase>('select')
-const selectedRole = ref<CareerRole>('前端开发')
+const selectedRole = ref<CareerRole>(DEFAULT_CAREER_ROLE)
 const selectedTrack = ref('')
 const currentQuestionIndex = ref(0)
 
@@ -387,12 +391,30 @@ function selectRole(role: CareerRole, trackLabel = '') {
   phase.value = 'quiz'
 }
 
-function goNext() {
+async function submitAssessmentResult() {
+  const weak = gapResults.value.filter(g => g.gap > 0).slice(0, 8).map(g => g.name)
+  const assessed_abilities = Object.fromEntries(
+    Object.entries(userAnswers.value).map(([k, v]) => [k, v]),
+  )
+  try {
+    await submitAssessment({
+      student_id: userStore.currentUser?.id || DEMO_STUDENT_ID,
+      assessed_skills: weak,
+      assessed_abilities,
+      target_role: selectedDirectionLabel.value,
+    })
+  } catch (e) {
+    console.warn('[exams] assessment submit failed', e)
+  }
+}
+
+async function goNext() {
   if (selectedScore.value < 0) return
   if (currentQuestionIndex.value < totalQuestions.value - 1) {
     currentQuestionIndex.value++
   } else {
     phase.value = 'result'
+    await submitAssessmentResult()
   }
 }
 

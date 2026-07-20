@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "data": {
+    "student_id": "student_001",
+    "job_portrait_id": "job_001",
+    "position_name": "后端开发",
+    "critical_count": 1,
+    "quick_learn_count": 1,
+    "total_gap_count": 2,
+    "gaps": [
+      { "skill": "Kubernetes", "priority": "critical" },
+      { "skill": "Go", "priority": "quick_learn" }
+    ],
+    "keyword_coverage": {
+      "matched": ["Python", "SQL"],
+      "missing": ["Kubernetes", "Go"],
+      "highlight_missing": ["Kubernetes", "Go"]
+    },
+    "evidence": [
+      { "skill": "Python", "status": "covered" },
+      { "skill": "Kubernetes", "status": "gap" }
+    ],
+    "graph_paths": [],
+    "related_courses": []
+  }
+}

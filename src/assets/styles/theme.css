@@ -1,7 +1,4 @@
-/* ═══════════════════════════════════════════
-   故宫博物院 · Palace Museum Theme
-   宣纸米白 + 朱砂红 + 御金点缀 + 墨色文字
-   ═══════════════════════════════════════════ */
+/* 全局主题 Token */
 
 /* ── 原始色板 Base Tokens ── */
 :root {
@@ -89,19 +86,7 @@
   --radius-sm:   4px;
   --radius-md:   8px;
   --radius-lg:   14px;
-
-  /* 书籍布局（侧边栏） */
-  --book-spine-width:    56px;
-  --book-spine-expanded: 220px;
-  --book-page-shadow:    inset 6px 0 18px -8px rgba(0, 0, 0, 0.08);
-  --book-binding-color:  var(--color-primary);
-  --book-binding-width:  3px;
-
-  /* 装饰 */
-  --seal-red:      var(--vermilion-500);
   --bamboo-green:  #4A6741;
-  --ink-wash-color: rgba(0, 0, 0, 0.04);
-  --noise-opacity: 0;
 }
 
 /* ── 阴影 Shadow System ── */

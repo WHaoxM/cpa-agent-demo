@@ -2,7 +2,7 @@
 logs
 *.log
 npm-debug.log*
-yarn-debug.log*
+yarn-debug.log*hc-overview 学习概况记录
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
@@ -48,9 +48,15 @@ __screenshots__/
 .codebuddy/
 .codex/
 .continue/
+.devin/
 .kiro/
 .qoder/
 .roo/
 .trae/
 .windsurf/
 skills-lock.json
+
+# Local env
+.env
+.env.development
+

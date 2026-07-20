@@ -3,11 +3,16 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { ElMessage } from 'element-plus'
 import { useResumeStore } from '@/stores/resume'
+import { useUserStore } from '@/stores'
 import TiptapEditor from '@/components/TiptapEditor.vue'
+import { parseResumeText } from '@/api/pipeline'
+import { DEMO_STUDENT_ID } from '@/api/config'
 
 const router      = useRouter()
 const resumeStore = useResumeStore()
+const userStore   = useUserStore()
 
 /* ══ 类型定义 ══ */
 interface ProjectEntry { name: string; role: string; desc: string }
@@ -155,6 +160,69 @@ const resumeText = computed(() => {
   return lines.join('\n')
 })
 
+/* ══ 粘贴解析填充 ══ */
+const importText = ref('')
+const importing = ref(false)
+const showImport = ref(false)
+
+async function importFromParse() {
+  const text = importText.value.trim() || resumeText.value.trim()
+  if (!text) {
+    ElMessage.warning('请先粘贴简历文本')
+    return
+  }
+  importing.value = true
+  try {
+    const env = await parseResumeText({
+      text,
+      student_id: userStore.currentUser?.id || DEMO_STUDENT_ID,
+      source: 'resume-builder',
+    })
+    const data = env.data as {
+      name?: string
+      contact?: { phone?: string; email?: string }
+      education?: Array<{ school?: string; major?: string; degree?: string }>
+      skills?: Array<string | { name?: string }>
+      raw_text?: string
+    } | undefined
+    if (!data) throw new Error('empty parse')
+
+    if (data.name) form.value.name = data.name
+    if (data.contact?.phone) form.value.phone = data.contact.phone
+    if (data.contact?.email) form.value.email = data.contact.email
+    const edu0 = data.education?.[0]
+    if (edu0?.school) form.value.school = edu0.school
+    if (edu0?.major) form.value.major = edu0.major
+    if (edu0 && form.value.educations[0]) {
+      form.value.educations[0] = {
+        school: edu0.school || '',
+        major: edu0.major || '',
+        degree: edu0.degree || '',
+        period: '',
+        gpa: '',
+      }
+    } else if (edu0) {
+      form.value.educations = [{
+        school: edu0.school || '',
+        major: edu0.major || '',
+        degree: edu0.degree || '',
+        period: '',
+        gpa: '',
+      }]
+    }
+    if (data.skills?.length) {
+      form.value.skills = data.skills.map(s => (typeof s === 'string' ? s : String(s?.name ?? ''))).filter(Boolean)
+    }
+    showImport.value = false
+    ElMessage.success('已根据解析结果填充表单')
+  } catch (e) {
+    console.warn('[resume-builder] parse failed', e)
+    ElMessage.error('解析失败，请检查文本后重试')
+  } finally {
+    importing.value = false
+  }
+}
+
 /* ══ 操作 ══ */
 function useResume() {
   resumeStore.setDraftText(resumeText.value)
@@ -168,6 +236,7 @@ function clearForm() {
     honors: [], workExps: [], educations: [], selfEval: '',
   }
   avatarBase64.value = ''
+  importText.value = ''
 }
 
 const gradeOptions    = ['大一', '大二', '大三', '大四', '研一', '研二', '研三', '已毕业']
@@ -186,6 +255,9 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
       </button>
       <span class="rb-hdr-title">快速制作简历</span>
       <div class="rb-hdr-actions">
+        <button class="rb-ghost-btn" type="button" @click="showImport = !showImport">
+          <Icon icon="lucide:sparkles" :width="13"/>智能填充
+        </button>
         <button class="rb-ghost-btn" disabled title="后端接入后开放">
           <Icon icon="lucide:download" :width="13"/>下载 PDF
           <span class="rb-soon-badge">即将开放</span>
@@ -195,6 +267,22 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
         </button>
       </div>
     </header>
+
+    <div v-if="showImport" class="rb-import-panel">
+      <textarea
+        v-model="importText"
+        class="rb-import-ta"
+        rows="5"
+        placeholder="粘贴简历全文，点击解析后自动填入姓名/学历/技能…"
+      />
+      <div class="rb-import-actions">
+        <button class="rb-ghost-btn" type="button" :disabled="importing" @click="importFromParse">
+          <Icon icon="lucide:wand-2" :width="13"/>
+          {{ importing ? '解析中…' : '解析并填充' }}
+        </button>
+        <button class="rb-ghost-btn" type="button" @click="showImport = false">取消</button>
+      </div>
+    </div>
 
     <!-- ══ BODY 三栏 ══ -->
     <div class="rb-body">
@@ -647,6 +735,30 @@ const honorTypeIcons  = { cert: 'lucide:award', intern: 'lucide:briefcase', awar
 }
 .rb-hdr-back:hover { border-color: rgba(139,37,0,0.4); color: rgba(200,150,110,0.9); }
 .rb-hdr-title { font-size: 14px; font-weight: 600; flex: 1; letter-spacing: 0.02em; }
+.rb-import-panel {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  border: 1px solid #e3e3e0;
+  border-radius: 8px;
+  background: #fafaf8;
+}
+.rb-import-ta {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #e3e3e0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #333;
+  background: #fff;
+  box-sizing: border-box;
+}
+.rb-import-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
 .rb-hdr-actions { display: flex; align-items: center; gap: 8px; }
 .rb-ghost-btn {
   position: relative; display: flex; align-items: center; gap: 5px;

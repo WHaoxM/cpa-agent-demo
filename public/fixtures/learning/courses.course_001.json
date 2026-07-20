@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "data": {
+    "course_id": "course_001",
+    "category": "前端开发",
+    "description": "从零开始学习 Vue 3，掌握现代前端开发",
+    "title": "Vue 3 入门"
+  }
+}

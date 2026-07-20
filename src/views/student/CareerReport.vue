@@ -1,4 +1,4 @@
-<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
+﻿<!-- 页面：职业生涯发展报告；路由：student/career-report；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import * as d3 from 'd3'
@@ -12,9 +12,8 @@ import { useReportStore } from '@/stores/report'
 import {
   JOB_PORTRAITS, CAREER_PATH_EDGES,
   deriveStudentSevenDim, getGrowthPlan,
-  type JobPortrait, type JobLevel, type SevenDim,
+  type JobPortrait, type JobLevel,
 } from '@/mock/careerReportData'
-import { fetchStudentPortrait } from '@/api/backend'
 import { CAREER_DOMAINS } from '@/composables/useCareerInsights'
 import D3RadarChart from '@/components/charts/D3RadarChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
@@ -36,7 +35,7 @@ const effectiveTargetRoles = computed<string[]>(() => {
   if (learningStore.targetRoles.length > 0) return learningStore.targetRoles.map(r => r.role)
   const predicted = resumeStore.insights?.predictedRole
   if (predicted) return [predicted]
-  return ['前端开发']
+  return ['机器学习工程师']
 })
 
 function saveCareerReport() {
@@ -101,36 +100,22 @@ const LINE_COLORS: Record<string, string> = {
 
 /* ══ 攀岩墙白名单：只展示 CAREER_DOMAINS 15 职业的岗位 ══ */
 const CLIMB_JOB_IDS = new Set<string>([
-  /* 前端：Vue 前端工程师 */
-  'fe-intern', 'fe-junior', 'fe-mid', 'fe-senior', 'fe-lead',
-  /* 前端：React 前端工程师 */
-  'fe-react-intern', 'fe-react-junior', 'fe-react-mid', 'fe-react-senior',
-  /* 前端：可视化工程师 */
-  'fe-vis-junior', 'fe-vis-mid', 'fe-vis-senior',
-  /* 后端：Java 后端工程师 */
-  'be-java-intern', 'be-java-junior', 'be-java-mid', 'be-java-senior',
-  /* 后端：Go 后端工程师 */
-  'be-go-intern', 'be-go-junior', 'be-go-mid', 'be-go-senior',
   /* 后端：Python 后端工程师 */
   'be-python-intern', 'be-python-junior', 'be-python-mid', 'be-python-senior',
-  /* 测试：自动化测试工程师 */
-  'qa-intern', 'qa-junior', 'qa-mid', 'qa-senior',
-  /* 测试：质量平台工程师 */
-  'qa-plat-junior', 'qa-plat-mid', 'qa-plat-senior',
-  /* 测试：性能测试工程师 */
-  'qa-perf-intern', 'qa-perf-junior', 'qa-perf-mid', 'qa-perf-senior',
-  /* 数据：商业数据分析师 */
-  'da-biz-junior', 'da-biz-mid', 'da-biz-senior',
-  /* 数据：数据开发工程师 */
-  'da-dev-junior', 'da-dev-mid', 'da-dev-senior',
-  /* 数据：增长分析师 */
-  'da-growth-junior', 'da-growth-mid', 'da-growth-senior',
   /* ML：推荐算法工程师 */
   'algo-recsys-intern', 'algo-recsys-junior', 'algo-recsys-mid', 'algo-recsys-senior',
   /* ML：深度学习工程师 */
   'dl-junior', 'dl-mid', 'dl-senior',
   /* ML：LLM 应用工程师 */
   'ai-llm-intern', 'ai-llm-junior', 'ai-llm-mid', 'ai-llm-senior',
+  /* ML：AI Agent 开发工程师 */
+  'ai-agent-intern', 'ai-agent-junior', 'ai-agent-mid', 'ai-agent-senior',
+  /* ML：NLP 工程师 */
+  'ai-nlp-junior', 'ai-nlp-senior',
+  /* ML：NLP 算法工程师 */
+  'algo-nlp-junior', 'algo-nlp-senior',
+  /* ML：搜索算法工程师 */
+  'algo-search-junior', 'algo-search-senior',
 ])
 
 const LEVEL_ORDER: Record<JobLevel, number> = {
@@ -145,7 +130,7 @@ const recommendedIds = computed<Set<string>>(() => {
     '后端开发': ['be-java-junior', 'be-java-mid', 'be-go-junior', 'be-python-junior'],
     '测试开发': ['qa-junior', 'qa-mid', 'qa-plat-junior', 'qa-perf-junior'],
     '数据分析': ['da-biz-junior', 'da-biz-mid', 'da-dev-junior', 'da-growth-junior'],
-    '机器学习工程师': ['algo-recsys-junior', 'algo-recsys-mid', 'dl-junior', 'ai-llm-junior'],
+    '机器学习工程师': ['ai-agent-intern', 'ai-agent-junior', 'ai-llm-junior', 'ai-nlp-junior', 'algo-recsys-junior', 'dl-junior', 'be-python-junior'],
   }
   const ids = new Set<string>()
   for (const role of effectiveTargetRoles.value) {
@@ -155,7 +140,7 @@ const recommendedIds = computed<Set<string>>(() => {
     ;(roleToIds[c.role] ?? []).slice(0, 2).forEach(id => ids.add(id))
   }
   if (ids.size === 0) {
-    ;['fe-mid', 'fe-junior', 'be-java-junior', 'da-biz-junior', 'qa-junior'].forEach(id => ids.add(id))
+    ;['ai-agent-intern', 'ai-agent-junior', 'ai-llm-junior', 'ai-nlp-junior', 'be-python-junior'].forEach(id => ids.add(id))
   }
   return ids
 })
@@ -165,17 +150,17 @@ const selectedJob = computed(() => JOB_PORTRAITS.find(j => j.id === selectedJobI
 /* 统一匹配度：与气泡图一致，推荐岗位 +0.2 */
 function getDisplayMatchScore(job: JobPortrait | null | undefined): number {
   if (!job) return 0
-  return recommendedIds.value.has(job.id) ? Math.min(1, job.matchScore + 0.2) : job.matchScore
+  return recommendedIds.value.has(job.id) ? Math.min(0.95, job.matchScore + 0.2) : job.matchScore
 }
 
 const effectiveMatchScore = computed(() => {
   return getDisplayMatchScore(selectedJob.value)
 })
 
-/* ══ 学生七维（后端优先，fallback 到 mock）══ */
-const backendStudentDim = ref<SevenDim | null>(null)
-const studentDim = computed<SevenDim>(() => {
-  if (backendStudentDim.value) return backendStudentDim.value
+/* ══ 学生七维 ══ */
+const studentDim = computed(() => {
+  const stored = resumeStore.portraitDimensions
+  if (stored) return stored
   const skills = resumeStore.parsedSkills
   const confidence = resumeStore.insights?.confidence ?? 0.5
   return deriveStudentSevenDim(skills, confidence)
@@ -184,7 +169,7 @@ const studentDim = computed<SevenDim>(() => {
 /* ══ 成长计划 ══ */
 const growthPlan = computed(() => selectedJobId.value ? getGrowthPlan(selectedJobId.value) : [])
 
-/* ══ 水墨分组气泡图 ══ */
+/* ══ 分组气泡图 ══ */
 type ReportBubbleJob = JobPortrait & {
   domainId: string
   domainName: string
@@ -331,7 +316,7 @@ const bubbleJobs = computed<ReportBubbleJob[]>(() => {
     '后端开发': ['be-java-junior', 'be-java-mid', 'be-go-junior', 'be-python-junior'],
     '测试开发': ['qa-junior', 'qa-mid', 'qa-plat-junior', 'qa-perf-junior'],
     '数据分析': ['da-biz-junior', 'da-biz-mid', 'da-dev-junior', 'da-growth-junior'],
-    '机器学习工程师': ['algo-recsys-junior', 'algo-recsys-mid', 'dl-junior', 'ai-llm-junior'],
+    '机器学习工程师': ['ai-agent-intern', 'ai-agent-junior', 'ai-llm-junior', 'ai-nlp-junior', 'algo-recsys-junior', 'dl-junior', 'be-python-junior'],
   }
 
   const evalRole = resumeStore.evaluatingRole
@@ -354,7 +339,7 @@ const bubbleJobs = computed<ReportBubbleJob[]>(() => {
     selectedJobs = [selectedJob.value, ...selectedJobs.slice(0, 7)]
   }
 
-  return selectedJobs
+  const mapped = selectedJobs
     .map(job => {
       const meta = getReportBubbleDomainMeta(job)
       return {
@@ -364,6 +349,17 @@ const bubbleJobs = computed<ReportBubbleJob[]>(() => {
       }
     })
     .sort((a, b) => b.displayMatchScore - a.displayMatchScore)
+
+  const seenStacks = new Set<string>()
+  const deduped: typeof mapped = []
+  for (const job of mapped) {
+    const key = job.stack || job.title
+    if (seenStacks.has(key)) continue
+    seenStacks.add(key)
+    deduped.push(job)
+  }
+
+  return deduped
 })
 
 const bubbleGroups = computed<ReportBubbleGroup[]>(() => {
@@ -803,6 +799,23 @@ type ClimbRope = { path: string; type: 'promote' | 'transfer'; fromId: string; t
 const CW_W = 400, CW_H = 900
 const CW_NODE_R = 28
 
+/* ── 攀岩岩点造型 (6 种不规则 SVG path) ── */
+const HOLD_SHAPES: string[] = [
+  /* Jug 碗型 */    'M-14,-8 C-14,-13 -8,-15 0,-15 C8,-15 14,-13 14,-8 C14,-2 10,7 5,11 C2,13 -2,13 -5,11 C-10,7 -14,-2 -14,-8Z',
+  /* Crimp 捏点 */  'M-16,-5 C-16,-10 -10,-12 0,-12 C10,-12 16,-10 16,-5 C16,1 11,6 7,8 C3,10 -3,10 -7,8 C-11,6 -16,1 -16,-5Z',
+  /* Pinch 侧拉 */  'M-12,-11 C-7,-15 3,-14 9,-10 C15,-6 16,0 13,5 C10,10 4,13 -1,12 C-7,11 -14,7 -15,1 C-16,-4 -15,-8 -12,-11Z',
+  /* Sloper 圆球 */ 'M-11,-10 C-5,-15 5,-15 11,-10 C16,-4 16,4 11,10 C5,15 -5,15 -11,10 C-16,4 -16,-4 -11,-10Z',
+  /* Volume 多面 */ 'M0,-14 L13,-6 L14,5 L6,13 L-6,13 L-14,5 L-13,-6Z',
+  /* Pocket 口袋 */ 'M-13,-7 C-13,-13 -6,-14 0,-14 C6,-14 13,-13 13,-7 C13,-2 9,3 6,5 C3,3 -3,3 -6,5 C-9,3 -13,-2 -13,-7Z',
+]
+
+function getHoldShapeIndex(label: string): number {
+  return strHash(label) % HOLD_SHAPES.length
+}
+function getHoldRotation(label: string): number {
+  return (strHash(label + '_rot') % 60) - 30
+}
+
 function strHash(s: string): number {
   let h = 0
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
@@ -1076,10 +1089,23 @@ const crRadarData = computed<RadarDatum[]>(() => {
 function animateClimbingWall() {
   if (!climbingSvgEl.value) return
   climbTimeline?.kill()
+
+  /* 清除上一轮 GSAP 残留的 inline style（CSS transform 会覆盖 SVG transform 属性，
+     导致切换岗位后节点位置与连线不一致）。
+     注意：不能用 gsap.set(el, { clearProps:'all' })，它会破坏 GSAP 内部的
+     SVG transform 分解缓存，导致 translate(x,y) 丢失、节点不可见。
+     直接 removeAttribute('style') 只清 CSS 行内样式，不影响 SVG 属性。 */
+  const svg = climbingSvgEl.value
+  svg.querySelectorAll('.cw-rope-path, .cw-hold, .cw-job-node').forEach(el => {
+    el.removeAttribute('style')
+  })
+  const climberEl = svg.querySelector('.cw-climber')
+  if (climberEl) climberEl.removeAttribute('style')
+
   const tl = gsap.timeline()
   climbTimeline = tl
 
-  const ropePaths = climbingSvgEl.value.querySelectorAll('.cw-rope-path')
+  const ropePaths = svg.querySelectorAll('.cw-rope-path')
   ropePaths.forEach((path, i) => {
     const el = path as SVGPathElement
     const len = el.getTotalLength()
@@ -1088,17 +1114,17 @@ function animateClimbingWall() {
     tl.to(el, { strokeDashoffset: 0, duration: 0.8, ease: 'power2.inOut' }, i * 0.3)
   })
 
-  const holds = climbingSvgEl.value.querySelectorAll('.cw-hold')
+  const holds = svg.querySelectorAll('.cw-hold')
   if (holds.length) {
-    tl.from(holds, { scale: 0, transformOrigin: 'center center', stagger: 0.03, ease: 'back.out(2)', duration: 0.3 }, '-=0.4')
+    tl.fromTo(holds, { scale: 0, transformOrigin: 'center center' }, { scale: 1, stagger: 0.03, ease: 'back.out(2)', duration: 0.3 }, '-=0.4')
   }
 
-  const jobNodes = climbingSvgEl.value.querySelectorAll('.cw-job-node')
+  const jobNodes = svg.querySelectorAll('.cw-job-node')
   if (jobNodes.length) {
-    tl.from(jobNodes, { scale: 0.8, opacity: 0.5, transformOrigin: 'center center', stagger: 0.1, ease: 'elastic.out(1, 0.5)', duration: 0.6 }, '-=0.3')
+    tl.fromTo(jobNodes, { scale: 0.8, opacity: 0.5, transformOrigin: 'center center' }, { scale: 1, opacity: 1, stagger: 0.1, ease: 'elastic.out(1, 0.5)', duration: 0.6 }, '-=0.3')
   }
 
-  const climber = climbingSvgEl.value.querySelector('.cw-climber')
+  const climber = svg.querySelector('.cw-climber')
   if (climber && ropePaths.length > 0) {
     const firstRope = ropePaths[0] as SVGPathElement
     tl.to(climber, {
@@ -1114,7 +1140,7 @@ watch(() => climbLayout.value, async () => { await nextTick(); animateClimbingWa
 /* ══ 报告文本 ══ */
 const reportText = computed(() => {
   const job = selectedJob.value
-  const user = userStore.currentUser?.name ?? '同学'
+  const user = userStore.currentUser?.name ?? '钟同学'
   if (!job) return ''
   const gaps = dimGaps.value.filter(d => d.gap > 0).map(d => `${d.name}（差 ${d.gap} 分）`).join('、') || '无明显差距'
   const plan = growthPlan.value.map(s => `**${s.phaseLabel}**：${s.goal}`).join('\n')
@@ -1280,24 +1306,6 @@ onMounted(async () => {
     bubbleResizeObserver = new ResizeObserver(() => initBubbleChart())
     bubbleResizeObserver.observe(bubbleSvgRef.value)
   }
-  // 后端七维同步（失败时保留 mock）
-  const studentId = userStore.currentUser?.id || 'stu_001'
-  fetchStudentPortrait(studentId)
-    .then(resp => {
-      if (resp.success && resp.data?.sub_dimensions) {
-        const sub = resp.data.sub_dimensions
-        backendStudentDim.value = {
-          专业技能: sub.skill?.score ?? 0,
-          证书资质: sub.cert?.score ?? 0,
-          创新能力: sub.innovation?.score ?? 0,
-          学习能力: sub.learning?.score ?? 0,
-          抗压能力: sub.stress?.score ?? 0,
-          沟通能力: sub.communication?.score ?? 0,
-          实习经验: sub.internship?.score ?? 0,
-        }
-      }
-    })
-    .catch(() => { /* 后端不可用时保留 mock */ })
 })
 
 onBeforeUnmount(() => {
@@ -1381,37 +1389,121 @@ onBeforeUnmount(() => {
             class="cr-cw-svg"
             :viewBox="`0 0 ${CW_W} ${CW_H}`"
             preserveAspectRatio="xMidYMid meet"
+            overflow="visible"
             fill="none"
           >
-            <defs></defs>
+            <defs>
+              <!-- 墙面纹理滤镜 -->
+              <filter id="cw-wall-tex" x="0" y="0" width="100%" height="100%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="5" result="noise"/>
+                <feDiffuseLighting in="noise" lighting-color="#e8e4de" surfaceScale="1.2" result="lit">
+                  <feDistantLight azimuth="225" elevation="50"/>
+                </feDiffuseLighting>
+                <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="0.12" k2="0.88" k3="0" k4="0"/>
+              </filter>
+              <!-- T-nut 螺栓孔网格 -->
+              <pattern id="cw-tnut" x="0" y="0" width="56" height="56" patternUnits="userSpaceOnUse">
+                <circle cx="28" cy="28" r="2.6" fill="rgba(0,0,0,0.13)"/>
+                <circle cx="28" cy="28" r="1" fill="rgba(0,0,0,0.07)"/>
+              </pattern>
+              <!-- 拼板缝隙 -->
+              <pattern id="cw-seams" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="0" y2="200" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="0" y1="0" x2="200" y2="0" stroke="rgba(0,0,0,0.03)" stroke-width="1"/>
+              </pattern>
+              <!-- 岩点渐变：已掌握 (绿) -->
+              <radialGradient id="cw-hold-green" cx="40%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#6DD4A8" stop-opacity="1"/>
+                <stop offset="60%" stop-color="#3DB88C" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2A8A66" stop-opacity="1"/>
+              </radialGradient>
+              <!-- 岩点渐变：未掌握 (橙红) -->
+              <radialGradient id="cw-hold-orange" cx="40%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#F4A574" stop-opacity="1"/>
+                <stop offset="60%" stop-color="#E8764A" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#C45530" stop-opacity="1"/>
+              </radialGradient>
+              <!-- 岩点渐变：未掌握 蓝(转岗) -->
+              <radialGradient id="cw-hold-blue" cx="40%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#8AB8E0" stop-opacity="1"/>
+                <stop offset="60%" stop-color="#5A9BD4" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#3A78B0" stop-opacity="1"/>
+              </radialGradient>
+              <!-- 岩点渐变：已掌握 蓝(转岗) -->
+              <radialGradient id="cw-hold-blue-ok" cx="40%" cy="35%" r="60%">
+                <stop offset="0%" stop-color="#7ED4B8" stop-opacity="1"/>
+                <stop offset="60%" stop-color="#4ABEAA" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#2E9C8A" stop-opacity="1"/>
+              </radialGradient>
+              <!-- 路线箭头 marker -->
+              <marker id="cw-arrow-promote" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(210,80,45,0.5)" stroke-width="1.2"/>
+              </marker>
+              <marker id="cw-arrow-transfer" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L8,3 L0,6" fill="none" stroke="rgba(74,130,200,0.45)" stroke-width="1.2"/>
+              </marker>
+              <!-- 节点渐变 -->
+              <radialGradient id="cw-node-idle" cx="45%" cy="40%" r="55%">
+                <stop offset="0%" stop-color="#F0ECE6" stop-opacity="1"/>
+                <stop offset="100%" stop-color="#D8D2C8" stop-opacity="1"/>
+              </radialGradient>
+              <!-- 节点投影滤镜 -->
+              <filter id="cw-node-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.22)"/>
+              </filter>
+              <filter id="cw-hold-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,0.28)"/>
+              </filter>
+            </defs>
 
-            <!-- 绳索路径 -->
-            <path
-              v-for="(rope, ri) in climbLayout.ropes" :key="'r'+ri"
-              class="cw-rope-path"
-              :d="rope.path"
-              :stroke="rope.type === 'promote' ? 'rgba(232,93,58,0.75)' : 'rgba(74,144,217,0.75)'"
-              stroke-width="2" fill="none"
-              stroke-linecap="round"
-            />
+            <!-- 墙面底色 + 纹理（大幅超出 viewBox，配合 overflow=visible 覆盖全容器） -->
+            <rect x="-400" y="-200" :width="CW_W + 800" :height="CW_H + 400" fill="#D8D4CC"/>
+            <rect x="-400" y="-200" :width="CW_W + 800" :height="CW_H + 400" fill="#E2DED6" filter="url(#cw-wall-tex)"/>
+            <rect x="-400" y="-200" :width="CW_W + 800" :height="CW_H + 400" fill="url(#cw-tnut)"/>
+            <rect x="-400" y="-200" :width="CW_W + 800" :height="CW_H + 400" fill="url(#cw-seams)"/>
 
-            <!-- 技能抓手 + 省略标记 -->
-            <g v-for="rope in climbLayout.ropes" :key="'h'+rope.fromId+rope.toId">
+            <!-- 路线色带（底层宽带 + 上层细线） -->
+            <g v-for="rope in climbLayout.ropes" :key="rope.type+':'+rope.fromId+'-'+rope.toId">
+              <path
+                class="cw-rope-tape"
+                :d="rope.path"
+                :stroke="rope.type === 'promote' ? 'rgba(210,80,45,0.18)' : 'rgba(74,130,200,0.15)'"
+                :stroke-width="rope.type === 'promote' ? 8 : 7"
+                fill="none" stroke-linecap="round" stroke-linejoin="round"
+              />
+              <path
+                class="cw-rope-path"
+                :d="rope.path"
+                :stroke="rope.type === 'promote' ? 'rgba(210,80,45,0.55)' : 'rgba(74,130,200,0.45)'"
+                :stroke-width="rope.type === 'promote' ? 2.5 : 2"
+                fill="none" stroke-linecap="round"
+                :stroke-dasharray="rope.type === 'transfer' ? '8 4' : 'none'"
+                :marker-end="rope.type === 'promote' ? 'url(#cw-arrow-promote)' : 'url(#cw-arrow-transfer)'"
+              />
+            </g>
+
+            <!-- 技能岩点 + 省略标记 -->
+            <g v-for="rope in climbLayout.ropes" :key="'h:'+rope.type+':'+rope.fromId+'-'+rope.toId">
               <g v-for="hold in rope.holds" :key="hold.label" class="cw-hold"
-                :transform="`translate(${hold.x},${hold.y})`"
+                :transform="`translate(${hold.x},${hold.y}) rotate(${getHoldRotation(hold.label)})`"
                 @click.stop="activeSkillEdge = { fromId: rope.fromId, toId: rope.toId, skills: rope.allSkills, fromTitle: JOB_PORTRAITS.find(j => j.id === rope.fromId)?.title ?? '', toTitle: JOB_PORTRAITS.find(j => j.id === rope.toId)?.title ?? '' }"
               >
-                <ellipse
-                  rx="18" ry="12"
+                <!-- 岩点造型 -->
+                <path
+                  :d="HOLD_SHAPES[getHoldShapeIndex(hold.label)]"
                   :fill="hold.mastered
-                    ? (hold.edgeType === 'promote' ? 'rgba(62,184,140,0.88)' : 'rgba(74,144,217,0.85)')
-                    : 'rgba(255,252,245,0.96)'"
-                  :stroke="hold.mastered
-                    ? (hold.edgeType === 'promote' ? '#2A9D6E' : '#2E78C0')
-                    : (hold.edgeType === 'promote' ? '#B8421A' : '#2E78C0')"
-                  :stroke-width="hold.mastered ? 2.2 : 1.8"
+                    ? (hold.edgeType === 'promote' ? 'url(#cw-hold-green)' : 'url(#cw-hold-blue-ok)')
+                    : (hold.edgeType === 'promote' ? 'url(#cw-hold-orange)' : 'url(#cw-hold-blue)')"
+                  :stroke="hold.mastered ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.12)'"
+                  stroke-width="0.8"
+                  filter="url(#cw-hold-shadow)"
                 />
-                <text y="3" text-anchor="middle" class="cw-hold-text">
+                <!-- 螺栓孔 -->
+                <circle r="2" fill="rgba(0,0,0,0.15)" cy="-1"/>
+                <circle r="0.8" fill="rgba(0,0,0,0.08)" cy="-1"/>
+                <!-- 技能标签（反转旋转，保持水平） -->
+                <text :y="18" text-anchor="middle" class="cw-hold-text"
+                  :transform="`rotate(${-getHoldRotation(hold.label)})`">
                   {{ hold.label.length > 6 ? hold.label.slice(0,6) + '…' : hold.label }}
                 </text>
                 <title>{{ hold.label }}{{ hold.mastered ? ' ✓ 已掌握' : ' ✗ 未掌握' }}（点击查看全部技能）</title>
@@ -1420,43 +1512,51 @@ onBeforeUnmount(() => {
                 :transform="`translate(${(rope.holds[rope.holds.length - 1]?.x ?? 0) + 38},${rope.holds[rope.holds.length - 1]?.y ?? 0})`"
                 @click.stop="activeSkillEdge = { fromId: rope.fromId, toId: rope.toId, skills: rope.allSkills, fromTitle: JOB_PORTRAITS.find(j => j.id === rope.fromId)?.title ?? '', toTitle: JOB_PORTRAITS.find(j => j.id === rope.toId)?.title ?? '' }"
               >
-                <ellipse rx="15" ry="10" fill="rgba(139,37,0,0.08)" stroke="rgba(139,37,0,0.25)" stroke-width="1.2" stroke-dasharray="3 2"/>
-                <text y="3" text-anchor="middle" class="cw-hold-text" style="fill:rgba(139,37,0,0.6)">+{{ rope.omittedCount }}</text>
+                <circle r="12" fill="rgba(120,115,105,0.12)" stroke="rgba(120,115,105,0.3)" stroke-width="1.2" stroke-dasharray="3 2"/>
+                <text y="4" text-anchor="middle" class="cw-hold-text" style="fill:rgba(100,90,78,0.7)">+{{ rope.omittedCount }}</text>
                 <title>还有 {{ rope.omittedCount }} 项技能，点击查看</title>
               </g>
             </g>
 
-            <!-- 岗位节点（圆形攀岩平台） -->
+            <!-- 岗位节点（立体攀岩平台） -->
             <g
               v-for="node in climbLayout.nodes" :key="node.id"
               class="cw-job-node"
               :transform="`translate(${node.x},${node.y})`"
               @click="selectJob(node.id)"
+              filter="url(#cw-node-shadow)"
             >
+              <!-- 选中态外发光环 -->
               <circle v-if="selectedJobId === node.id"
-                :r="CW_NODE_R + 6" fill="none"
-                :stroke="LINE_COLORS[node.lineId] ?? '#E85D3A'" stroke-width="1.5"
-                opacity="0.35"
+                :r="CW_NODE_R + 7" fill="none"
+                :stroke="LINE_COLORS[node.lineId] ?? '#E85D3A'" stroke-width="2"
+                opacity="0.3" class="cw-node-glow"
               />
+              <!-- 主体圆盘 -->
               <circle
                 :r="CW_NODE_R"
                 :fill="selectedJobId === node.id
                   ? (LINE_COLORS[node.lineId] ?? '#E85D3A')
-                  : 'rgba(237,229,214,0.95)'"
+                  : 'url(#cw-node-idle)'"
                 :stroke="LINE_COLORS[node.lineId] ?? '#E85D3A'"
-                :stroke-width="selectedJobId === node.id ? 3 : 2"
+                :stroke-width="selectedJobId === node.id ? 2.5 : 1.8"
               />
+              <!-- 高光弧线 -->
               <circle
-                :r="CW_NODE_R - 6" fill="none"
-                :stroke="selectedJobId === node.id ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.05)'"
+                :r="CW_NODE_R - 5" fill="none"
+                :stroke="selectedJobId === node.id ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.35)'"
                 stroke-width="0.8"
               />
+              <!-- 螺栓固定孔 -->
+              <circle r="2.5" :cy="-(CW_NODE_R - 3)" fill="rgba(0,0,0,0.12)"/>
+              <circle r="2.5" :cy="CW_NODE_R - 3" fill="rgba(0,0,0,0.12)"/>
+              <!-- 文字 -->
               <text y="-3" text-anchor="middle"
                 class="cw-node-title"
                 :class="{ 'cw-node-title--active': selectedJobId === node.id }">
                 {{ node.title.length > 6 ? node.title.slice(0,6) : node.title }}
               </text>
-              <text y="8" text-anchor="middle"
+              <text y="9" text-anchor="middle"
                 class="cw-node-sub"
                 :class="{ 'cw-node-sub--active': selectedJobId === node.id }">
                 {{ node.salaryRange }}
@@ -1464,16 +1564,19 @@ onBeforeUnmount(() => {
               <title>{{ node.title }} · {{ node.salaryRange }}</title>
             </g>
 
-            <!-- 攀登者标记 + 起点文字 -->
-            <g v-if="selectedJob" class="cw-climber">
-              <text
-                :x="climbLayout.nodes.find(n => n.id === selectedJobId)?.x ?? CW_W/2"
-                :y="(climbLayout.nodes.find(n => n.id === selectedJobId)?.y ?? CW_H - 50) + 24"
-                text-anchor="middle" font-size="16">🧗</text>
-              <text
-                :x="climbLayout.nodes.find(n => n.id === selectedJobId)?.x ?? CW_W/2"
-                :y="(climbLayout.nodes.find(n => n.id === selectedJobId)?.y ?? CW_H - 50) + 38"
-                text-anchor="middle" class="cw-origin-label">当前位置</text>
+            <!-- 攀登者标记 -->
+            <g v-if="selectedJob" class="cw-climber"
+              :transform="`translate(${climbLayout.nodes.find(n => n.id === selectedJobId)?.x ?? CW_W/2},${(climbLayout.nodes.find(n => n.id === selectedJobId)?.y ?? CW_H - 50) + 28})`"
+            >
+              <!-- 脉冲光圈 -->
+              <circle r="10" fill="none" stroke="rgba(210,80,45,0.4)" stroke-width="1.5" class="cw-climber-pulse"/>
+              <circle r="5" fill="rgba(210,80,45,0.15)"/>
+              <!-- 攀登者简笔图标 -->
+              <g transform="scale(0.6) translate(-12,-16)">
+                <circle cx="12" cy="4" r="3.5" fill="#5A534E" stroke="#fff" stroke-width="0.6"/>
+                <path d="M12,8 L12,18 M8,12 L16,12 M12,18 L8,24 M12,18 L16,24" stroke="#5A534E" stroke-width="2" stroke-linecap="round" fill="none"/>
+              </g>
+              <text y="22" text-anchor="middle" class="cw-origin-label">当前位置</text>
             </g>
 
           </svg>
@@ -1858,47 +1961,74 @@ onBeforeUnmount(() => {
 }
 .cr-cw-wrap {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  display: flex; justify-content: center; padding: 4px;
+  display: flex; justify-content: center; padding: 0;
   position: relative;
   background:
-    radial-gradient(ellipse at 50% 40%, transparent 0%, rgba(26,20,16,0.08) 100%),
-    radial-gradient(circle at 18% 25%, rgba(139,37,0,0.04) 0%, transparent 50%),
-    radial-gradient(circle at 75% 60%, rgba(139,37,0,0.03) 0%, transparent 45%),
-    radial-gradient(circle at 45% 80%, rgba(139,105,20,0.025) 0%, transparent 40%),
-    var(--bg-200);
+    /* T-nut 螺栓孔（与 SVG pattern 同参数） */
+    radial-gradient(circle at 28px 28px, rgba(0,0,0,0.13) 2.3px, transparent 2.6px),
+    /* 拼板缝隙 */
+    repeating-linear-gradient(90deg, transparent, transparent 199px, rgba(0,0,0,0.04) 199px, rgba(0,0,0,0.04) 200px),
+    repeating-linear-gradient(0deg, transparent, transparent 199px, rgba(0,0,0,0.03) 199px, rgba(0,0,0,0.03) 200px),
+    /* 墙面底色 */
+    #D8D4CC;
+  background-size: 56px 56px, 200px 200px, 200px 200px, auto;
 }
 .cr-cw-wrap::-webkit-scrollbar { width: 3px; }
-.cr-cw-wrap::-webkit-scrollbar-thumb { background: rgba(139,37,0,0.2); }
+.cr-cw-wrap::-webkit-scrollbar-thumb { background: rgba(100,95,88,0.3); border-radius: 2px; }
 .cr-cw-svg { display: block; width: 100%; height: auto; cursor: default; }
-.cw-job-node { cursor: pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.22)); }
-.cw-job-node:hover circle { filter: brightness(1.1); }
-.cw-node-title { font-size: 12px; fill: #333; font-weight: 600; pointer-events: none; }
+
+/* ── 岗位节点 ── */
+.cw-job-node { cursor: pointer; transition: transform 200ms ease; }
+.cw-job-node:hover { transform: scale(1.04); }
+.cw-node-title { font-size: 11px; fill: #3D3D3D; font-weight: 600; pointer-events: none; }
 .cw-node-title--active { fill: #fff; }
-.cw-node-sub { font-size: 10px; fill: #5C4A38; pointer-events: none; }
-.cw-node-sub--active { fill: rgba(255,255,255,0.9); }
-.cw-hold { cursor: pointer; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.18)); }
-.cw-hold:hover ellipse { filter: brightness(1.2); }
-.cw-hold--more { cursor: pointer; opacity: 0.85; }
+.cw-node-sub { font-size: 9px; fill: #6B6560; pointer-events: none; }
+.cw-node-sub--active { fill: rgba(255,255,255,0.88); }
+.cw-node-glow { animation: cw-glow-pulse 2s ease-in-out infinite; }
+@keyframes cw-glow-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.45; }
+}
+
+/* ── 岩点 ── */
+.cw-hold { cursor: pointer; transition: transform 150ms ease; }
+.cw-hold:hover { transform: scale(1.12); }
+.cw-hold--more { cursor: pointer; opacity: 0.8; }
 .cw-hold--more:hover { opacity: 1; }
-.cw-hold-text { font-size: 10px; fill: #3D2B1A; pointer-events: none; font-weight: 600; }
-.cw-origin-label { font-size: 9px; fill: var(--primary-100, #8B2500); font-weight: 600; font-family: var(--font-ui); }
+.cw-hold-text { font-size: 9px; fill: #4A4540; pointer-events: none; font-weight: 600; }
+
+/* ── 路线色带 ── */
+.cw-rope-tape { pointer-events: none; }
+.cw-rope-path { transition: stroke-width 250ms ease, stroke 250ms ease; pointer-events: stroke; }
+.cw-rope-path:hover { stroke-width: 4 !important; }
+
+/* ── 攀登者 ── */
+.cw-origin-label { font-size: 8px; fill: #8B5E3C; font-weight: 600; font-family: var(--font-ui); }
+.cw-climber-pulse {
+  animation: cw-pulse 2s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes cw-pulse {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ── 图例 ── */
 .cw-legend-overlay {
-  position: absolute; top: 4px; left: 4px; z-index: 2;
+  position: absolute; top: 6px; left: 6px; z-index: 2;
   display: flex; flex-direction: column; gap: 5px;
   padding: 6px 10px; border-radius: 6px;
-  background: rgba(245,240,232,0.88); backdrop-filter: blur(4px);
-  border: 1px solid rgba(139,37,0,0.08);
+  background: rgba(230,226,220,0.92); backdrop-filter: blur(4px);
+  border: 1px solid rgba(0,0,0,0.06);
   pointer-events: none;
 }
-.cw-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #5C4A38; font-family: var(--font-ui); white-space: nowrap; }
+.cw-legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600; color: #5A5550; font-family: var(--font-ui); white-space: nowrap; }
 .cw-legend-line { display: inline-block; width: 20px; height: 3px; border-radius: 2px; flex-shrink: 0; }
-.cw-legend-line--promote { background: rgba(232,93,58,0.6); }
-.cw-legend-line--transfer { background: rgba(74,144,217,0.6); }
-.cw-legend-dot { display: inline-block; width: 12px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.cw-legend-dot--mastered { background: rgba(62,184,140,0.5); border: 1.4px solid #3DB88C; }
-.cw-legend-dot--unmastered { background: rgba(237,229,214,0.5); border: 1.4px dashed #E85D3A; }
-.cw-rope-path { transition: stroke-width 300ms ease; }
-.cw-rope-path:hover { stroke-width: 3; }
+.cw-legend-line--promote { background: rgba(210,80,45,0.5); }
+.cw-legend-line--transfer { background: rgba(74,130,200,0.45); border-top: 1px dashed rgba(74,130,200,0.6); }
+.cw-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.cw-legend-dot--mastered { background: #3DB88C; }
+.cw-legend-dot--unmastered { background: #E8764A; }
 /* ── 引导覆盖层 ── */
 .cr-guide-overlay {
   position: absolute; inset: 0; z-index: 5;

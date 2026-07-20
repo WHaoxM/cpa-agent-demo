@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "data": {
+    "fuzzy_matches": [
+      {
+        "role_name": "前端开发工程师",
+        "score": 0.92
+      }
+    ],
+    "semantic_matches": []
+  }
+}

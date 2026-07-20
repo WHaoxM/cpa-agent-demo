@@ -26,6 +26,9 @@ import App from './App.vue'
 import router from './router'
 import pinia from './stores/pinia'
 import { useThemeStore } from './stores/theme'
+import { seedResumeStore } from '@/mock/resumeSeed'
+
+seedResumeStore()
 
 const app = createApp(App)
 

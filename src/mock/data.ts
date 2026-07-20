@@ -22,8 +22,8 @@ export const CURRENT_USER_ID = 'student_001'
 export const mockUsers: User[] = [
   {
     id: 'student_001',
-    username: '123456',
-    name: '张同学',
+    username: 'student001',
+    name: '钟同学',
     email: 'student001@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
     role: UserRole.STUDENT,
@@ -34,7 +34,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student_002',
-    username: '123456',
+    username: 'student002',
     name: '李同学',
     email: 'student002@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -45,7 +45,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student_003',
-    username: '123456',
+    username: 'student003',
     name: '王同学',
     email: 'student003@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -56,7 +56,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'admin_001',
-    username: '123456',
+    username: 'admin001',
     name: '管理员',
     email: 'admin001@example.com',
     avatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
@@ -93,6 +93,7 @@ export const mockCourses: Course[] = [
     title: 'Vue 3 前端开发实战',
     description: '从零开始学习 Vue 3，掌握现代前端开发技术栈，包括 Composition API、Pinia、Vue Router 等核心技术。',
     skillTags: ['专业技能', '学习能力'],
+    externalUrl: 'https://www.bilibili.com/video/BV1Zy4y1K7SH/',
     cover: 'https://picsum.photos/400/300?random=1',
     categoryId: 'cat_001',
     teacherId: 'teacher_001',
@@ -110,6 +111,7 @@ export const mockCourses: Course[] = [
     title: 'TypeScript 进阶开发',
     description: '深入学习 TypeScript 高级特性，掌握类型体操、泛型编程等进阶技术。',
     skillTags: ['专业技能', '创新能力'],
+    externalUrl: 'https://www.bilibili.com/video/BV1Xy4y1v7S2/',
     cover: 'https://picsum.photos/400/300?random=2',
     categoryId: 'cat_001',
     teacherId: 'teacher_001',
@@ -132,6 +134,7 @@ export const mockCourses: Course[] = [
     title: 'Node.js 后端开发',
     description: '学习 Node.js 服务端开发，掌握 Express、Koa 等主流框架。',
     skillTags: ['专业技能', '实习能力'],
+    externalUrl: 'https://www.bilibili.com/video/BV1a34y167AZ/',
     cover: 'https://picsum.photos/400/300?random=3',
     categoryId: 'cat_002',
     teacherId: 'teacher_001',
@@ -154,6 +157,7 @@ export const mockCourses: Course[] = [
     title: 'Python 人工智能入门',
     description: '从零开始学习 Python 和人工智能基础，包括机器学习算法和深度学习框架。',
     skillTags: ['专业技能', '创新能力', '学习能力'],
+    externalUrl: 'https://www.bilibili.com/video/BV1Fzszz4Ek7/',
     cover: 'https://picsum.photos/400/300?random=4',
     categoryId: 'cat_003',
     teacherId: 'teacher_001',
@@ -175,6 +179,7 @@ export const mockCourses: Course[] = [
     id: 'course_005',
     title: 'MySQL 数据库设计与优化',
     description: '深入学习 MySQL 数据库设计、SQL 优化和高可用架构。',
+    externalUrl: 'https://www.bilibili.com/video/BV1iF411z7Pu/',
     cover: 'https://picsum.photos/400/300?random=5',
     categoryId: 'cat_004',
     teacherId: 'teacher_001',
@@ -466,7 +471,7 @@ export const mockClasses: ClassData[] = [
 // AI 预设回复
 export const mockAIResponses: Record<string, string[]> = {
   '课程答疑': [
-    '关于 Vue 3 的响应式系统，它使用了 ES6 的 Proxy 对象来替代 Vue 2 中的 Object.defineProperty。这使得 Vue 3 能够更精确地追踪对象属性的变化，同时也支持 Map、Set 等数据结构。\n\n核心变化包括：\n1. **深层响应式**：Proxy 天然支持嵌套对象，无需递归遍历\n2. **数组变更检测**：不再需要特殊的变更方法\n3. **新属性添加**：无需 `Vue.set()`，直接赋值即可触发更新',
+    '关于 Vue 3 的响应式系统，它使用了 ES6 的 Proxy 对象来替代 Vue 2 中的 Object.defineProperty。这使得 Vue 3 能够更精确地追踪对象属性的变化，同时也支持 Map、Set 等数据结构。\n\n### 核心变化\n\n1. **深层响应式**：Proxy 天然支持嵌套对象，无需递归遍历\n2. **数组变更检测**：不再需要特殊的变更方法\n3. **新属性添加**：无需 `Vue.set()`，直接赋值即可触发更新\n\n```ts\nimport { ref, reactive } from \'vue\'\n\nconst count = ref(0)\nconst state = reactive({ name: \'CPA\' })\n```\n\n> 记住：模板里 `ref` 会自动解包，脚本里要写 `.value`。',
     'Composition API 是 Vue 3 引入的新特性，它允许我们将相关功能的代码组织在一起，而不是按照选项类型分散在不同的生命周期钩子中。\n\n推荐的使用模式：\n- 将复杂逻辑抽取为 `composable` 函数（如 `useAuth`、`useFetch`）\n- 用 `<script setup>` 语法糖简化样板代码\n- 配合 TypeScript 获得更好的类型推导',
     'TypeScript 的主要优势在于提供了静态类型检查，可以在编译时发现潜在的错误。它还提供了更好的 IDE 支持，包括自动补全、重构和类型提示。\n\n在 Vue 项目中的实践要点：\n1. 为 Props 定义 interface 而非运行时声明\n2. 用泛型约束 `ref<T>()` 和 `reactive<T>()`\n3. 为 store 和 API 返回值定义完整类型',
     'Pinia 是 Vue 3 推荐的状态管理库，相比 Vuex 有以下优势：\n1. **更简洁的 API**：不需要 mutations，直接修改 state\n2. **完整的 TypeScript 支持**：自动推导 state、getters、actions 类型\n3. **模块化设计**：每个 store 独立定义，无需注册到全局\n4. **DevTools 支持**：与 Vue DevTools 深度集成',
@@ -500,31 +505,54 @@ export const mockAIResponses: Record<string, string[]> = {
   ],
 }
 
-// AI 思考过程模板
+// AI 思考过程模板（Claude 式内部独白，展开后按段落展示）
 export const mockThinkingTemplates: Record<string, string[][]> = {
   '课程答疑': [
-    ['正在理解你的课程相关问题...', '检索课程知识点数据库...', '匹配最相关的知识点解释...', '组织回答内容...'],
-    ['分析问题涉及的技术概念...', '查找相关文档和示例...', '结合你的学习进度整理要点...'],
-    ['理解问题上下文...', '检索 Vue 3 / TypeScript 知识库...', '筛选核心知识点...', '生成结构化回答...'],
+    [
+      '用户在问课程概念。我先判断核心对象是响应式、Composition API，还是路由/状态管理。',
+      '这类问题最容易卡在「知道名词但不会用」。回答应先给一句结论，再补关键差异和最小示例。',
+      '我会控制篇幅，只保留对下一步学习最有用的 2~3 个要点。',
+    ],
+    [
+      '问题看起来偏概念澄清。我对照常见误区：模板自动解包、ref 与 reactive 的取舍、类型标注位置。',
+      '如果能落到一个可运行片段，会比纯定义更有帮助。',
+    ],
   ],
   '解题指导': [
-    ['分析题目考察的知识点...', '检索相关解题模式...', '整理解题步骤和关键思路...'],
-    ['理解题目要求...', '回顾相关算法和数据结构...', '构建解题框架...', '验证思路正确性...'],
-    ['解析题目关键词...', '匹配类似题型的解法模式...', '组织分步解答...'],
+    [
+      '先拆题目：考察的是 API 语义、类型约束，还是异步/布局取舍。',
+      '解题路径应是「判断题型 → 选定模式 → 分步落地」，避免一上来堆完整代码。',
+      '最后补一个常见陷阱，帮助用户自检。',
+    ],
+    [
+      '用户要的是思路，不是标准答案全文。我会强调区分原则和检查清单。',
+    ],
   ],
   '学习建议': [
-    ['读取你的学习记录和进度...', '分析当前技能水平分布...', '对比目标岗位的能力要求...', '生成个性化学习建议...'],
-    ['评估你的学习阶段...', '参考行业学习路径数据...', '筛选最适合你的下一步行动...'],
-    ['分析你的学习数据...', '识别知识盲区和薄弱项...', '规划优先级和时间分配...', '整理建议方案...'],
+    [
+      '先看学习记录能说明什么：最近是否在堆新概念，还是已经到了需要项目串联的阶段。',
+      '建议按一周粒度拆，每步都要有可验证产出，而不是再开一条新赛道。',
+      '优先级：能立刻转化到简历/作品集的动作，高于继续拓宽知识面。',
+    ],
+    [
+      '用户问「现在该学什么」。我应先给一个主线，再附带可选分支，避免并列太多方向。',
+    ],
   ],
   '能力补齐': [
-    ['加载你的技能评估数据...', '对比目标方向的能力模型...', '识别差距最大的 2~3 项能力...', '制定补齐优先级...'],
-    ['分析你当前的能力画像...', '参考岗位 JD 高频要求...', '计算能力匹配度...', '整理补齐路径...'],
-    ['读取技能雷达图数据...', '与同阶段学习者对比...', '找出最具性价比的提升方向...'],
+    [
+      '能力补齐要回答「差在哪」和「先补哪」。我先锁定 2~3 个高频短板。',
+      '校招场景里，状态管理、路由权限、接口联调通常比多学一个框架更划算。',
+      '给出可执行动作，并说明为什么先做这些。',
+    ],
+    [
+      '对比目标方向与当前画像后，应把建议收敛成短期/中期两层，避免清单过长。',
+    ],
   ],
   '默认': [
-    ['正在理解你的问题...', '检索相关知识和数据...', '组织回答内容...'],
-    ['分析问题意图...', '匹配最佳回答策略...', '生成建议...'],
+    [
+      '先确认用户意图：概念解释、路径规划，还是下一步行动建议。',
+      '在信息不足时，我会给一个可用的起点，并追问一个关键约束。',
+    ],
   ],
 }
 
@@ -533,7 +561,7 @@ export const mockAIMessages: AIMessage[] = [
   {
     id: 'ai_msg_001',
     role: 'assistant',
-    content: '你好，这里是ai助手。你可以直接提问课程重点、解题思路、技能补齐顺序，或者结合目标方向讨论下一步学习安排。',
+    content: '你好。\n\n可以直接问我：\n- 课程重点与概念梳理\n- 解题思路与练习建议\n- 技能补齐顺序\n- 结合目标方向的下一步安排\n\n从下面任选一个话题开始，或直接输入你的问题。',
     timestamp: '2024-02-10 08:00',
   },
 ]
@@ -583,6 +611,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '前端开发工程师',
       competitivenessScore: 84,
+      completenessScore: 92,
       sevenDim: [
         { name: '基础知识', score: 86 },
         { name: '工程能力', score: 80 },
@@ -591,6 +620,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 81 },
         { name: '沟通协作', score: 85 },
         { name: '学习效率', score: 90 },
+      ],
+      skillTags: [
+        { name: 'Vue 3', weight: 0.92, category: '前端' },
+        { name: 'TypeScript', weight: 0.88, category: '前端' },
+        { name: '工程化', weight: 0.80, category: '前端' },
+        { name: 'CSS / 动画', weight: 0.76, category: '前端' },
+        { name: '算法', weight: 0.55, category: '通用' },
       ],
     },
   },
@@ -602,6 +638,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '全栈开发工程师',
       competitivenessScore: 76,
+      completenessScore: 85,
       sevenDim: [
         { name: '基础知识', score: 78 },
         { name: '工程能力', score: 75 },
@@ -610,6 +647,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 74 },
         { name: '沟通协作', score: 79 },
         { name: '学习效率', score: 82 },
+      ],
+      skillTags: [
+        { name: 'Vue 3', weight: 0.82, category: '前端' },
+        { name: 'Node.js', weight: 0.75, category: '后端' },
+        { name: 'TypeScript', weight: 0.72, category: '前端' },
+        { name: 'MySQL', weight: 0.60, category: '后端' },
+        { name: '性能优化', weight: 0.48, category: '前端' },
       ],
     },
   },
@@ -621,6 +665,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '前端工程化开发',
       competitivenessScore: 69,
+      completenessScore: 78,
       sevenDim: [
         { name: '基础知识', score: 72 },
         { name: '工程能力', score: 77 },
@@ -629,6 +674,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 64 },
         { name: '沟通协作', score: 71 },
         { name: '学习效率', score: 74 },
+      ],
+      skillTags: [
+        { name: 'Webpack / Vite', weight: 0.82, category: '前端' },
+        { name: 'Git 协作', weight: 0.76, category: '通用' },
+        { name: 'ESLint / 规范', weight: 0.70, category: '前端' },
+        { name: 'CI/CD', weight: 0.52, category: '通用' },
+        { name: '单元测试', weight: 0.44, category: '通用' },
       ],
     },
   },
@@ -640,6 +692,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '数据可视化开发',
       competitivenessScore: 63,
+      completenessScore: 72,
       sevenDim: [
         { name: '基础知识', score: 64 },
         { name: '工程能力', score: 62 },
@@ -648,6 +701,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 59 },
         { name: '沟通协作', score: 70 },
         { name: '学习效率', score: 68 },
+      ],
+      skillTags: [
+        { name: 'D3.js', weight: 0.78, category: '可视化' },
+        { name: 'ECharts', weight: 0.74, category: '可视化' },
+        { name: 'JavaScript', weight: 0.68, category: '前端' },
+        { name: 'Canvas / SVG', weight: 0.60, category: '可视化' },
+        { name: 'Vue 3', weight: 0.50, category: '前端' },
       ],
     },
   },
@@ -659,6 +719,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '初级前端开发',
       competitivenessScore: 58,
+      completenessScore: 65,
       sevenDim: [
         { name: '基础知识', score: 60 },
         { name: '工程能力', score: 54 },
@@ -667,6 +728,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 52 },
         { name: '沟通协作', score: 64 },
         { name: '学习效率', score: 66 },
+      ],
+      skillTags: [
+        { name: 'HTML / CSS', weight: 0.72, category: '前端' },
+        { name: 'JavaScript', weight: 0.65, category: '前端' },
+        { name: 'Vue 基础', weight: 0.58, category: '前端' },
+        { name: '数据结构', weight: 0.42, category: '通用' },
+        { name: '项目实践', weight: 0.38, category: '通用' },
       ],
     },
   },
@@ -678,6 +746,7 @@ export const mockReportRecords: ReportRecord[] = [
     snapshot: {
       predictedRole: '前端实习生',
       competitivenessScore: 51,
+      completenessScore: 58,
       sevenDim: [
         { name: '基础知识', score: 55 },
         { name: '工程能力', score: 48 },
@@ -686,6 +755,13 @@ export const mockReportRecords: ReportRecord[] = [
         { name: '项目经验', score: 46 },
         { name: '沟通协作', score: 58 },
         { name: '学习效率', score: 60 },
+      ],
+      skillTags: [
+        { name: 'HTML / CSS', weight: 0.60, category: '前端' },
+        { name: 'JavaScript 基础', weight: 0.52, category: '前端' },
+        { name: 'Git 基础', weight: 0.45, category: '通用' },
+        { name: 'Vue 入门', weight: 0.38, category: '前端' },
+        { name: '算法基础', weight: 0.32, category: '通用' },
       ],
     },
   },

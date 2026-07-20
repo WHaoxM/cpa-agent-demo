@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import type { UploadRawFile } from 'element-plus'
-import { fetchKnowledgeBase, uploadKnowledgeBase, deleteKnowledgeBase, type KbItem } from '@/api/backend'
+import { deleteKnowledgeBase, listKnowledgeBase, uploadKnowledgeBase } from '@/api/admin'
 
 // ─── 类型定义 ───
 interface KbDocument {
@@ -17,51 +17,43 @@ interface KbDocument {
   chunks: number
 }
 
+function mapKbRow(row: Record<string, unknown>): KbDocument {
+  const statusRaw = String(row.status ?? 'published')
+  const status: KbDocument['status'] =
+    statusRaw === 'draft' || statusRaw === 'indexing'
+      ? 'indexing'
+      : statusRaw === 'error'
+        ? 'error'
+        : 'indexed'
+  return {
+    id: String(row.id ?? ''),
+    filename: String(row.title ?? row.filename ?? row.id ?? 'document'),
+    category: String(row.type ?? row.category ?? '其他'),
+    size: Number(row.size ?? 0),
+    uploadedAt: String(row.created_at ?? row.uploadedAt ?? '').replace('T', ' ').slice(0, 16),
+    status,
+    chunks: Number(row.chunks ?? 0),
+  }
+}
+
 // ─── 状态 ───
 const uploading = ref(false)
 const searchKeyword = ref('')
 const filterCategory = ref('')
 
-const categories = ['岗位分析', '行业报告', '技术文档', '政策法规', '其他']
+const categories = ['岗位分析', '行业报告', '技术文档', '政策法规', '其他', 'skill', 'career_path']
 
-const documents = ref<KbDocument[]>([
-  {
-    id: 'kb_001',
-    filename: '2024互联网行业人才报告.pdf',
-    category: '行业报告',
-    size: 4194304,
-    uploadedAt: '2024-03-01 10:00',
-    status: 'indexed',
-    chunks: 128,
-  },
-  {
-    id: 'kb_002',
-    filename: '前端工程师岗位能力要求.docx',
-    category: '岗位分析',
-    size: 102400,
-    uploadedAt: '2024-03-03 14:30',
-    status: 'indexed',
-    chunks: 32,
-  },
-  {
-    id: 'kb_003',
-    filename: 'Java后端技术栈标准.md',
-    category: '技术文档',
-    size: 51200,
-    uploadedAt: '2024-03-08 09:45',
-    status: 'indexed',
-    chunks: 18,
-  },
-  {
-    id: 'kb_004',
-    filename: 'AI大模型应用岗位调研.pdf',
-    category: '岗位分析',
-    size: 2097152,
-    uploadedAt: '2024-03-12 16:20',
-    status: 'indexing',
-    chunks: 0,
-  },
-])
+const documents = ref<KbDocument[]>([])
+
+onMounted(async () => {
+  try {
+    const env = await listKnowledgeBase()
+    const rows = (env.data as Record<string, unknown>[] | undefined) ?? []
+    documents.value = rows.map(mapKbRow)
+  } catch {
+    ElMessage.warning('知识库列表加载失败，显示为空')
+  }
+})
 
 const newDocCategory = ref('岗位分析')
 
@@ -75,36 +67,6 @@ const filteredDocs = computed(() => {
 
 const totalIndexed = computed(() => documents.value.filter(d => d.status === 'indexed').length)
 const totalChunks = computed(() => documents.value.reduce((s, d) => s + d.chunks, 0))
-
-// ─── 后端状态映射 ───
-function mapKbStatus(s?: string | null): KbDocument['status'] {
-  if (s === 'indexed' || s === 'done' || s === 'completed') return 'indexed'
-  if (s === 'indexing' || s === 'processing' || s === 'running') return 'indexing'
-  if (s === 'error' || s === 'failed') return 'error'
-  return 'indexing'
-}
-
-// ─── 后端数据同步（失败时保留 mock）───
-onMounted(async () => {
-  try {
-    const resp = await fetchKnowledgeBase()
-    if (resp.success && resp.data && resp.data.length > 0) {
-      documents.value = resp.data.map((item: KbItem) => ({
-        id: item.id,
-        filename: item.title || item.id,
-        category: item.type || '其他',
-        size: 0,
-        uploadedAt: item.created_at
-          ? new Date(item.created_at).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
-          : '',
-        status: mapKbStatus(item.status),
-        chunks: 0,
-      }))
-    }
-  } catch {
-    // 后端不可用时保留 mock 数据
-  }
-})
 
 // ─── 工具函数 ───
 function formatSize(bytes: number): string {
@@ -121,32 +83,18 @@ function statusType(s: KbDocument['status']): '' | 'success' | 'warning' | 'dang
   return { indexing: 'warning', indexed: 'success', error: 'danger' }[s] as '' | 'success' | 'warning' | 'danger' | 'info'
 }
 
-// ─── 上传处理 ───
+// ─── 上传处理（API 调用点）───
 async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
   uploading.value = true
   try {
-    const resp = await uploadKnowledgeBase(rawFile.name, newDocCategory.value)
-    const newId = resp.success && resp.data ? resp.data.id : `kb_${Date.now()}`
+    const res = await uploadKnowledgeBase({
+      title: rawFile.name,
+      type: newDocCategory.value,
+      status: 'draft',
+    })
+    const newId = String((res.data as { id?: string } | undefined)?.id ?? `kb_${Date.now()}`)
     const newDoc: KbDocument = {
       id: newId,
-      filename: rawFile.name,
-      category: newDocCategory.value,
-      size: rawFile.size,
-      uploadedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
-      status: 'indexing',
-      chunks: 0,
-    }
-    documents.value.unshift(newDoc)
-    setTimeout(() => {
-      const d = documents.value.find(d => d.id === newId)
-      if (d) { d.status = 'indexed'; d.chunks = Math.floor(rawFile.size / 1800) + 5 }
-    }, 3000)
-    ElMessage.success(`「${rawFile.name}」上传成功，正在向量化入库`)
-    return false
-  } catch {
-    // 后端不可用时 fallback 到本地 mock
-    const newDoc: KbDocument = {
-      id: `kb_${Date.now()}`,
       filename: rawFile.name,
       category: newDocCategory.value,
       size: rawFile.size,
@@ -159,7 +107,10 @@ async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
       const d = documents.value.find(d => d.id === newDoc.id)
       if (d) { d.status = 'indexed'; d.chunks = Math.floor(rawFile.size / 1800) + 5 }
     }, 3000)
-    ElMessage.success(`「${rawFile.name}」上传成功（本地模式）`)
+    ElMessage.success(`「${rawFile.name}」上传成功，正在向量化入库`)
+    return false
+  } catch {
+    ElMessage.error('上传失败，请重试')
     return false
   } finally {
     uploading.value = false
@@ -175,9 +126,8 @@ function beforeUpload(file: UploadRawFile) {
   return handleUpload(file)
 }
 
-// ─── 重建索引 ───
+// ─── 重建索引（API 调用点）───
 async function onReindex(row: KbDocument) {
-  // 后端暂无重建索引接口，仅本地模拟
   row.status = 'indexing'
   row.chunks = 0
   ElMessage.info('已重新触发向量化')
@@ -187,7 +137,7 @@ async function onReindex(row: KbDocument) {
   }, 2500)
 }
 
-// ─── 删除 ───
+// ─── 删除（API 调用点）───
 async function onDelete(row: KbDocument) {
   await ElMessageBox.confirm(`确认从知识库移除「${row.filename}」？该文档的所有向量块将被清除。`, '删除确认', {
     type: 'warning',
@@ -196,11 +146,11 @@ async function onDelete(row: KbDocument) {
   })
   try {
     await deleteKnowledgeBase(row.id)
+    documents.value = documents.value.filter(d => d.id !== row.id)
+    ElMessage.success('已移除')
   } catch {
-    // 后端不可用时仍从本地移除
+    ElMessage.error('删除失败')
   }
-  documents.value = documents.value.filter(d => d.id !== row.id)
-  ElMessage.success('已移除')
 }
 </script>
 

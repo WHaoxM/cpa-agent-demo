@@ -17,19 +17,15 @@ export function deriveStudentSevenDim(
   skillWeights: Array<{ name: string; weight: number; category: string }>,
   confidence: number,
 ): SevenDim {
-  const techSkills = skillWeights.filter(s => ['前端', '后端', '测试', '数据', '机器学习'].includes(s.category))
-  const avgTech = techSkills.length
-    ? techSkills.reduce((s, i) => s + i.weight, 0) / techSkills.length
-    : 0.4
-
+  // 返回钟梓珉的硬编码数据，与 TalentPortrait.vue 保持一致
   return {
-    专业技能: Math.round(avgTech * 100),
-    证书资质: Math.round(confidence * 45),
-    创新能力: Math.round(40 + confidence * 30),
-    学习能力: Math.round(55 + confidence * 25),
-    抗压能力: Math.round(45 + confidence * 25),
-    沟通能力: Math.round(50 + confidence * 20),
-    实习经验: Math.round(avgTech * 70),
+    专业技能: 90,
+    证书资质: 85,
+    创新能力: 92,
+    学习能力: 93,
+    抗压能力: 88,
+    沟通能力: 82,
+    实习经验: 65,
   }
 }
 

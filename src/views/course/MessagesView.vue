@@ -2,70 +2,16 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
+import { listMessages, markMessageRead, type InboxMessage } from '@/api/messages'
+import { DEMO_STUDENT_ID } from '@/api/config'
+import { useUserStore } from '@/stores'
 
 type MsgType = '系统消息'
+type Msg = InboxMessage
 
-type Msg = {
-  id: string
-  title: string
-  content: string
-  time: string
-  type: MsgType
-  read: boolean
-}
-
+const userStore = useUserStore()
 const tab = ref<MsgType | '全部'>('全部')
-
-const list = ref<Msg[]>([
-  {
-    id: 'm_01',
-    title: '学习中心新主题上线',
-    content: '现在支持"宝石蓝 / 温暖 / 宣纸 / 落日"四种主题，切换更丝滑。',
-    time: '2026-02-07 14:12',
-    type: '系统消息',
-    read: false,
-  },
-  {
-    id: 'm_02',
-    title: '《Vue3 + TypeScript 工程化实战》新增章节',
-    content: '已更新：路由守卫与鉴权最佳实践。建议优先学习。',
-    time: '2026-02-06 20:30',
-    type: '系统消息',
-    read: false,
-  },
-  {
-    id: 'm_03',
-    title: '本周学习提醒',
-    content: '保持节奏：每次 45 分钟深度学习 + 10 分钟复盘。',
-    time: '2026-02-03 09:00',
-    type: '系统消息',
-    read: true,
-  },
-  {
-    id: 'm_04',
-    title: '安全提醒：密码已 90 天未更换',
-    content: '建议定期更换密码以保护账户安全，前往设置页即可修改。',
-    time: '2026-01-28 10:00',
-    type: '系统消息',
-    read: true,
-  },
-  {
-    id: 'm_05',
-    title: '职业分析功能升级',
-    content: '新增薪资趋势图、城市热力对比，帮助你更全面地了解目标岗位。',
-    time: '2026-01-20 16:45',
-    type: '系统消息',
-    read: true,
-  },
-  {
-    id: 'm_06',
-    title: '系统维护通知',
-    content: '2026-01-15 02:00–06:00 进行例行维护，届时部分功能可能暂不可用。',
-    time: '2026-01-14 18:00',
-    type: '系统消息',
-    read: true,
-  },
-])
+const list = ref<Msg[]>([])
 
 const filtered = computed(() => {
   return list.value.filter((x) => (tab.value === '全部' ? true : x.type === tab.value))
@@ -74,16 +20,18 @@ const filtered = computed(() => {
 const unreadCount = computed(() => list.value.filter((x) => !x.read).length)
 const latestTime = computed(() => list.value.length ? list.value[0]!.time.split(' ')[0] : '—')
 
-function markRead(id: string) {
+async function markRead(id: string) {
   const m = list.value.find((x) => x.id === id)
   if (m) m.read = true
+  const uid = userStore.currentUser?.id || DEMO_STUDENT_ID
+  await markMessageRead(id, uid).catch(() => {})
 }
 
 /* ── 进场动画 ── */
 let observer: IntersectionObserver | null = null
 
-onMounted(async () => {
-  await nextTick()
+function bindReveal() {
+  observer?.disconnect()
   observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -97,6 +45,16 @@ onMounted(async () => {
     ;(el as HTMLElement).style.transitionDelay = `${i * 80}ms`
     observer?.observe(el)
   })
+}
+
+onMounted(async () => {
+  try {
+    list.value = await listMessages(userStore.currentUser?.id || DEMO_STUDENT_ID)
+  } catch (e) {
+    console.warn('[messages] load failed', e)
+  }
+  await nextTick()
+  bindReveal()
 })
 
 onUnmounted(() => { observer?.disconnect() })

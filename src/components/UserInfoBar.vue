@@ -69,7 +69,7 @@ async function onLogout() {
             <span v-else class="uib__avatar-char">{{ avatarChar }}</span>
           </div>
           <div class="uib__text">
-            <div class="uib__name">{{ userStore.currentUser?.name || '同学' }}</div>
+            <div class="uib__name">{{ userStore.currentUser?.name || '钟同学' }}</div>
             <div class="uib__role">{{ roleLabel }}</div>
           </div>
         </div>

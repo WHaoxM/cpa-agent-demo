@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "count": 2,
+  "data": [
+    {
+      "report_id": "report_001",
+      "student_id": "student_001",
+      "job_portrait_id": "job_001",
+      "title": "职业生涯发展报告",
+      "status": "completed",
+      "type": "career",
+      "created_at": "2026-07-14T11:33:58Z",
+      "elapsed_seconds": 38.5,
+      "html_path": null,
+      "pdf_path": null
+    },
+    {
+      "report_id": "report_portrait_001",
+      "student_id": "student_001",
+      "job_portrait_id": null,
+      "title": "个人能力画像（前端进阶）",
+      "status": "completed",
+      "type": "portrait",
+      "created_at": "2026-03-30T10:00:00Z",
+      "elapsed_seconds": 12.0
+    }
+  ]
+}

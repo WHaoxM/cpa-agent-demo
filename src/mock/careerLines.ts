@@ -36,7 +36,7 @@ export const METRO_LINES: MetroLine[] = [
   },
   {
     id: 'ai', name: '人工智能线', color: '#8B4A9C', trackColor: 'rgba(139,74,156,0.7)',
-    stationIds: ['ai-cv-junior', 'ai-cv-senior', 'ai-nlp-junior', 'ai-nlp-senior', 'ai-llm-junior', 'ai-llm-senior', 'ai-mm-junior', 'ai-mm-senior'],
+    stationIds: ['ai-cv-junior', 'ai-cv-senior', 'ai-nlp-junior', 'ai-nlp-senior', 'ai-llm-junior', 'ai-llm-senior', 'ai-mm-junior', 'ai-mm-senior', 'ai-agent-intern', 'ai-agent-junior', 'ai-agent-mid', 'ai-agent-senior'],
   },
   {
     id: 'bigdata', name: '大数据线', color: '#C45E2A', trackColor: 'rgba(196,94,42,0.7)',
@@ -517,4 +517,46 @@ export const CAREER_PATH_EDGES: CareerPathEdge[] = [
     skills: ['模型蒸馏与量化', 'PyTorch 高级训练', '分布式训练（DDP）', 'TensorRT 推理加速', '混合精度训练'] },
   { fromId: 'ai-llm-senior', toId: 'dl-senior', type: 'transfer',
     skills: ['Foundation Model 预训练', '大规模分布式训练', '自研架构搜索', 'MLOps 自动化', 'AI 安全防御'] },
+
+  /* ── AI Agent 开发工程师 晋升链 ── */
+  { fromId: 'ai-agent-intern', toId: 'ai-agent-junior', type: 'promote',
+    skills: ['LangChain/LangGraph Agent 链路构建', 'RAG 系统实现（Embedding + 检索 + 生成）', 'Prompt Engineering 进阶（CoT/Few-shot/自一致性）', '向量数据库使用（Milvus/Chroma）', 'FastAPI AI 服务封装与流式输出', 'Function Calling & Tool Use 设计', 'Docker 容器化部署'] },
+  { fromId: 'ai-agent-junior', toId: 'ai-agent-mid', type: 'promote',
+    skills: ['LangGraph 多 Agent 编排与状态机设计', 'GraphRAG 知识图谱融合检索', 'Neo4j 图数据库建模与查询', 'LoRA/QLoRA 模型微调实践', '模型部署与推理加速（vLLM/Ollama）', 'MCP 协议集成与工具生态', 'Agent 系统架构设计'] },
+  { fromId: 'ai-agent-mid', toId: 'ai-agent-senior', type: 'promote',
+    skills: ['Agent 平台架构（LangGraph/AutoGen/CrewAI 选型）', '多模态 Agent 系统（视觉+语音+文本融合）', 'LLM 私有化部署全链路（训练→推理→监控）', 'GraphRAG 企业级知识库架构', 'Agent 安全与对齐（越狱防御/输出过滤/红队测试）', '技术团队管理与 AI 产品战略', '商业化落地与 ROI 评估'] },
+
+  /* ── AI Agent 转岗路径 ── */
+  { fromId: 'ai-llm-junior', toId: 'ai-agent-junior', type: 'transfer',
+    skills: ['LangGraph Agent 编排', 'Function Calling 设计', 'RAG 系统深化', '向量数据库调优', '多轮对话状态管理'] },
+  { fromId: 'be-python-junior', toId: 'ai-agent-intern', type: 'transfer',
+    skills: ['Python 异步编程', 'LangChain 基础入门', 'Prompt 工程入门', 'FastAPI 接口封装', 'Docker 基础'] },
+  { fromId: 'dl-mid', toId: 'ai-agent-junior', type: 'transfer',
+    skills: ['LangChain 应用框架', 'RAG 检索增强', 'Prompt 工程方法论', 'Agent 编排基础', '模型推理服务化'] },
+  { fromId: 'algo-recsys-junior', toId: 'ai-agent-intern', type: 'transfer',
+    skills: ['Python 数据处理', 'LangChain 入门', '向量检索基础', 'A/B 实验思维', 'FastAPI 基础'] },
+  { fromId: 'ai-agent-senior', toId: 'ai-llm-senior', type: 'transfer',
+    skills: ['LLM 平台架构', '推理加速优化', 'Agent 框架通用化', 'MLOps 全链路', 'AI 产品化'] },
+
+  /* ── NLP 工程师 晋升链 ── */
+  { fromId: 'ai-nlp-junior', toId: 'ai-nlp-senior', type: 'promote',
+    skills: ['LLM SFT/RLHF 微调（Qwen/LLaMA）', 'RAG 系统架构设计', '向量数据库选型与优化（Milvus/Weaviate）', '多轮对话与意图理解', '长文本建模与检索', 'vLLM/TGI 服务化部署', '评测体系设计（RAGAS/MT-Bench）'] },
+
+  /* ── NLP 算法工程师 晋升链 ── */
+  { fromId: 'algo-nlp-junior', toId: 'algo-nlp-senior', type: 'promote',
+    skills: ['LLM 预训练/SFT/RLHF 全链路', 'RAG 系统架构', '向量数据库（Milvus/Weaviate）', '多语言模型适配', '长文本建模', '评测体系设计', 'vLLM 部署与服务化'] },
+
+  /* ── 搜索算法工程师 晋升链 ── */
+  { fromId: 'algo-search-junior', toId: 'algo-search-senior', type: 'promote',
+    skills: ['语义向量检索（FAISS/Milvus）', '学习排序（LTR）', '查询理解（NLU）', '知识图谱融合检索', '大规模索引优化', 'Bert-as-a-service', '搜索平台架构'] },
+
+  /* ── NLP/搜索 转岗路径 ── */
+  { fromId: 'ai-nlp-junior', toId: 'ai-agent-junior', type: 'transfer',
+    skills: ['LangGraph Agent 编排', 'Function Calling 设计', 'RAG 系统深化', '知识图谱与 Agent 记忆', 'Prompt 工程进阶'] },
+  { fromId: 'algo-nlp-junior', toId: 'ai-llm-junior', type: 'transfer',
+    skills: ['LangChain 应用框架', 'Prompt 工程方法论', 'RAG 检索增强', 'LLM API 调用', '向量检索实践'] },
+  { fromId: 'algo-search-junior', toId: 'ai-agent-intern', type: 'transfer',
+    skills: ['LangChain 基础', '向量检索迁移', 'RAG 系统入门', 'Prompt 工程入门', 'FastAPI 基础'] },
+  { fromId: 'be-python-junior', toId: 'ai-nlp-junior', type: 'transfer',
+    skills: ['Hugging Face Transformers', 'BERT 微调', 'NER 实体识别', '文本分类', 'Python NLP 工具链'] },
 ]

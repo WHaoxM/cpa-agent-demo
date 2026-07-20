@@ -684,47 +684,47 @@ function getChildrenForRole(role: string): Record<string, { id: string; name: st
       ],
     },
 
-    '深度学习工程师': {
+    '大模型应用工程师': {
       'board-pro': [
-        { id: 'pro-pytorch', name: 'PyTorch',         heat: 96 },
-        { id: 'pro-tf',      name: 'TensorFlow',      heat: 84 },
-        { id: 'pro-cnn',     name: 'CNN',             heat: 88 },
-        { id: 'pro-rnn',     name: 'RNN / LSTM',      heat: 84 },
-        { id: 'pro-transformer', name: 'Transformer', heat: 92 },
-        { id: 'pro-transfer', name: '迁移学习',       heat: 84 },
-        { id: 'pro-aug',     name: '数据增强',        heat: 80 },
-        { id: 'pro-prune',   name: '模型压缩 / 剪枝', heat: 78 },
-        { id: 'pro-cuda',    name: 'CUDA / GPU 编程', heat: 82 },
-        { id: 'pro-amp',     name: '混合精度训练',    heat: 76 },
+        { id: 'pro-python',  name: 'Python',          heat: 92 },
+        { id: 'pro-langchain', name: 'LangChain / LangGraph', heat: 94 },
+        { id: 'pro-llama',   name: 'LlamaIndex',      heat: 86 },
+        { id: 'pro-prompt',  name: 'Prompt Engineering', heat: 90 },
+        { id: 'pro-rag',     name: 'RAG 系统',         heat: 92 },
+        { id: 'pro-vdb',     name: '向量数据库',       heat: 88 },
+        { id: 'pro-fastapi', name: 'FastAPI',          heat: 82 },
+        { id: 'pro-mcp',     name: 'MCP 协议',         heat: 80 },
+        { id: 'pro-agent',   name: 'AI Agent 框架',    heat: 88 },
+        { id: 'pro-llm-api', name: 'LLM API 集成',     heat: 86 },
       ],
       'board-pos': [
-        { id: 'pos-train',   name: '模型训练',        heat: 90 },
-        { id: 'pos-eval',    name: '模型评估',        heat: 86 },
-        { id: 'pos-hp',      name: '超参调优',        heat: 84 },
-        { id: 'pos-infer',   name: '推理优化',        heat: 86 },
-        { id: 'pos-compress', name: '模型压缩',       heat: 82 },
-        { id: 'pos-ddp',     name: '分布式训练',      heat: 84 },
-        { id: 'pos-dataset', name: '数据集构建',      heat: 80 },
-        { id: 'pos-mlops',   name: 'MLOps / 实验管理', heat: 78 },
+        { id: 'pos-rag-pipe', name: 'RAG 管道设计',    heat: 90 },
+        { id: 'pos-agent-orch', name: 'Agent 协作编排', heat: 88 },
+        { id: 'pos-eval',    name: '模型评测体系',     heat: 84 },
+        { id: 'pos-kb',      name: '知识库构建',       heat: 86 },
+        { id: 'pos-multimodal', name: '多模态集成',    heat: 78 },
+        { id: 'pos-cost',    name: '成本优化',         heat: 80 },
+        { id: 'pos-align',   name: '安全对齐',         heat: 76 },
+        { id: 'pos-deploy',  name: '工程化部署',       heat: 84 },
       ],
       'board-cog': [
-        { id: 'cog-math',    name: '数学 / 线性代数', heat: 88 },
-        { id: 'cog-prob',    name: '概率统计',        heat: 84 },
-        { id: 'cog-opt',     name: '优化理论',        heat: 82 },
-        { id: 'cog-info',    name: '信息论',          heat: 76 },
-        { id: 'cog-nn',      name: '神经网络原理',    heat: 88 },
-        { id: 'cog-cv',      name: '计算机视觉',      heat: 82 },
-        { id: 'cog-nlp',     name: '自然语言处理',    heat: 80 },
-        { id: 'cog-algo',    name: '数据结构与算法',  heat: 74 },
+        { id: 'cog-nlp',     name: 'NLP 基础',         heat: 82 },
+        { id: 'cog-ml',      name: '机器学习基础',     heat: 78 },
+        { id: 'cog-ir',      name: '信息检索',         heat: 80 },
+        { id: 'cog-design',  name: '系统设计',         heat: 82 },
+        { id: 'cog-product', name: '产品思维',         heat: 74 },
+        { id: 'cog-algo',    name: '数据结构与算法',   heat: 76 },
+        { id: 'cog-transformer', name: 'Transformer 原理', heat: 84 },
+        { id: 'cog-data',    name: '数据分析',         heat: 72 },
       ],
       'board-gen': [
-        { id: 'gen-git',     name: 'Git / 协作',      heat: 74 },
-        { id: 'gen-ci',      name: 'CI/CD',           heat: 66 },
-        { id: 'gen-k8s',     name: 'Docker / K8s',    heat: 72 },
-        { id: 'gen-linux',   name: 'Linux / GPU 服务器', heat: 78 },
-        { id: 'gen-doc',     name: '技术文档',        heat: 62 },
-        { id: 'gen-comm',    name: '跨团队沟通',      heat: 60 },
-        { id: 'gen-paper',   name: '论文阅读',        heat: 76 },
+        { id: 'gen-git',     name: 'Git / 协作',       heat: 74 },
+        { id: 'gen-ci',      name: 'CI/CD',            heat: 68 },
+        { id: 'gen-docker',  name: 'Docker',           heat: 72 },
+        { id: 'gen-linux',   name: 'Linux',            heat: 70 },
+        { id: 'gen-doc',     name: '技术文档',         heat: 66 },
+        { id: 'gen-comm',    name: '跨团队沟通',       heat: 68 },
+        { id: 'gen-review',  name: '代码审查',         heat: 64 },
       ],
     },
 
@@ -1015,22 +1015,23 @@ function getCrossEdgesForRole(role: string): AbilityEdge[] {
       { source: 'cog-pgm',     target: 'pro-rec',     relation: 'dependency',   label: '概率图模型支撑推荐' },
     ],
 
-    '深度学习工程师': [
-      { source: 'cog-math',    target: 'cog-nn',      relation: 'prerequisite', label: '数学是神经网络基础' },
-      { source: 'cog-opt',     target: 'pos-train',   relation: 'prerequisite', label: '优化理论支撑模型训练' },
-      { source: 'cog-prob',    target: 'pro-cnn',     relation: 'prerequisite', label: '概率统计是 CNN 基础' },
-      { source: 'pro-pytorch', target: 'pro-cnn',     relation: 'prerequisite', label: 'PyTorch 实现 CNN' },
-      { source: 'pro-pytorch', target: 'pro-transformer', relation: 'prerequisite', label: 'PyTorch 实现 Transformer' },
-      { source: 'pro-transformer', target: 'cog-nlp', relation: 'synergy',      label: 'Transformer 驱动 NLP' },
-      { source: 'pro-transfer', target: 'pos-train',  relation: 'synergy',      label: '迁移学习加速训练' },
-      { source: 'pro-aug',     target: 'pos-dataset', relation: 'synergy',      label: '数据增强扩充数据集' },
-      { source: 'pro-cuda',    target: 'pos-ddp',     relation: 'synergy',      label: 'CUDA 支撑分布式训练' },
-      { source: 'gen-linux',   target: 'pro-cuda',    relation: 'synergy',      label: 'Linux 服务器配置 CUDA' },
-      { source: 'gen-paper',   target: 'pro-transformer', relation: 'synergy',  label: '论文阅读跟进 Transformer 进展' },
-      { source: 'pro-prune',   target: 'pos-compress', relation: 'synergy',     label: '剪枝实现模型压缩' },
-      { source: 'pos-infer',   target: 'pos-compress', relation: 'dependency',  label: '推理优化依赖模型压缩' },
-      { source: 'pos-train',   target: 'pos-eval',    relation: 'dependency',   label: '训练完成才能评估' },
-      { source: 'pos-hp',      target: 'pos-train',   relation: 'dependency',   label: '超参调优改善训练效果' },
+    '大模型应用工程师': [
+      { source: 'cog-nlp',     target: 'pro-llm-api',  relation: 'prerequisite', label: 'NLP 基础支撑 LLM API' },
+      { source: 'cog-ir',      target: 'pro-rag',      relation: 'prerequisite', label: '信息检索是 RAG 基础' },
+      { source: 'cog-transformer', target: 'pro-langchain', relation: 'prerequisite', label: 'Transformer 原理支撑 LangChain' },
+      { source: 'pro-python',  target: 'pro-fastapi',  relation: 'prerequisite', label: 'Python 是 FastAPI 基础' },
+      { source: 'pro-prompt',  target: 'pro-llm-api',  relation: 'synergy',      label: 'Prompt 工程优化 API 调用' },
+      { source: 'pro-langchain', target: 'pro-rag',    relation: 'synergy',      label: 'LangChain 构建 RAG 管道' },
+      { source: 'pro-vdb',     target: 'pro-rag',      relation: 'synergy',      label: '向量数据库支撑 RAG 检索' },
+      { source: 'pro-agent',   target: 'pro-langchain', relation: 'synergy',     label: 'Agent 框架基于 LangGraph' },
+      { source: 'pro-mcp',     target: 'pro-agent',    relation: 'synergy',      label: 'MCP 协议赋能 Agent 工具调用' },
+      { source: 'pro-llama',   target: 'pro-rag',      relation: 'synergy',      label: 'LlamaIndex 构建 RAG' },
+      { source: 'gen-docker',  target: 'pos-deploy',   relation: 'synergy',      label: 'Docker 支撑工程化部署' },
+      { source: 'gen-git',     target: 'gen-ci',       relation: 'synergy',      label: 'Git 与 CI/CD 协同' },
+      { source: 'pos-rag-pipe', target: 'pos-kb',      relation: 'dependency',   label: 'RAG 管道依赖知识库' },
+      { source: 'pos-eval',    target: 'pos-agent-orch', relation: 'dependency', label: '模型评测指导 Agent 优化' },
+      { source: 'pos-align',   target: 'pro-prompt',   relation: 'dependency',   label: '安全对齐约束 Prompt 设计' },
+      { source: 'pos-cost',    target: 'pos-deploy',   relation: 'dependency',   label: '成本优化约束部署方案' },
     ],
 
     'AI 应用工程师': [
@@ -1152,10 +1153,22 @@ export interface RoleIntro {
 
 export function getRoleIntro(role: string): RoleIntro {
   // TODO: 后续替换为 GET /api/career/role-intro?role=...
+  const ALIAS: Record<string, string> = {
+    '前端开发':       'Vue 前端工程师',
+    '后端开发':       'Java 后端工程师',
+    '测试开发':       '自动化测试工程师',
+    '数据分析':       '商业数据分析师',
+    '机器学习工程师': '算法工程师',
+  }
+  const resolved = ALIAS[role] ?? role
+
   const map: Record<string, RoleIntro> = {
-    '前端开发': {
-      title: '前端开发工程师',
-      summary: '负责 Web 应用用户界面的设计与实现，关注性能、可访问性与用户体验。',
+
+    /* ──────── 前端领域 ──────── */
+
+    'Vue 前端工程师': {
+      title: 'Vue 前端开发工程师',
+      summary: '负责基于 Vue 生态的 Web 应用用户界面设计与实现，关注性能、可访问性与用户体验。',
       responsibilities: [
         '根据产品需求完成页面开发与交互实现',
         '参与前端架构设计与技术选型',
@@ -1165,12 +1178,12 @@ export function getRoleIntro(role: string): RoleIntro {
       ],
       requirements: [
         '本科及以上学历，计算机相关专业优先',
-        '熟悉 Vue / React 至少一种主流框架',
+        '熟练掌握 Vue 3 + Composition API',
         '掌握 TypeScript、ES6+ 语法',
-        '了解前端工程化（Webpack / Vite / CI/CD）',
+        '了解前端工程化（Vite / CI/CD）',
         '有数据可视化或跨端开发经验者加分',
       ],
-      skills: ['Vue 3', 'React', 'TypeScript', 'CSS', 'Node.js', 'Webpack', 'Vite', 'ECharts', 'Git'],
+      skills: ['Vue 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite', 'Element Plus', 'Nuxt.js', 'CSS', 'ECharts', 'Git'],
       topRegions: [
         { name: '北京', demand: '极高' },
         { name: '上海', demand: '极高' },
@@ -1180,14 +1193,452 @@ export function getRoleIntro(role: string): RoleIntro {
       ],
       outlook: '前端技术迭代快，全栈化与跨端趋势明显；掌握框架原理、性能优化和工程化能力的开发者持续紧缺，3-5 年可晋升高级/架构方向。',
     },
+
+    'React 前端工程师': {
+      title: 'React 前端开发工程师',
+      summary: '基于 React 生态构建高性能 Web 应用，负责组件化架构设计、状态管理及 SSR/SSG 方案落地。',
+      responsibilities: [
+        '使用 React / Next.js 构建复杂交互页面',
+        '设计组件库和公共 Hook，提升研发效率',
+        '接入状态管理（Redux / Zustand）保障数据一致性',
+        '配合后端完成 BFF / API 对接',
+        '推动 SSR/SSG、性能优化与工程化改造',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业优先',
+        '精通 React Hooks、Context、Concurrent Mode',
+        '掌握 TypeScript 和现代 CSS 方案',
+        '熟悉 Next.js 或 Remix 等全栈框架',
+        '有 React Native 或组件库建设经验者加分',
+      ],
+      skills: ['React', 'TypeScript', 'Next.js', 'Redux', 'React Query', 'Styled Components', 'Webpack', 'Storybook', 'TailwindCSS', 'Git'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: 'React 生态成熟，Server Components 与流式渲染持续演进；高级 React 开发者在大厂需求旺盛，3 年可进阶架构或全栈方向。',
+    },
+
+    '可视化工程师': {
+      title: '可视化工程师',
+      summary: '将复杂数据通过图表、3D 场景和动效系统转化为直观的交互视觉体验，服务于大屏、BI、GIS 等场景。',
+      responsibilities: [
+        '设计并实现业务级图表系统与大屏方案',
+        '使用 D3.js / ECharts / Three.js 构建定制可视化',
+        '开发地理信息系统（GIS）与 3D 场景',
+        '优化 Canvas / WebGL 渲染性能',
+        '与设计和数据团队协作，推动数据叙事',
+      ],
+      requirements: [
+        '本科及以上学历，计算机或设计相关专业',
+        '熟练掌握 D3.js、ECharts 中至少一种',
+        '了解 Canvas、SVG、WebGL 底层原理',
+        '具备色彩理论和信息设计基础',
+        '有 Three.js / Cesium 或大屏项目经验加分',
+      ],
+      skills: ['D3.js', 'ECharts', 'Three.js', 'WebGL', 'Canvas', 'SVG', 'TypeScript', 'GSAP', 'Cesium', 'PixiJS'],
+      topRegions: [
+        { name: '北京', demand: '高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '中等' },
+        { name: '武汉', demand: '中等' },
+      ],
+      outlook: '数字孪生、智慧城市和数据大屏需求持续增长；兼具图形学与数据分析能力的可视化人才稀缺，发展上限较高。',
+    },
+
+    /* ──────── 后端领域 ──────── */
+
+    'Java 后端工程师': {
+      title: 'Java 后端工程师',
+      summary: '基于 Java / Spring 技术栈构建高并发、高可用的企业级后端服务，承担核心业务系统研发与微服务治理。',
+      responsibilities: [
+        '负责核心业务模块的设计与开发',
+        '构建基于 Spring Cloud 的微服务体系',
+        '设计数据库模型与缓存策略',
+        '排查线上性能瓶颈并进行 JVM 调优',
+        '制定接口规范与技术文档',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业',
+        '精通 Java / JVM，熟悉并发编程',
+        '掌握 Spring Boot / Spring Cloud 全家桶',
+        '熟悉 MySQL、Redis、Kafka 等中间件',
+        '有分布式系统或高并发项目经验优先',
+      ],
+      skills: ['Java', 'Spring Boot', 'Spring Cloud', 'MySQL', 'Redis', 'Kafka', 'MyBatis', 'Docker', 'Elasticsearch', 'Nginx'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '极高' },
+        { name: '杭州', demand: '高' },
+        { name: '南京', demand: '高' },
+      ],
+      outlook: 'Java 后端仍是企业级开发主力；云原生、微服务与中台化趋势下，具备架构设计能力的资深开发者持续紧缺，5 年可进阶架构师。',
+    },
+
+    'Go 后端工程师': {
+      title: 'Go 后端工程师',
+      summary: '使用 Golang 构建高性能、高并发的云原生后端服务，擅长微服务治理与基础设施建设。',
+      responsibilities: [
+        '使用 Go 开发高并发 API 服务',
+        '设计并实现微服务架构与 gRPC 通信',
+        '基于 Kubernetes 进行服务编排与治理',
+        '实现限流、熔断、链路追踪等基础设施',
+        '持续优化系统吞吐量和响应延迟',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业',
+        '精通 Go 语言，理解协程调度与 Channel 机制',
+        '掌握 gRPC、etcd、Kubernetes 等生态',
+        '熟悉 MySQL、Redis、Kafka 等存储与消息中间件',
+        '有高并发系统或基础设施建设经验优先',
+      ],
+      skills: ['Golang', 'Gin', 'gRPC', 'Protobuf', 'etcd', 'Kubernetes', 'Docker', 'MySQL', 'Redis', 'Kafka'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '成都', demand: '中等' },
+      ],
+      outlook: 'Go 在云原生与中间件领域持续扩张，字节、腾讯等大厂大量采用；掌握并发模型与分布式能力的工程师薪资溢价明显。',
+    },
+
+    'Python 后端工程师': {
+      title: 'Python 后端工程师',
+      summary: '基于 Python / Django / FastAPI 构建灵活高效的后端服务，兼顾数据处理流水线与异步任务体系。',
+      responsibilities: [
+        '使用 Django / FastAPI 开发 RESTful API',
+        '设计 ORM 模型与数据库 Schema',
+        '构建 Celery 异步任务与数据处理流水线',
+        '保障接口安全与性能调优',
+        '与前端/数据团队协作推进产品迭代',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业',
+        '精通 Python，熟悉异步编程与 GIL 机制',
+        '掌握 Django / FastAPI 至少一种框架',
+        '熟悉 MySQL / PostgreSQL、Redis、RabbitMQ',
+        '有数据处理或 AI 服务后端经验者加分',
+      ],
+      skills: ['Python', 'Django', 'FastAPI', 'Celery', 'SQLAlchemy', 'MySQL', 'Redis', 'RabbitMQ', 'Nginx', 'Docker'],
+      topRegions: [
+        { name: '北京', demand: '高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '中等' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: 'Python 在 AI、数据和自动化领域有天然优势；后端 + AI 复合型人才需求快速增长，3-5 年可向技术专家或架构方向发展。',
+    },
+
+    /* ──────── 测试领域 ──────── */
+
+    '自动化测试工程师': {
+      title: '自动化测试工程师',
+      summary: '设计并维护自动化测试框架与用例体系，保障软件质量，推动持续集成测试落地。',
+      responsibilities: [
+        '搭建和维护 UI / API 自动化测试框架',
+        '编写、执行并维护自动化测试用例',
+        '接入 Jenkins / CI 持续集成测试流水线',
+        '分析缺陷根因并输出测试报告',
+        '推动测试数据管理与 Mock 服务建设',
+      ],
+      requirements: [
+        '本科及以上学历，计算机或软件工程专业',
+        '熟练掌握 Python / Java 至少一种语言',
+        '掌握 Selenium / Playwright / Appium 等工具',
+        '熟悉 pytest / TestNG 测试框架',
+        '有 CI/CD 或测试平台开发经验优先',
+      ],
+      skills: ['Selenium', 'Playwright', 'pytest', 'Appium', 'Python', 'Jenkins', 'Docker', 'API 测试', 'Robot Framework', 'Git'],
+      topRegions: [
+        { name: '北京', demand: '高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '中等' },
+        { name: '成都', demand: '中等' },
+      ],
+      outlook: 'DevOps 与质量内建趋势下，自动化测试是刚需；向测试架构师或质量平台方向发展空间广阔。',
+    },
+
+    '质量平台工程师': {
+      title: '质量平台工程师',
+      summary: '开发和运营测试平台与质量度量系统，通过工程化手段提升团队研发效能与交付质量。',
+      responsibilities: [
+        '设计并开发测试管理与质量度量平台',
+        '构建自动化集成与覆盖率分析系统',
+        '搭建数据采集与报表可视化体系',
+        '制定测试规范与质量标准',
+        '推动风险看板与效能分析工具落地',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业',
+        '熟练掌握 Python / Java 开发能力',
+        '熟悉 MySQL、Elasticsearch、Kafka 等技术',
+        '有 CI 流水线和测试平台开发经验',
+        '具备质量管理理论和数据分析能力',
+      ],
+      skills: ['Python', 'Java', '测试平台', 'MySQL', 'Elasticsearch', 'Kafka', 'CI 流水线', 'Docker', '可视化报表', '数据采集'],
+      topRegions: [
+        { name: '北京', demand: '高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '中等' },
+        { name: '杭州', demand: '中等' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: '质量平台是大厂质量基础设施核心，具备全链路质量治理能力的工程师稀缺，可向质量架构师或工程效能方向发展。',
+    },
+
+    '性能测试工程师': {
+      title: '性能测试工程师',
+      summary: '设计压测方案、分析系统瓶颈、规划容量，保障线上服务的高可用与高性能。',
+      responsibilities: [
+        '制定压测方案并编写压测脚本',
+        '执行性能基准测试与容量规划',
+        '使用 APM 工具定位性能瓶颈',
+        '协助开发完成 JVM / 数据库调优',
+        '输出性能测试报告与优化建议',
+      ],
+      requirements: [
+        '本科及以上学历，计算机相关专业',
+        '熟练掌握 JMeter / Locust / k6 等压测工具',
+        '了解操作系统、网络协议和数据库原理',
+        '具备 APM 监控与链路追踪实战经验',
+        '有大规模系统性能优化经验者优先',
+      ],
+      skills: ['JMeter', 'Locust', 'k6', 'APM 监控', 'Python', '压测脚本', 'MySQL 调优', 'Linux', '链路追踪', 'Gatling'],
+      topRegions: [
+        { name: '北京', demand: '高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '中等' },
+        { name: '南京', demand: '中等' },
+      ],
+      outlook: '高并发系统普及使性能保障成为必备环节；掌握全栈性能分析能力的工程师供不应求，可向稳定性或 SRE 方向延伸。',
+    },
+
+    /* ──────── 数据领域 ──────── */
+
+    '商业数据分析师': {
+      title: '商业数据分析师',
+      summary: '运用 SQL、统计分析和 BI 工具从数据中挖掘商业洞察，驱动产品和运营决策。',
+      responsibilities: [
+        '构建业务指标体系与数据看板',
+        '使用 SQL / Python 进行数据提取与分析',
+        '输出分析报告并提供业务优化建议',
+        '协助产品与运营完成用户画像和漏斗分析',
+        '推动 A/B 测试与市场分析落地',
+      ],
+      requirements: [
+        '本科及以上学历，统计学/经济学/计算机专业优先',
+        '精通 SQL，熟练使用 Python / Pandas',
+        '掌握 Tableau / PowerBI 等 BI 工具',
+        '具备统计学和商业分析思维',
+        '有行业数据分析项目经验者加分',
+      ],
+      skills: ['SQL', 'Python', 'Pandas', 'Tableau', 'PowerBI', 'Excel', '统计分析', '数据可视化', 'BI 工具', '数据清洗'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: '数据驱动决策已成为企业标配；商业分析师横跨技术与业务，向数据产品经理或数据科学家方向发展前景广阔。',
+    },
+
+    '数据开发工程师': {
+      title: '数据开发工程师',
+      summary: '构建企业数仓体系与大数据处理流水线，保障数据从采集、清洗、建模到服务的全链路质量。',
+      responsibilities: [
+        '设计和维护 ODS/DWD/DWS/ADS 数仓分层模型',
+        '开发 ETL 数据管道与调度任务',
+        '基于 Spark / Flink 构建离线和实时计算',
+        '实施数据质量监控与数据治理',
+        '优化 SQL 性能与集群资源利用率',
+      ],
+      requirements: [
+        '本科及以上学历，计算机或数学相关专业',
+        '精通 Spark、Hive SQL，熟悉 Flink',
+        '掌握 Hadoop / HDFS / Kafka 等大数据组件',
+        '了解数仓建模理论（Kimball / Inmon）',
+        '有数据治理或实时计算项目经验优先',
+      ],
+      skills: ['Spark', 'Flink', 'Hive', 'Hadoop', 'Kafka', 'Airflow', 'Python', 'DataX', 'Presto', 'ClickHouse'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '成都', demand: '中等' },
+      ],
+      outlook: '大数据基础设施持续扩张，湖仓一体与实时计算是行业热点；资深数据开发可晋升数据架构师，薪资天花板较高。',
+    },
+
+    '增长分析师': {
+      title: '增长分析师',
+      summary: '以数据驱动用户增长，设计增长实验、分析用户行为，推动获客、留存与变现策略优化。',
+      responsibilities: [
+        '设计和分析增长实验（A/B 测试）',
+        '构建用户获取、留存和变现分析体系',
+        '建立归因模型与渠道评估机制',
+        '输出增长策略并推动跨部门落地',
+        '维护埋点体系与行为分析看板',
+      ],
+      requirements: [
+        '本科及以上学历，统计学/市场营销/计算机专业',
+        '精通 SQL 和 A/B 测试方法论',
+        '熟悉漏斗分析、归因模型和用户分层',
+        '具备商业思维和增长理论知识',
+        '有互联网产品增长项目经验者优先',
+      ],
+      skills: ['A/B 测试', 'SQL', 'Python', '漏斗分析', '归因模型', '增长黑客', 'BI 工具', '埋点分析', '用户分层', '热图分析'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: '互联网存量竞争加剧，增长岗位从独角兽扩散到全行业；具备因果推断与实验设计能力者可向增长负责人方向发展。',
+    },
+
+    /* ──────── 机器学习领域 ──────── */
+
+    '算法工程师': {
+      title: '算法工程师',
+      summary: '设计并实现推荐、搜索、排序等机器学习系统，通过特征工程和模型迭代持续提升业务效果。',
+      responsibilities: [
+        '设计推荐 / 搜索 / 广告等核心算法方案',
+        '完成特征工程、模型训练与效果评估',
+        '推动算法模型线上部署与 A/B 实验',
+        '持续优化召回、排序链路的效果与效率',
+        '跟进学术前沿并落地创新方案',
+      ],
+      requirements: [
+        '硕士及以上学历，计算机/数学/统计相关专业',
+        '精通机器学习算法，熟悉推荐/搜索/广告场景',
+        '掌握 Python、XGBoost、Spark MLlib 等工具',
+        '具备扎实的数学（线性代数/概率论/优化）基础',
+        '有大规模推荐系统或搜索排序项目经验优先',
+      ],
+      skills: ['Python', '机器学习', '推荐系统', 'XGBoost', '特征工程', 'Spark MLlib', 'scikit-learn', 'A/B 实验', 'SQL', '排序学习'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '广州', demand: '中等' },
+      ],
+      outlook: '算法工程师是互联网大厂核心岗位，薪资水平业内领先；深耕推荐/搜索/广告方向 3-5 年可晋升高级算法专家。',
+    },
+
+    '大模型应用工程师': {
+      title: '大模型应用工程师',
+      summary: '基于 LangChain/LangGraph 和 RAG 技术构建 LLM 原生应用，推动 AI Agent 和多智能体协作在企业场景的规模化落地。',
+      responsibilities: [
+        '基于 LangChain / LangGraph 构建 RAG 管道与 Agent 工作流',
+        '设计 Prompt 策略并进行结构化输出与效果调优',
+        '搭建向量数据库、知识库与混合检索体系',
+        '实现 MCP 协议工具调用与多 Agent 协作编排',
+        '完成 LLM 应用的工程化部署、成本优化与安全对齐',
+      ],
+      requirements: [
+        '本科及以上学历，计算机或 AI 相关专业',
+        '熟练掌握 Python、FastAPI 异步编程',
+        '深入理解 LLM 原理、Transformer 架构和 Prompt Engineering',
+        '掌握 LangChain/LangGraph、向量数据库（Milvus/Qdrant）',
+        '有 RAG / Agent / MCP 项目实战经验优先',
+      ],
+      skills: ['LangChain', 'LangGraph', 'RAG', 'Prompt Engineering', '向量数据库', 'Python', 'FastAPI', 'AI Agent', 'MCP 协议', 'LlamaIndex'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '极高' },
+        { name: '杭州', demand: '高' },
+        { name: '成都', demand: '中等' },
+      ],
+      outlook: '大模型应用工程师是 2025-2026 最炙手可热的岗位，供需严重失衡；RAG+Agent 方向人才缺口巨大，薪资天花板极高，是程序员转型 AI 时代的最佳赛道。',
+    },
+
+    'AI 应用工程师': {
+      title: 'AI 应用工程师',
+      summary: '基于大语言模型（LLM）和 RAG 技术构建智能应用，推动 AI 能力在业务场景的规模化落地。',
+      responsibilities: [
+        '基于 LangChain / LlamaIndex 构建 RAG 系统',
+        '设计 Prompt 策略并进行效果调优',
+        '搭建向量数据库与知识库检索体系',
+        '完成 AI 应用的工程化部署与成本优化',
+        '保障模型输出的安全对齐与可控性',
+      ],
+      requirements: [
+        '本科及以上学历，计算机或 AI 相关专业',
+        '熟练掌握 Python、FastAPI',
+        '了解 LLM 原理和 Prompt Engineering',
+        '掌握 LangChain、向量数据库（Milvus/Weaviate）',
+        '有 RAG / Agent / 知识库项目实战经验优先',
+      ],
+      skills: ['LLM 应用', 'Prompt 工程', 'RAG 系统', 'LangChain', '向量数据库', 'Python', 'FastAPI', '模型微调', '知识库', 'API 集成'],
+      topRegions: [
+        { name: '北京', demand: '极高' },
+        { name: '上海', demand: '极高' },
+        { name: '深圳', demand: '高' },
+        { name: '杭州', demand: '高' },
+        { name: '成都', demand: '中等' },
+      ],
+      outlook: 'AIGC 与大模型应用是 2024-2026 最热赛道；AI 应用工程师岗位爆发式增长，是技术人才转型 AI 的最佳切入口。',
+    },
   }
-  return map[role] ?? map['前端开发']!
+  return map[resolved] ?? map['Vue 前端工程师']!
 }
 
 /* ═══ 数据获取（预留接口替换） ═══ */
 
 export async function getAbilityGraphData(role: string): Promise<AbilityGraphData> {
-  // TODO: 后续替换为真实 API 调用
-  // return fetch(`/api/ability-graph?role=${encodeURIComponent(role)}`).then(r => r.json())
+  const { fetchAbilityGraph } = await import('@/api/ability')
+  const { getApiMode } = await import('@/api/config')
+  const mode = getApiMode()
+  try {
+    const remote = await fetchAbilityGraph(role)
+    // http 成功则用远端；mock 下 fixture 往往比本地图谱稀疏，仅当节点足够时采用
+    if (remote?.nodes?.length) {
+      if (mode === 'http' || remote.nodes.length >= 12) return remote
+    }
+  } catch (e) {
+    console.warn('[ability-graph] remote fetch failed', e)
+  }
+  // http 模式禁止静默灌本地假图，避免「已切 API 仍像 mock」
+  if (mode === 'http') {
+    return { nodes: [], edges: [] }
+  }
   return buildMockData(role)
+}
+
+/** Async role intro: fixture/API first; http 无数据时给空壳，不再灌本地长文案。 */
+export async function getRoleIntroAsync(role: string): Promise<RoleIntro> {
+  const { getApiMode } = await import('@/api/config')
+  try {
+    const { fetchRoleIntro } = await import('@/api/ability')
+    const remote = await fetchRoleIntro(role)
+    if (remote?.title) return remote
+  } catch (e) {
+    console.warn('[role-intro] remote fetch failed', e)
+  }
+  if (getApiMode() === 'http') {
+    return {
+      title: role,
+      summary: '',
+      responsibilities: [],
+      requirements: [],
+      skills: [],
+      topRegions: [],
+      outlook: '',
+    }
+  }
+  return getRoleIntro(role)
 }

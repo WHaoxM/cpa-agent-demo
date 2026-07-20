@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "data": {
+    "student_id": "student_001",
+    "job_portrait_id": "job_001",
+    "position_name": "后端开发",
+    "total_score": 78.0,
+    "skill_coverage": 0.72,
+    "is_matched": true,
+    "match_level": "良好",
+    "dimensions": {
+      "D1": { "score": 70 },
+      "D2": { "score": 80, "skill_coverage": 0.72 },
+      "D3": { "score": 75 },
+      "D4": { "score": 72 }
+    }
+  }
+}

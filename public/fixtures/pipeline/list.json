@@ -1,0 +1,25 @@
+{
+  "success": true,
+  "data": [
+    {
+      "name": "L0_parse_resume",
+      "description": "简历解析"
+    },
+    {
+      "name": "L1_build_graph",
+      "description": "知识图谱构建"
+    },
+    {
+      "name": "L2_generate_portrait",
+      "description": "画像生成"
+    },
+    {
+      "name": "L3_run_match",
+      "description": "人岗匹配"
+    },
+    {
+      "name": "L4_generate_report",
+      "description": "报告生成"
+    }
+  ]
+}

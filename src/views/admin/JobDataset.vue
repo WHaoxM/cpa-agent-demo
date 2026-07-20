@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Icon } from '@iconify/vue'
 import type { UploadFile, UploadRawFile } from 'element-plus'
-import { fetchDatasets, uploadDataset, deleteDataset, type DatasetItem } from '@/api/backend'
+import { deleteDataset, listDatasets, uploadDataset } from '@/api/admin'
 
 // ─── 类型定义 ───
 interface DatasetRecord {
@@ -16,70 +16,42 @@ interface DatasetRecord {
   remark: string
 }
 
+function mapDatasetRow(row: Record<string, unknown>): DatasetRecord {
+  const statusRaw = String(row.status ?? 'done')
+  const status: DatasetRecord['status'] =
+    statusRaw === 'pending' || statusRaw === 'processing' || statusRaw === 'error'
+      ? statusRaw
+      : 'done'
+  return {
+    id: String(row.id ?? ''),
+    filename: String(row.title ?? row.filename ?? row.id ?? 'dataset'),
+    size: Number(row.count ?? row.size ?? 0) * 1024 || Number(row.size ?? 0),
+    uploadedAt: String(row.created_at ?? row.uploadedAt ?? '').replace('T', ' ').slice(0, 16),
+    status,
+    remark: String(row.description ?? row.remark ?? ''),
+  }
+}
+
 // ─── 状态 ───
 const uploading = ref(false)
 const searchKeyword = ref('')
 
-const records = ref<DatasetRecord[]>([
-  {
-    id: 'ds_001',
-    filename: 'job_posts_2024Q1.csv',
-    size: 2048576,
-    uploadedAt: '2024-03-01 10:22',
-    status: 'done',
-    remark: '2024年Q1岗位需求数据',
-  },
-  {
-    id: 'ds_002',
-    filename: 'backend_jobs_shenzhen.xlsx',
-    size: 512000,
-    uploadedAt: '2024-03-05 14:08',
-    status: 'done',
-    remark: '深圳后端岗位合集',
-  },
-  {
-    id: 'ds_003',
-    filename: 'frontend_requirements_2024.json',
-    size: 307200,
-    uploadedAt: '2024-03-10 09:15',
-    status: 'processing',
-    remark: '',
-  },
-])
+const records = ref<DatasetRecord[]>([])
+
+onMounted(async () => {
+  try {
+    const env = await listDatasets()
+    const rows = (env.data as Record<string, unknown>[] | undefined) ?? []
+    records.value = rows.map(mapDatasetRow)
+  } catch {
+    ElMessage.warning('数据集列表加载失败，显示为空')
+  }
+})
 
 const filteredRecords = computed(() => {
   const kw = searchKeyword.value.trim().toLowerCase()
   if (!kw) return records.value
   return records.value.filter(r => r.filename.toLowerCase().includes(kw) || r.remark.toLowerCase().includes(kw))
-})
-
-// ─── 后端状态映射 ───
-function mapStatus(s?: string | null): DatasetRecord['status'] {
-  if (s === 'done' || s === 'completed') return 'done'
-  if (s === 'processing' || s === 'running') return 'processing'
-  if (s === 'error' || s === 'failed') return 'error'
-  return 'pending'
-}
-
-// ─── 后端数据同步（失败时保留 mock）───
-onMounted(async () => {
-  try {
-    const resp = await fetchDatasets()
-    if (resp.success && resp.data && resp.data.length > 0) {
-      records.value = resp.data.map((item: DatasetItem) => ({
-        id: item.id,
-        filename: item.title || item.id,
-        size: 0,
-        uploadedAt: item.created_at
-          ? new Date(item.created_at).toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
-          : '',
-        status: mapStatus(item.status),
-        remark: item.category || '',
-      }))
-    }
-  } catch {
-    // 后端不可用时保留 mock 数据
-  }
 })
 
 // ─── 工具函数（API 调用点，后续替换为真实接口）───
@@ -97,31 +69,19 @@ function statusType(s: DatasetRecord['status']): '' | 'success' | 'warning' | 'd
   return { pending: 'info', processing: 'warning', done: 'success', error: 'danger' }[s] as '' | 'success' | 'warning' | 'danger' | 'info'
 }
 
-// ─── 上传处理 ───
+// ─── 上传处理（API 调用点）───
 async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
   uploading.value = true
   try {
-    const resp = await uploadDataset(rawFile.name, '通用')
-    const newId = resp.success && resp.data ? resp.data.id : `ds_${Date.now()}`
+    const res = await uploadDataset({
+      title: rawFile.name,
+      count: 1,
+      category: 'upload',
+      status: 'pending',
+    })
+    const newId = String((res.data as { id?: string } | undefined)?.id ?? `ds_${Date.now()}`)
     const newRecord: DatasetRecord = {
       id: newId,
-      filename: rawFile.name,
-      size: rawFile.size,
-      uploadedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
-      status: 'processing',
-      remark: '',
-    }
-    records.value.unshift(newRecord)
-    setTimeout(() => {
-      const r = records.value.find(r => r.id === newId)
-      if (r) r.status = 'done'
-    }, 2000)
-    ElMessage.success(`「${rawFile.name}」上传成功，正在解析`)
-    return false
-  } catch {
-    // 后端不可用时 fallback 到本地 mock
-    const newRecord: DatasetRecord = {
-      id: `ds_${Date.now()}`,
       filename: rawFile.name,
       size: rawFile.size,
       uploadedAt: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
@@ -133,12 +93,16 @@ async function handleUpload(rawFile: UploadRawFile): Promise<boolean> {
       const r = records.value.find(r => r.id === newRecord.id)
       if (r) r.status = 'done'
     }, 2000)
-    ElMessage.success(`「${rawFile.name}」上传成功（本地模式）`)
+    ElMessage.success(`「${rawFile.name}」上传成功，正在解析`)
+    return false
+  } catch {
+    ElMessage.error('上传失败，请重试')
     return false
   } finally {
     uploading.value = false
   }
 }
+
 
 function beforeUpload(file: UploadRawFile) {
   const MAX = 200 * 1024 * 1024
@@ -153,7 +117,7 @@ function handleExceed(_files: File[], _fileList: UploadFile[]) {
   ElMessage.warning('请逐个上传文件')
 }
 
-// ─── 删除 ───
+// ─── 删除（API 调用点）───
 async function onDelete(row: DatasetRecord) {
   await ElMessageBox.confirm(`确认删除「${row.filename}」？`, '删除确认', {
     type: 'warning',
@@ -162,16 +126,17 @@ async function onDelete(row: DatasetRecord) {
   })
   try {
     await deleteDataset(row.id)
+    records.value = records.value.filter(r => r.id !== row.id)
+    ElMessage.success('已删除')
   } catch {
-    // 后端不可用时仍从本地移除
+    ElMessage.error('删除失败')
   }
-  records.value = records.value.filter(r => r.id !== row.id)
-  ElMessage.success('已删除')
 }
 
-// ─── 备注保存 ───
+// ─── 备注保存（API 调用点）───
 async function onRemarkSave(row: DatasetRecord, val: string) {
-  // 后端暂无备注更新接口，仅本地更新
+  // TODO: 替换为真实 API
+  // await axios.patch(`/api/admin/dataset/${row.id}`, { remark: val })
   row.remark = val
   ElMessage.success('备注已保存')
 }

@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "student_001",
+      "username": "student001",
+      "password": "123456",
+      "name": "钟同学",
+      "email": "student001@example.com",
+      "avatar": "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png",
+      "role": "student",
+      "createdAt": "2024-01-15",
+      "status": "active",
+      "classId": "class_001",
+      "phone": "13800138001"
+    },
+    {
+      "id": "admin_001",
+      "username": "admin001",
+      "password": "123456",
+      "name": "管理员",
+      "email": "admin001@example.com",
+      "avatar": "https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png",
+      "role": "admin",
+      "createdAt": "2023-08-01",
+      "status": "active",
+      "phone": "13700137001"
+    }
+  ]
+}

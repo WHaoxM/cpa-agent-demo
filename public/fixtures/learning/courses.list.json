@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "data": {
+    "count": 2,
+    "courses": [
+      {
+        "course_id": "course_001",
+        "category": "前端开发",
+        "description": "从零开始学习 Vue 3",
+        "title": "Vue 3 入门"
+      },
+      {
+        "course_id": "course_002",
+        "category": "后端开发",
+        "description": "Go 语言基础",
+        "title": "Go 入门"
+      }
+    ]
+  }
+}

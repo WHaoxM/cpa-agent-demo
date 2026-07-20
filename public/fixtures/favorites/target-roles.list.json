@@ -1,0 +1,21 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "role_name": "前端开发",
+      "priority": 1,
+      "location_preference": "北京/上海/深圳",
+      "notes": "优先大厂",
+      "created_at": "2026-07-14T11:33:58Z"
+    },
+    {
+      "id": 2,
+      "role_name": "后端开发",
+      "priority": 2,
+      "location_preference": "深圳",
+      "notes": "",
+      "created_at": "2026-07-10T08:00:00Z"
+    }
+  ]
+}

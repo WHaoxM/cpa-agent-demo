@@ -1,10 +1,12 @@
-<!-- 页面：技能提升；路由：student/learning（student-learning）；角色：STUDENT -->
+﻿<!-- 页面：技能提升；路由：student/learning（student-learning）；角色：STUDENT -->
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore, useCourseStore } from '@/stores'
+import { useLearningStore } from '@/stores/learning'
+import type { LearningRecord } from '@/stores/learning'
 import type { Course } from '@/types'
 import { JOB_PORTRAITS } from '@/mock/careerPortraits'
 import D3Treemap from '@/components/charts/D3Treemap.vue'
@@ -15,6 +17,12 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const courseStore = useCourseStore()
+const learningStore = useLearningStore()
+
+onMounted(() => {
+  const uid = userStore.currentUser?.id
+  courseStore.loadFromApi(uid).catch(() => {})
+})
 
 /* ═══ 来源岗位（从 CourseSystemGraph 跳转时携带 ?role=xxx） ═══ */
 const fromRole = computed<string>(() => (route.query.role as string) || '')
@@ -65,9 +73,9 @@ const ROLE_LINE_MAP: Record<string, { lineIds: string[]; stacks?: string[] }> = 
   '数据开发工程师': { lineIds: ['data-analyst', 'bigdata'], stacks: ['数据开发'] },
   '增长分析师':     { lineIds: ['data-analyst'], stacks: ['增长分析'] },
   // ML 三细分
-  '算法工程师':     { lineIds: ['algorithm'] },
-  '深度学习工程师': { lineIds: ['ai'], stacks: ['深度学习'] },
-  'AI 应用工程师':  { lineIds: ['ai'], stacks: ['LLM应用'] },
+  '算法工程师':         { lineIds: ['algorithm'] },
+  'AI 应用工程师':      { lineIds: ['ai'], stacks: ['LLM应用'] },
+  '大模型应用工程师':   { lineIds: ['ai'], stacks: ['LLM应用', 'Agent'] },
 }
 
 /* ═══ 岗位相关课程 ID 集合（基于 skillTags ∩ keySkills 匹配） ═══ */
@@ -164,6 +172,19 @@ function viewCourse(course: Course) {
         type: 'info',
       },
     ).then(() => {
+      const userId = userStore.currentUser?.id ?? ''
+      if (userId) {
+        learningStore.addLearningRecord({
+          userId,
+          courseId: course.id,
+          courseName: course.title,
+          courseType: 'programming',
+          difficulty: 'intermediate',
+          studyTime: 1,
+          completedAt: new Date().toISOString(),
+          progress: 0,
+        } as Omit<LearningRecord, 'id'>)
+      }
       window.open(course.externalUrl, '_blank', 'noopener,noreferrer')
     }).catch(() => { /* 用户取消 */ })
   } else {
@@ -297,15 +318,6 @@ const chordResult = computed(() => {
 
   return { nodes: hotTags, matrix, pairCourses: pairPortraits }
 })
-
-/* ═══ 后端同步：课程列表 + 学习进度（失败时保留 mock / 本地数据） ═══ */
-onMounted(async () => {
-  await courseStore.syncFromBackend()
-  const userId = userStore.currentUser?.id
-  if (userId) {
-    await courseStore.syncProgressFromBackend(userId)
-  }
-})
 </script>
 <template>
   <div class="lc-page">
@@ -419,7 +431,7 @@ onMounted(async () => {
                   <Icon icon="lucide:external-link" :width="12" style="margin-right:3px"/>前往 B 站学习
                 </template>
                 <template v-else>
-                  {{ getCourseProgress(course.id) > 0 ? '继续学习' : '开始学习' }}
+                  开始学习
                 </template>
               </span>
             </div>
@@ -430,16 +442,12 @@ onMounted(async () => {
             >
               <Icon icon="lucide:star" :width="13" />
             </button>
-            <span v-if="getCourseProgress(course.id) > 0" class="lc-card__progress-badge">
-              {{ getCourseProgress(course.id) }}%
-            </span>
             <span v-if="roleCourseIds.has(course.id)" class="lc-card__rec-badge">推荐</span>
           </div>
 
           <div class="lc-card__body">
             <div class="lc-card__cat-row">
               <span class="lc-card__cat">{{ courseStore.categories.find(c => c.id === course.categoryId)?.name ?? course.categoryId }}</span>
-              <span class="lc-card__rating" v-if="course.rating > 0">★ {{ course.rating.toFixed(1) }}</span>
             </div>
             <h3 class="lc-card__title">{{ course.title }}</h3>
             <p class="lc-card__desc">{{ course.description }}</p>
@@ -448,15 +456,6 @@ onMounted(async () => {
                 <Icon icon="lucide:clock" :width="11" />
                 {{ formatDuration(course.totalDuration) }}
               </span>
-            </div>
-            <div v-if="getCourseProgress(course.id) > 0" class="lc-card__progress-bar">
-              <div
-                class="lc-card__progress-fill"
-                :style="{
-                  width: getCourseProgress(course.id) + '%',
-                  background: getCourseProgress(course.id) >= 100 ? 'var(--bamboo-green, #4A6741)' : 'var(--color-primary)'
-                }"
-              />
             </div>
           </div>
         </div>
@@ -659,7 +658,7 @@ onMounted(async () => {
 /* ═══ D3 可视化区 ═══ */
 .lc-viz {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 3fr 2fr;
   gap: 0;
   padding: 0;
   border-radius: var(--radius-md, 10px);
@@ -833,18 +832,6 @@ onMounted(async () => {
   background: color-mix(in srgb, var(--color-gold) 15%, transparent 85%);
 }
 
-.lc-card__progress-badge {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  padding: 2px 7px;
-  background: rgba(0,0,0,0.72);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 999px;
-}
-
 .lc-card__rec-badge {
   position: absolute;
   top: 8px;
@@ -880,12 +867,6 @@ onMounted(async () => {
   border-radius: 999px;
 }
 
-.lc-card__rating {
-  font-size: 11px;
-  color: var(--color-gold);
-  font-weight: 600;
-}
-
 .lc-card__title {
   font-size: 13px;
   font-weight: 600;
@@ -917,20 +898,6 @@ onMounted(async () => {
   gap: 3px;
   font-size: 11px;
   color: var(--color-text-subtle, #a0aec0);
-}
-
-.lc-card__progress-bar {
-  height: 3px;
-  background: var(--color-border, #e2e8f0);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: auto;
-}
-
-.lc-card__progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.4s ease;
 }
 
 /* ═══ 分页 ═══ */

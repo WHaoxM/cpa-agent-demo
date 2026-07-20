@@ -1,0 +1,61 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "job_id": "job_001",
+      "user_id": "student_001",
+      "job_title": "前端开发工程师",
+      "company": "字节跳动",
+      "industry": "互联网",
+      "salary": "15k-25k",
+      "location": "北京",
+      "match_score": 78,
+      "required_skills": [
+        "Vue/React",
+        "TypeScript",
+        "工程化",
+        "性能优化"
+      ],
+      "saved_at": "2024-02-10",
+      "notes": "技术氛围好，面试难度高，需加强算法"
+    },
+    {
+      "id": 2,
+      "job_id": "job_002",
+      "user_id": "student_001",
+      "job_title": "后端开发工程师",
+      "company": "腾讯",
+      "industry": "互联网",
+      "salary": "15k-22k",
+      "location": "深圳",
+      "match_score": 65,
+      "required_skills": [
+        "Java/Go",
+        "分布式系统",
+        "MySQL",
+        "Redis"
+      ],
+      "saved_at": "2024-02-09"
+    },
+    {
+      "id": 3,
+      "job_id": "job_003",
+      "user_id": "student_001",
+      "job_title": "数据分析师",
+      "company": "阿里巴巴",
+      "industry": "电子商务",
+      "salary": "12k-20k",
+      "location": "杭州",
+      "match_score": 82,
+      "required_skills": [
+        "Python",
+        "SQL",
+        "数据可视化",
+        "统计分析"
+      ],
+      "saved_at": "2024-02-08",
+      "notes": "匹配度较高，优先投递"
+    }
+  ]
+}

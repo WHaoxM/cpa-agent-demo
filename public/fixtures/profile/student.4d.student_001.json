@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": {
+    "student_id": "student_001",
+    "completeness": 95.0,
+    "dimensions": {
+      "D1": {
+        "name": "基础要求",
+        "score": 85.0,
+        "description": "学历、学校、专业等基础条件"
+      },
+      "D2": {
+        "name": "职业技能",
+        "score": 80.0,
+        "description": "技术技能匹配程度"
+      },
+      "D3": {
+        "name": "项目经历",
+        "score": 78.0,
+        "description": "项目与实践深度"
+      },
+      "D4": {
+        "name": "综合素质",
+        "score": 82.0,
+        "description": "软技能与潜力"
+      }
+    },
+    "sub_dimensions": {
+      "skill": {
+        "score": 80.0
+      },
+      "cert": {
+        "score": 70.0
+      }
+    },
+    "total_score": 81.0,
+    "skill_coverage": 0.72,
+    "skill_count": 18
+  }
+}

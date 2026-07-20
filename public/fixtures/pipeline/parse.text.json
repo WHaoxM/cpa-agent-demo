@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "data": {
+    "name": "钟梓珉",
+    "contact": {},
+    "education": [
+      {
+        "school": "示例大学",
+        "major": "计算机科学与技术"
+      }
+    ],
+    "skills": [
+      "Vue",
+      "TypeScript",
+      "Python"
+    ],
+    "raw_text": "钟梓珉\\n本科 计算机\\n技能：Vue、TypeScript、Python",
+    "text": "钟梓珉\n本科 计算机科学与技术\n技能：Vue、TypeScript、Python\n项目：CPA 职业导航平台前端"
+  }
+}

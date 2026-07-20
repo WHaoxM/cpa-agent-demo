@@ -1,4 +1,4 @@
-<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
+﻿<!-- 页面：心仪岗位；路由：student/favorites（student-favorites）；角色：STUDENT -->
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router'
 import { useLearningStore } from '@/stores'
 import { useResumeStore } from '@/stores/resume'
 import { mockTargetRoleMarkets } from '@/mock/data'
-import { fetchTargetRoles, removeTargetRole as apiRemoveTargetRole } from '@/api/backend'
+import { getTargetRoleMarketCard } from '@/api/favorites'
 import type { TargetRoleMarket } from '@/types'
 
 // ── 角色专属色（当代杂志调：暖而有质地） ──
@@ -62,8 +62,30 @@ function normalizeRole(role: string): TargetRoleMarket['role'] {
   return '前端开发'
 }
 
-function getRoleMarket(role: string): TargetRoleMarket {
+const marketCache = reactive<Record<string, TargetRoleMarket>>({})
+
+function localMarketFallback(role: string): TargetRoleMarket {
   return mockTargetRoleMarkets.find(item => item.role === normalizeRole(role)) ?? mockTargetRoleMarkets[0]!
+}
+
+function getRoleMarket(role: string): TargetRoleMarket {
+  const key = normalizeRole(role)
+  return marketCache[key] ?? localMarketFallback(role)
+}
+
+async function hydrateRoleMarkets() {
+  const roles = [...new Set(learningStore.targetRoles.map(r => normalizeRole(r.role)))]
+  await Promise.all(
+    roles.map(async role => {
+      try {
+        const card = await getTargetRoleMarketCard(role, localMarketFallback(role))
+        if (card) marketCache[role] = card
+      } catch (e) {
+        console.warn('[favorites] market hydrate failed', role, e)
+        marketCache[role] = localMarketFallback(role)
+      }
+    }),
+  )
 }
 
 /* 匹配度状态：基于职途导航产出的 matchedCareers */
@@ -84,7 +106,7 @@ function goToNavigation(role: string) {
   router.push({ name: 'student-career-navigation' })
 }
 
-// TODO: API — GET /api/saved-jobs?userId=xxx
+// 心仪岗位列表由 learningStore 持有；进入页时从 fixtures/API 刷新
 const savedJobs = computed(() => learningStore.savedJobs)
 
 const sortMode = ref<SortMode>('matchScore_desc')
@@ -134,14 +156,9 @@ const followedCount = computed(() => {
   return uniqueRoles.size
 })
 
-async function removeJob(role: string) {
+function removeJob(role: string) {
   const matched = learningStore.targetRoles.find(item => normalizeRole(item.role) === role)
   if (!matched) return
-  try {
-    await apiRemoveTargetRole(matched.role, 'stu_001')
-  } catch {
-    // 后端删除失败时仍更新前端，保证 UX
-  }
   learningStore.toggleTargetRole(matched.role)
   ElMessage.success('已取消关注该方向')
 }
@@ -218,25 +235,8 @@ function demandClass(level: string) {
 let cardObserver: IntersectionObserver | null = null
 
 onMounted(async () => {
-  /* 从后端同步 target roles（失败时保留本地 store 数据） */
-  try {
-    const resp = await fetchTargetRoles('stu_001')
-    if (resp.success && resp.data && resp.data.length > 0) {
-      const backendRoles = resp.data.map(item => ({
-        role: item.role_name,
-        savedAt: (item.created_at || new Date().toISOString()).slice(0, 10),
-      }))
-      /* 合并：后端数据优先，本地未同步的保留 */
-      const existingRoles = new Set(learningStore.targetRoles.map(r => r.role))
-      backendRoles.forEach(r => {
-        if (!existingRoles.has(r.role)) {
-          learningStore.targetRoles.push(r)
-        }
-      })
-    }
-  } catch {
-    // 后端不可用时降级到本地 store
-  }
+  await learningStore.loadFavoritesFromApi()
+  await hydrateRoleMarkets()
 
   /* 初始化显示值为 0 */
   filteredDirections.value.forEach(job => {

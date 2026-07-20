@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "data": {
+    "skills": ["Python", "SQL"],
+    "candidates": [
+      {
+        "id": "job_001",
+        "job_portrait_id": "job_001",
+        "position_name": "后端开发",
+        "retrieve_score": 0.031,
+        "channels": ["vector", "keyword"],
+        "matched_keywords": ["Python", "SQL"],
+        "components": { "vector": 0.016, "keyword": 0.015, "graph": 0.02, "rrf": 0.031 }
+      }
+    ],
+    "note": "retrieve_score is RRF fusion only; deterministic match scores are separate"
+  }
+}

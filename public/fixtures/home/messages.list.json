@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "data": [
+    {
+      "id": "msg_001",
+      "title": "报告已生成",
+      "body": "report_001 已可在「我的报告」中查看",
+      "type": "系统消息",
+      "read": false,
+      "created_at": "2026-07-18 10:00"
+    },
+    {
+      "id": "msg_002",
+      "title": "学习进度提醒",
+      "body": "Vue 3 入门课程进度 100%，可以开始下一门了",
+      "type": "系统消息",
+      "read": false,
+      "created_at": "2026-07-17 14:12"
+    },
+    {
+      "id": "msg_003",
+      "title": "职业分析功能升级",
+      "body": "新增薪资趋势与城市热力对比",
+      "type": "系统消息",
+      "read": true,
+      "created_at": "2026-07-10 16:45"
+    }
+  ]
+}

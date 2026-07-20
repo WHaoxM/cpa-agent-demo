@@ -10,8 +10,20 @@ import { useReportStore } from '@/stores/report'
 import { callAgentPortraitStreaming, PHASE_META } from '@/composables/useAgentPortrait'
 import type { AgentPortraitResult, AgentPhase, PhaseData, PersonInfo, AbilityDimension, SummarySource } from '@/composables/useAgentPortrait'
 import type { PortraitReplaySnapshot, PortraitSessionStatus } from '@/composables/usePortraitSession'
-import D3RadarChart from '@/components/charts/D3RadarChart.vue'
+import D3FlowerChart, { DEFAULT_FLOWER_COLORS } from '@/components/charts/D3FlowerChart.vue'
 import type { RadarDatum } from '@/components/charts/D3RadarChart.vue'
+import type { SevenDim } from '@/types'
+
+function dimBarStyle(idx: number, score: number): Record<string, string> {
+  const hex = DEFAULT_FLOWER_COLORS[idx] ?? DEFAULT_FLOWER_COLORS[0]!
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return {
+    width: score + '%',
+    background: `linear-gradient(90deg, rgba(${r},${g},${b},0.60), rgba(${r},${g},${b},1.0))`,
+  }
+}
 
 const props = withDefaults(defineProps<{
   embedded?: boolean
@@ -146,29 +158,12 @@ function savePortraitReport() {
       predictedRole,
       competitivenessScore: portraitData.value.competitivenessScore,
       completenessScore: portraitData.value.completenessScore,
-      sevenDim: extractSevenDim(portraitData.value),
+      sevenDim: portraitData.value.dimensions,
       skillTags: portraitData.value.skillTags,
       personInfo: portraitData.value.personInfo,
     },
   })
   portraitSaved.value = true
-}
-
-/* 优先使用 agent 返回的 sub_dimensions（七维），fallback 到 dimensions */
-function extractSevenDim(data: AgentPortraitResult): unknown {
-  const sub = (data as AgentPortraitResult & { sub_dimensions?: Record<string, { name: string; score: number }> }).sub_dimensions
-  if (sub) {
-    return {
-      专业技能: sub.skill?.score ?? 0,
-      证书资质: sub.cert?.score ?? 0,
-      创新能力: sub.innovation?.score ?? 0,
-      学习能力: sub.learning?.score ?? 0,
-      抗压能力: sub.stress?.score ?? 0,
-      沟通能力: sub.communication?.score ?? 0,
-      实习经验: sub.internship?.score ?? 0,
-    }
-  }
-  return data.dimensions
 }
 
 function goToCareerReport() {
@@ -263,6 +258,20 @@ function applyPhaseData(data: PhaseData) {
       phaseCompetitiveness.value = data.competitivenessScore
       phaseSkillTags.value = data.skillTags
       currentPhase.value = 'evaluating'
+      {
+        const dimMap: Record<string, number> = {}
+        for (const d of data.dimensions) dimMap[d.key] = d.score
+        const seven: SevenDim = {
+          专业技能: dimMap.professional ?? 0,
+          证书资质: dimMap.certificate ?? 0,
+          创新能力: dimMap.innovation ?? 0,
+          学习能力: dimMap.learning ?? 0,
+          抗压能力: dimMap.stress ?? 0,
+          沟通能力: dimMap.communication ?? 0,
+          实习经验: dimMap.internship ?? 0,
+        }
+        resumeStore.setPortraitDimensions(seven)
+      }
       nextTick(() => animatePhase2())
       break
     case 'analyzing':
@@ -486,11 +495,11 @@ onBeforeUnmount(() => {
       <!-- [B+C] 雷达图 + 分项评分（Phase ② evaluating） -->
       <div v-if="phaseDimensions.length" class="tp-portrait__viz-row">
         <div class="tp-portrait__radar-wrap">
-          <D3RadarChart :data="radarData" :show-legend="false" />
+          <D3FlowerChart :data="radarData" :colors="DEFAULT_FLOWER_COLORS" />
         </div>
         <div class="tp-portrait__dims">
           <div
-            v-for="dim in phaseDimensions" :key="dim.key"
+            v-for="(dim, dimIdx) in phaseDimensions" :key="dim.key"
             class="tp-portrait__dim-item"
           >
             <div class="tp-portrait__dim-top">
@@ -508,7 +517,7 @@ onBeforeUnmount(() => {
             <div class="tp-portrait__dim-bar-wrap">
               <div class="tp-portrait__dim-track">
                 <div class="tp-portrait__dim-bar"
-                  :style="{ width: dim.score + '%' }"
+                  :style="dimBarStyle(dimIdx, dim.score)"
                   :class="`tp-portrait__dim-bar--${dim.level === '优秀' ? 'good' : dim.level === '良好' ? 'mid' : 'low'}`">
                 </div>
               </div>
@@ -616,6 +625,14 @@ onBeforeUnmount(() => {
               <Icon icon="lucide:map" :width="13"/>
               查看人岗匹配报告
               <Icon icon="lucide:arrow-right" :width="12"/>
+            </button>
+            <button
+              class="tp-portrait__step-guide-btn tp-portrait__step-guide-btn--ghost"
+              :disabled="!summaryDone"
+              @click="exportPortrait"
+            >
+              <Icon icon="lucide:printer" :width="13"/>
+              打印报告
             </button>
             <button
               class="tp-portrait__step-guide-btn tp-portrait__step-guide-btn--ghost"
@@ -913,13 +930,13 @@ onBeforeUnmount(() => {
 
 /* ── [B+C] 雷达 + 分项评分 ── */
 .tp-portrait__viz-row {
-  display: grid; grid-template-columns: 220px 1fr; gap: 16px;
+  display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: stretch;
 }
 .tp-portrait__radar-wrap {
   background: rgba(237,229,214,0.03);
   border: 1px solid rgba(212,201,181,0.1);
   border-radius: 8px; overflow: visible;
-  height: 220px; flex-shrink: 0;
+  min-height: 220px; flex-shrink: 0;
 }
 
 .tp-portrait__dims { display: flex; flex-direction: column; gap: 8px; justify-content: center; }
@@ -1520,7 +1537,7 @@ onBeforeUnmount(() => {
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .tp-portrait__viz-row { grid-template-columns: 190px 1fr; gap: 12px; }
+  .tp-portrait__viz-row { grid-template-columns: 1.1fr 1fr; gap: 12px; align-items: stretch; }
 }
 @media (max-width: 768px) {
   .tp-portrait { padding: 14px 14px; }

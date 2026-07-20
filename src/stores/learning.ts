@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Note, WrongQuestion, QuizRecord, Question, AIMessage, SavedJob, TargetRole } from '@/types'
+import type { Note, WrongQuestion, QuizRecord, Question, AIMessage, AIToolCall, SavedJob, TargetRole } from '@/types'
 import {
   mockNotes,
   mockWrongQuestions,
@@ -13,6 +13,23 @@ import {
   mockSavedJobs,
   CURRENT_USER_ID,
 } from '@/mock/data'
+import {
+  addTargetRole,
+  createSavedJob,
+  deleteSavedJob,
+  deleteTargetRole,
+  listSavedJobs,
+  listTargetRoles,
+} from '@/api/favorites'
+import {
+  chat as agentChat,
+  createSession as createAgentSession,
+  clearAgentSessionId,
+  ensureSession,
+  mapAgentToolCalls,
+  getAgentSessionId,
+} from '@/api/agent'
+import { useUserStore } from '@/stores/user'
 
 // 学习记录接口
 export interface LearningRecord {
@@ -442,13 +459,34 @@ export const useLearningStore = defineStore(
       return '默认'
     }
 
-    function getAIResponse(input: string): { content: string; thinking: string[]; category: string } {
+    function mockToolCallsForCategory(category: string): AIToolCall[] {
+      if (category === '能力补齐') {
+        return [
+          { name: 'skill_gap_scan', status: 'done', summary: '已对比目标岗位与当前技能画像', args: { focus: '状态管理 / 路由权限' } },
+          { name: 'learning_path_rank', status: 'done', summary: '按性价比排序补齐动作', args: { horizon: '2-4 周' } },
+        ]
+      }
+      if (category === '学习建议') {
+        return [
+          { name: 'progress_read', status: 'done', summary: '读取近一周学习记录', args: { window: '7d' } },
+          { name: 'path_suggest', status: 'done', summary: '生成分周学习路径' },
+        ]
+      }
+      if (category === '课程答疑') {
+        return [
+          { name: 'kb_lookup', status: 'done', summary: '检索课程知识库相关条目', args: { domain: 'Vue 3' } },
+        ]
+      }
+      return []
+    }
+
+    function getAIResponse(input: string): { content: string; thinking: string[]; category: string; toolCalls: AIToolCall[] } {
       const category = getAIResponseCategory(input)
       const responses = mockAIResponses[category] || mockAIResponses['默认']
       const content = responses[Math.floor(Math.random() * responses.length)]
       const thinkingPool = mockThinkingTemplates[category] || mockThinkingTemplates['默认']
       const thinking = thinkingPool[Math.floor(Math.random() * thinkingPool.length)]
-      return { content, thinking, category }
+      return { content, thinking, category, toolCalls: mockToolCallsForCategory(category) }
     }
 
     function clearAIMessages(): void {
@@ -456,7 +494,7 @@ export const useLearningStore = defineStore(
         {
           id: 'ai_msg_init',
           role: 'assistant',
-          content: '你好，这里是ai助手。你可以直接提问课程重点、解题思路、技能补齐顺序，或者结合目标方向讨论下一步学习安排。',
+          content: '你好。\n\n可以直接问我：\n- 课程重点与概念梳理\n- 解题思路与练习建议\n- 技能补齐顺序\n- 结合目标方向的下一步安排\n\n从下面任选一个话题开始，或直接输入你的问题。',
           timestamp: new Date().toISOString().replace('T', ' ').substring(0, 16),
         },
       ]
@@ -585,39 +623,170 @@ export const useLearningStore = defineStore(
       localStorage.removeItem('learning_history')
     }
 
-    // 心仪岗位 actions
-    // TODO: API — POST /api/saved-jobs (toggle)
-    function toggleSaveJob(job: SavedJob): void {
-      const idx = savedJobs.value.findIndex(j => j.id === job.id)
-      if (idx === -1) {
-        savedJobs.value.unshift({ ...job, savedAt: new Date().toISOString().slice(0, 10) })
-      } else {
-        savedJobs.value.splice(idx, 1)
+    function resolveUserId(): string {
+      try {
+        const userStore = useUserStore()
+        return userStore.currentUser?.id || CURRENT_USER_ID
+      } catch {
+        return CURRENT_USER_ID
       }
     }
 
-    // TODO: API — DELETE /api/saved-jobs/:id
+    async function loadFavoritesFromApi(userId?: string): Promise<void> {
+      const uid = userId || resolveUserId()
+      try {
+        const [jobs, roles] = await Promise.all([
+          listSavedJobs(uid),
+          listTargetRoles(uid),
+        ])
+        if (jobs.length) savedJobs.value = jobs
+        if (roles.length) targetRoles.value = roles
+      } catch (e) {
+        console.warn('[favorites] load failed, keeping local mock', e)
+      }
+    }
+
+    // 心仪岗位 actions
+    function toggleSaveJob(job: SavedJob): void {
+      const idx = savedJobs.value.findIndex(j => j.id === job.id)
+      const uid = resolveUserId()
+      if (idx === -1) {
+        const next = { ...job, savedAt: new Date().toISOString().slice(0, 10) }
+        savedJobs.value.unshift(next)
+        createSavedJob(uid, next).catch(() => {})
+      } else {
+        savedJobs.value.splice(idx, 1)
+        deleteSavedJob(job.id).catch(() => {})
+      }
+    }
+
     function removeSavedJob(jobId: string): void {
       const idx = savedJobs.value.findIndex(j => j.id === jobId)
       if (idx !== -1) savedJobs.value.splice(idx, 1)
+      deleteSavedJob(jobId).catch(() => {})
     }
 
     function isJobSaved(jobId: string): boolean {
       return savedJobs.value.some(j => j.id === jobId)
     }
 
-    // targetRoles actions
+    // targetRoles actions — POST always uses role_name via favorites API
     function toggleTargetRole(role: string): void {
       const idx = targetRoles.value.findIndex(r => r.role === role)
+      const uid = resolveUserId()
       if (idx === -1) {
         targetRoles.value.push({ role, savedAt: new Date().toISOString().slice(0, 10) })
+        addTargetRole(uid, role).catch(() => {})
       } else {
         targetRoles.value.splice(idx, 1)
+        deleteTargetRole(uid, role).catch(() => {})
       }
     }
 
     function isTargetRole(role: string): boolean {
       return targetRoles.value.some(r => r.role === role)
+    }
+
+    /**
+     * Freeform chat via agent API.
+     * - mock：本地回复 + 独白模板 + 模拟工具卡
+     * - http：真引擎；thinking 只用后端 thinking_steps（Claude/Qoder 风格推演），不回落假模板
+     */
+    async function getAIResponseFromApi(
+      input: string,
+      opts?: {
+        interactionMode?: 'ask' | 'agent' | 'experts'
+        planMode?: boolean
+        attachmentIds?: string[]
+        voiceTurnId?: string
+        contentParts?: Array<Record<string, unknown>>
+      },
+    ): Promise<{
+      content: string
+      thinking: string[]
+      category: string
+      toolCalls: AIToolCall[]
+      elapsedSeconds?: number
+      engine?: string
+      activeSubagent?: string
+      sessionId?: string
+      interactionMode?: string
+      upgradeHint?: { to: string; reason?: string }
+      fromApi: boolean
+    }> {
+      const local = getAIResponse(input)
+      const { getApiMode } = await import('@/api/config')
+      if (getApiMode() !== 'http') {
+        return { ...local, fromApi: false }
+      }
+
+      const studentId = resolveUserId()
+      await ensureSession(studentId)
+      const interactionMode = opts?.interactionMode ?? 'ask'
+      const data = await agentChat({
+        message: input,
+        student_id: studentId,
+        session_id: getAgentSessionId(),
+        mode: 'supervisor',
+        interaction_mode: interactionMode,
+        plan_mode: opts?.planMode === true,
+        attachment_ids: opts?.attachmentIds,
+        voice_turn_id: opts?.voiceTurnId,
+        content_parts: opts?.contentParts,
+      })
+
+      const remoteTools = mapAgentToolCalls(data?.tool_calls)
+      const sub = data?.active_subagent
+        || data?.orchestration?.active_subagent
+        || ''
+      const elapsedRaw = typeof data?.elapsed_seconds === 'number' ? data.elapsed_seconds : undefined
+      const elapsed = elapsedRaw != null ? Math.max(1, Math.round(elapsedRaw)) : undefined
+      const imode = data?.interaction_mode || interactionMode
+      const orchSteps = data?.orchestration && Array.isArray((data.orchestration as { thinking_steps?: unknown }).thinking_steps)
+        ? (data.orchestration as { thinking_steps: unknown[] }).thinking_steps
+        : []
+      const thinking = (Array.isArray(data?.thinking_steps) ? data.thinking_steps : orchSteps)
+        .map(s => String(s || '').trim())
+        .filter(Boolean)
+      const denials = data?.permission_denials
+        || data?.orchestration?.permission_denials
+        || []
+      if (Array.isArray(denials) && denials.length) {
+        thinking.push(
+          `权限层拦截：${String(denials[0]?.reason || denials[0]?.tool || '部分工具调用被拒绝').slice(0, 120)}`,
+        )
+      }
+      const upgradeHint = data?.upgrade_hint || data?.orchestration?.upgrade_hint
+
+      return {
+        content: data?.reply || '（模型未返回内容）',
+        thinking,
+        category: local.category,
+        toolCalls: remoteTools,
+        elapsedSeconds: elapsed,
+        engine: data?.engine,
+        activeSubagent: sub || undefined,
+        sessionId: data?.session_id || getAgentSessionId() || undefined,
+        interactionMode: imode,
+        upgradeHint: upgradeHint || undefined,
+        fromApi: true,
+      }
+    }
+
+    async function startAgentSession(): Promise<string | null> {
+      try {
+        clearAgentSessionId()
+        const created = await createAgentSession(resolveUserId())
+        return created.session_id || null
+      } catch (e) {
+        console.warn('[agent] createSession failed', e)
+        clearAgentSessionId()
+        return null
+      }
+    }
+
+    function resetAgentSession(): void {
+      clearAgentSessionId()
     }
 
     return {
@@ -664,6 +833,10 @@ export const useLearningStore = defineStore(
       addQuizRecord,
       addAIMessage,
       getAIResponse,
+      getAIResponseFromApi,
+      startAgentSession,
+      resetAgentSession,
+      loadFavoritesFromApi,
       clearAIMessages,
       
       // 心仪岗位 actions
@@ -691,7 +864,8 @@ export const useLearningStore = defineStore(
     persist: {
       key: 'learning-store',
       storage: localStorage,
-      pick: ['notes', 'wrongQuestions', 'quizRecords', 'aiMessages', 'noteFavorites', 'learningHistory', 'targetRoles'],
+      // aiMessages 已迁到 agentChat 按 session 隔离，不再持久化全局胶带
+      pick: ['notes', 'wrongQuestions', 'quizRecords', 'noteFavorites', 'learningHistory', 'targetRoles'],
     },
   },
 )

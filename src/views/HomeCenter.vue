@@ -77,15 +77,29 @@ const currentPhaseIndex = computed(() => {
   return 4
 })
 
-// ── 学习概览统计 ──
-const overviewStats = computed(() => {
-  const raw = learningStore.statistics.averageScore
-  return {
-    completedCourses: learningStore.statistics.totalCourses,
-    streakDays: learningStore.statistics.streakDays,
-    averageScore: isNaN(raw) || raw === 0 ? '—' : String(Math.round(raw)),
+// ── 连续学习天数（从当前用户记录计算，不依赖全量 statistics） ──
+const streakDaysLocal = computed(() => {
+  const dates = [...new Set(
+    userLearningHistory.value.map(r => r.completedAt.split('T')[0])
+  )].sort().reverse()
+  if (!dates.length) return 0
+  const today = new Date().toISOString().split('T')[0]
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  if (dates[0] !== today && dates[0] !== yesterday) return 0
+  let streak = 1
+  for (let i = 0; i < dates.length - 1; i++) {
+    const diff = (new Date(dates[i]!).getTime() - new Date(dates[i + 1]!).getTime()) / 86400000
+    if (Math.round(diff) === 1) streak++
+    else break
   }
+  return streak
 })
+
+// ── 学习概览统计 ──
+const overviewStats = computed(() => ({
+  learnedCourses: new Set(userLearningHistory.value.map(r => r.courseId)).size,
+  streakDays: streakDaysLocal.value,
+}))
 const hasAnyLearningData = computed(() => userLearningHistory.value.length > 0)
 
 // ── 阶段成果摘要 ──
@@ -99,8 +113,8 @@ const phaseStats = computed<(string | null)[]>(() => [
   userLearningHistory.value.length > 0
     ? `已涉及 ${new Set(userLearningHistory.value.map(r => r.courseId)).size} 门课程`
     : null,
-  reportStore.records.length > 0
-    ? `已生成 ${reportStore.records.length} 份报告`
+  reportStore.portraitRecords.length + reportStore.careerRecords.length > 0
+    ? `书架已有 ${reportStore.portraitRecords.length + reportStore.careerRecords.length} 份报告`
     : null,
 ])
 
@@ -224,7 +238,7 @@ const todayDisplay = computed(() => {
       <section class="hc-hero reveal">
         <div class="hc-hero__label">Career Development Platform</div>
         <div class="hc-hero__left">
-          <h1 class="hc-hero__greeting">{{ greeting }}，<strong>{{ userStore.currentUser?.name ?? '同学' }}</strong></h1>
+          <h1 class="hc-hero__greeting">{{ greeting }}，<strong>{{ userStore.currentUser?.name ?? '钟同学' }}</strong></h1>
           <div class="hc-hero__hairline" />
           <p class="hc-hero__tagline">个性化职业发展路径，从探索到成长的完整闭环。</p>
           <div class="hc-hero__date">{{ todayDisplay }}</div>
@@ -258,16 +272,12 @@ const todayDisplay = computed(() => {
         <template v-if="hasAnyLearningData">
           <div class="hc-overview__grid">
             <div class="hc-overview__stat">
-              <span class="hc-overview__num">{{ overviewStats.completedCourses }}</span>
-              <span class="hc-overview__key">已完成课程</span>
+              <span class="hc-overview__num">{{ overviewStats.learnedCourses }}</span>
+              <span class="hc-overview__key">学习课程数</span>
             </div>
             <div class="hc-overview__stat">
               <span class="hc-overview__num">{{ overviewStats.streakDays }}</span>
               <span class="hc-overview__key">连续学习天数</span>
-            </div>
-            <div class="hc-overview__stat">
-              <span class="hc-overview__num">{{ overviewStats.averageScore }}</span>
-              <span class="hc-overview__key">平均测评分</span>
             </div>
           </div>
         </template>
@@ -348,7 +358,7 @@ const todayDisplay = computed(() => {
             <div class="hc-bio-card__avatar-ring" />
           </div>
           <div class="hc-bio-card__info">
-            <div class="hc-bio-card__name">{{ userStore.currentUser?.name ?? '同学' }}</div>
+            <div class="hc-bio-card__name">{{ userStore.currentUser?.name ?? '钟同学' }}</div>
             <div class="hc-bio-card__role">{{ effectiveRole ?? '未设定目标' }}</div>
             <div class="hc-bio-card__hairline" />
             <div class="hc-bio-card__desc">
@@ -509,7 +519,7 @@ const todayDisplay = computed(() => {
   text-transform: uppercase; color: var(--hc-muted);
 }
 .hc-overview__grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 0;
 }
 .hc-overview__stat {
   display: flex; flex-direction: column; align-items: center; gap: 6px;

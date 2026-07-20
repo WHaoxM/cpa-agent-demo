@@ -1,6 +1,7 @@
 export { useUserStore } from './user'
 export { useCourseStore } from './course'
 export { useLearningStore } from './learning'
+export { useAgentChatStore } from './agentChat'
 export { useThemeStore, type ThemeName } from './theme'
 export { useResumeStore } from './resume'
 export type { ParsedSkill, ResumeParseResult } from './resume'
